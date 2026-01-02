@@ -6,8 +6,8 @@ const navItems = [
   { path: '/', label: 'sidebar.dashboard', icon: LayoutDashboard },
   { path: '/warehouse', label: 'sidebar.warehouse', icon: Package },
   { path: '/production-lines', label: 'sidebar.productionLines', icon: Factory },
-  { path: '/hr', label: 'sidebar.hr', icon: Users },
   { path: '/maintenance', label: 'sidebar.maintenance', icon: Wrench },
+  { path: '/hr', label: 'sidebar.hr', icon: Users },
 ];
 
 export function Sidebar() {
