@@ -6,6 +6,11 @@ import { Warehouse } from './components/Warehouse';
 import { ProductionLines } from './components/ProductionLines';
 import { ProductionLineDetail } from './components/ProductionLineDetail';
 import { HRDepartment } from './components/HRDepartment';
+import { MaintenanceDashboard } from './components/MaintenanceDashboard';
+import { FailureReportList } from './components/FailureReportList';
+import { FailureReportDetail } from './components/FailureReportDetail';
+import { CreateFailureReport } from './components/CreateFailureReport';
+import { UploadPhotoReport } from './components/UploadPhotoReport';
 import { FactoryProvider } from './context/FactoryContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { LanguageProvider } from './context/LanguageContext';
@@ -27,6 +32,11 @@ export default function App() {
                     <Route path="/production-lines" element={<ProductionLines />} />
                     <Route path="/production-lines/:id" element={<ProductionLineDetail />} />
                     <Route path="/hr" element={<HRDepartment />} />
+                    <Route path="/maintenance" element={<MaintenanceDashboard />} />
+                    <Route path="/maintenance/failure-reports" element={<FailureReportList />} />
+                    <Route path="/maintenance/failure-reports/new" element={<CreateFailureReport />} />
+                    <Route path="/maintenance/failure-reports/:id" element={<FailureReportDetail />} />
+                    <Route path="/maintenance/failure-reports/:id/upload-photos" element={<UploadPhotoReport />} />
                   </Routes>
                 </main>
               </div>

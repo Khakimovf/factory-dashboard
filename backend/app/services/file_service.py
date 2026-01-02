@@ -137,7 +137,15 @@ class FileService:
             Dictionary with file information
         """
         stat = file_path.stat()
+        # Return relative path from backend directory (e.g., "uploads/filename.pdf")
+        try:
+            # UPLOAD_DIR.parent is the backend directory
+            file_path_str = str(file_path.relative_to(UPLOAD_DIR.parent))
+        except ValueError:
+            # Fallback if path calculation fails
+            file_path_str = str(file_path)
+        
         return {
-            "file_path": str(file_path.relative_to(UPLOAD_DIR.parent)),
+            "file_path": file_path_str,
             "file_size": stat.st_size,
         }

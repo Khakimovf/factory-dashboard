@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.config import API_PREFIX, ALLOWED_ORIGINS
-from app.api.routes import documents
+from app.api.routes import documents, maintenance
 
 # Create FastAPI app
 app = FastAPI(
@@ -26,6 +26,7 @@ app.add_middleware(
 
 # Include routers
 app.include_router(documents.router, prefix=API_PREFIX)
+app.include_router(maintenance.router, prefix=API_PREFIX)
 
 
 @app.get("/", tags=["root"])

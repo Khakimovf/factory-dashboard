@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Package, Factory, Users } from 'lucide-react';
+import { LayoutDashboard, Package, Factory, Users, Wrench } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 
 const navItems = [
@@ -7,6 +7,7 @@ const navItems = [
   { path: '/warehouse', label: 'sidebar.warehouse', icon: Package },
   { path: '/production-lines', label: 'sidebar.productionLines', icon: Factory },
   { path: '/hr', label: 'sidebar.hr', icon: Users },
+  { path: '/maintenance', label: 'sidebar.maintenance', icon: Wrench },
 ];
 
 export function Sidebar() {

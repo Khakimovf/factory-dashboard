@@ -10,7 +10,7 @@ UPLOAD_DIR = BASE_DIR / "uploads"
 UPLOAD_DIR.mkdir(exist_ok=True)
 
 # Allowed file extensions
-ALLOWED_EXTENSIONS = {".pdf", ".docx", ".jpg", ".jpeg"}
+ALLOWED_EXTENSIONS = {".pdf", ".docx", ".jpg", ".jpeg", ".png"}
 
 # Max file size (10MB)
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB in bytes
