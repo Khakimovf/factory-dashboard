@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useFactory } from '../context/FactoryContext';
 import { useLanguage } from '../context/LanguageContext';
+import { maintenanceApi } from '../services/maintenanceApi';
 import { ArrowLeft, Package, PlayCircle, PauseCircle, Settings, Plus } from 'lucide-react';
 
 export function ProductionLineDetail() {
@@ -10,6 +11,8 @@ export function ProductionLineDetail() {
   const { productionLines, materials, updateProductionLine, requestMaterials } = useFactory();
   const { t } = useLanguage();
   const [showMaterialModal, setShowMaterialModal] = useState(false);
+  const [maintenanceDescription, setMaintenanceDescription] = useState('');
+  const [maintenanceDateTime, setMaintenanceDateTime] = useState('');
 
   const line = productionLines.find(l => l.id === id);
 
@@ -127,18 +130,59 @@ export function ProductionLineDetail() {
           </div>
 
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-            <h3 className="font-semibold text-gray-900 dark:text-white mb-4">{t('productionDetail.quickActions')}</h3>
-            <div className="space-y-2">
-              <button className="w-full px-4 py-2 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors text-left">
-                {t('productionDetail.viewReport')}
-              </button>
-              <button className="w-full px-4 py-2 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors text-left">
-                {t('productionDetail.scheduleMaintenance')}
-              </button>
-              <button className="w-full px-4 py-2 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors text-left">
-                {t('productionDetail.exportData')}
-              </button>
-            </div>
+            <h3 className="font-semibold text-gray-900 dark:text-white mb-4">{t('productionDetail.sendMaintenanceRequest')}</h3>
+            <form onSubmit={async (e) => {
+              e.preventDefault();
+              try {
+                await maintenanceApi.createFailureReport({
+                  line_id: id!,
+                  line_name: line.name,
+                  description: maintenanceDescription,
+                  reported_by: 'Line Master', // This would come from auth in real app
+                  priority: 'normal'
+                });
+                setMaintenanceDescription('');
+                setMaintenanceDateTime('');
+                alert(t('productionDetail.requestSubmitted'));
+              } catch (error) {
+                console.error('Error submitting maintenance request:', error);
+                alert(t('productionDetail.requestError'));
+              }
+            }}>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    {t('productionDetail.failureDescription')}
+                  </label>
+                  <textarea
+                    value={maintenanceDescription}
+                    onChange={(e) => setMaintenanceDescription(e.target.value)}
+                    rows={4}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                    placeholder={t('productionDetail.failureDescriptionPlaceholder')}
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    {t('productionDetail.failureTime')}
+                  </label>
+                  <input
+                    type="datetime-local"
+                    value={maintenanceDateTime}
+                    onChange={(e) => setMaintenanceDateTime(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    required
+                  />
+                </div>
+                <button
+                  type="submit"
+                  className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                >
+                  {t('productionDetail.submitRequest')}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
 
@@ -216,6 +260,22 @@ export function ProductionLineDetail() {
               </div>
             )}
           </div>
+        </div>
+      </div>
+
+      {/* Quick Actions - Moved to Bottom */}
+      <div className="mt-6 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+        <h3 className="font-semibold text-gray-900 dark:text-white mb-4">{t('productionDetail.quickActions')}</h3>
+        <div className="space-y-2">
+          <button className="w-full px-4 py-2 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors text-left">
+            {t('productionDetail.viewReport')}
+          </button>
+          <button className="w-full px-4 py-2 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors text-left">
+            {t('productionDetail.scheduleMaintenance')}
+          </button>
+          <button className="w-full px-4 py-2 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors text-left">
+            {t('productionDetail.exportData')}
+          </button>
         </div>
       </div>
 

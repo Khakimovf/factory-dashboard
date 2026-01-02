@@ -53,7 +53,13 @@
     "inStock": "Zaxirada",
     "rawMaterial": "Xom ashyo",
     "components": "Komponentlar",
-    "hardware": "Apparat"
+    "hardware": "Apparat",
+    "row": "Qator",
+    "backToRows": "Qatorlarga qaytish",
+    "rowDetailSubtitle": "Qator materiallari va statistikasi",
+    "responsiblePerson": "Mas'ul shaxs",
+    "responsiblePersonPlaceholder": "Mas'ul shaxs ismini kiriting...",
+    "noMaterials": "Materiallar topilmadi"
   },
   "production": {
     "title": "Ishlab chiqarish liniyalari",
@@ -104,7 +110,14 @@
     "idle": "Kutish",
     "maintenance": "Ta'mirlash",
     "availableLabel": "mavjud",
-    "cancel": "Bekor qilish"
+    "cancel": "Bekor qilish",
+    "sendMaintenanceRequest": "Ta'mirlashga so'rov yuborish",
+    "failureDescription": "Nosozlik tavsifi",
+    "failureDescriptionPlaceholder": "Nosozlikni batafsil tasvirlang...",
+    "failureTime": "Nosozlik vaqti",
+    "submitRequest": "So'rovni yuborish",
+    "requestSubmitted": "So'rov muvaffaqiyatli yuborildi",
+    "requestError": "So'rov yuborishda xatolik yuz berdi"
   },
   "hr": {
     "title": "Kadrlar bo'limi",
@@ -114,8 +127,11 @@
     "approved": "Tasdiqlangan",
     "draft": "Qoralama",
     "searchDocuments": "Hujjatlarni qidirish...",
-    "inProcess": "Jarayonda",
-    "archived": "Arxivlangan",
+    "inProcess": "HR bo'limi",
+    "hrDepartment": "HR bo'limi",
+    "accounting": "Buxgalteriya",
+    "director": "Direktor",
+    "archived": "Direktor",
     "noDocuments": "Hujjatlar yo'q",
     "documentLibrary": "Hujjat kutubxonasi",
     "handbooks": "Qo'llanmalar",
@@ -125,6 +141,15 @@
     "documents": "hujjatlar",
     "approve": "Tasdiqlash",
     "archive": "Arxivlash",
+    "download": "Yuklash",
+    "uploadDocument": "Hujjat yuklash",
+    "writeNote": "Eslatma yozish",
+    "sendToNextStage": "Keyingi bosqichga yuborish",
+    "note": "Eslatma",
+    "notePlaceholder": "Qisqa eslatma yozing...",
+    "send": "Yuborish",
+    "upload": "Yuklash",
+    "addDocument": "Hujjat qo'shish",
     "policy": "siyosat",
     "handbook": "qo'llanma",
     "form": "shakl",
@@ -216,7 +241,11 @@
     "selectImageFiles": "Iltimos, faqat rasm fayllarini tanlang",
     "uploadError": "Yuklashda xatolik yuz berdi",
     "comments": "Izohlar",
-    "commentsPlaceholder": "Qo'shimcha izohlar yozing..."
+    "commentsPlaceholder": "Qo'shimcha izohlar yozing...",
+    "acceptRequest": "Qabul qilindi",
+    "lineRequests": "Liniyalardan kelgan so'rovlar",
+    "lineRequestDetails": "Liniya so'rov tafsilotlari",
+    "noRequests": "So'rovlar yo'q"
   },
   "common": {
     "userName": "Foydalanuvchi",

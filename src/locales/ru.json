@@ -53,7 +53,13 @@
     "inStock": "На складе",
     "rawMaterial": "Сырье",
     "components": "Компоненты",
-    "hardware": "Оборудование"
+    "hardware": "Оборудование",
+    "row": "Ряд",
+    "backToRows": "Вернуться к рядам",
+    "rowDetailSubtitle": "Материалы и статистика ряда",
+    "responsiblePerson": "Ответственное лицо",
+    "responsiblePersonPlaceholder": "Введите имя ответственного лица...",
+    "noMaterials": "Материалы не найдены"
   },
   "production": {
     "title": "Производственные линии",
@@ -104,7 +110,14 @@
     "idle": "Простой",
     "maintenance": "Обслуживание",
     "availableLabel": "доступно",
-    "cancel": "Отмена"
+    "cancel": "Отмена",
+    "sendMaintenanceRequest": "Отправить запрос на ремонт",
+    "failureDescription": "Описание отказа",
+    "failureDescriptionPlaceholder": "Подробно опишите отказ...",
+    "failureTime": "Время отказа",
+    "submitRequest": "Отправить запрос",
+    "requestSubmitted": "Запрос успешно отправлен",
+    "requestError": "Ошибка при отправке запроса"
   },
   "hr": {
     "title": "Отдел кадров",
@@ -114,8 +127,11 @@
     "approved": "Одобрено",
     "draft": "Черновик",
     "searchDocuments": "Поиск документов...",
-    "inProcess": "В процессе",
-    "archived": "Архивировано",
+    "inProcess": "HR отдел",
+    "hrDepartment": "HR отдел",
+    "accounting": "Бухгалтерия",
+    "director": "Директор",
+    "archived": "Директор",
     "noDocuments": "Нет документов",
     "documentLibrary": "Библиотека документов",
     "handbooks": "Справочники",
@@ -125,6 +141,15 @@
     "documents": "документов",
     "approve": "Одобрить",
     "archive": "Архивировать",
+    "download": "Скачать",
+    "uploadDocument": "Загрузить документ",
+    "writeNote": "Написать заметку",
+    "sendToNextStage": "Отправить на следующий этап",
+    "note": "Заметка",
+    "notePlaceholder": "Напишите краткую заметку...",
+    "send": "Отправить",
+    "upload": "Загрузить",
+    "addDocument": "Добавить документ",
     "policy": "политика",
     "handbook": "справочник",
     "form": "форма",
@@ -216,7 +241,11 @@
     "selectImageFiles": "Пожалуйста, выберите только файлы изображений",
     "uploadError": "Ошибка при загрузке",
     "comments": "Комментарии",
-    "commentsPlaceholder": "Введите дополнительные комментарии..."
+    "commentsPlaceholder": "Введите дополнительные комментарии...",
+    "acceptRequest": "Принято",
+    "lineRequests": "Запросы от линий",
+    "lineRequestDetails": "Детали запроса линии",
+    "noRequests": "Нет запросов"
   },
   "common": {
     "userName": "Пользователь",

@@ -32,6 +32,15 @@ export function FailureReportList() {
     }
   };
 
+  const handleAcceptRequest = async (reportId: string) => {
+    try {
+      await maintenanceApi.updateFailureReport(reportId, { status: 'in_progress' });
+      loadReports();
+    } catch (error) {
+      console.error('Error updating report:', error);
+    }
+  };
+
   const filteredReports = reports.filter(report => {
     const matchesSearch = 
       report.line_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -114,8 +123,7 @@ export function FailureReportList() {
           {filteredReports.map(report => (
             <Card
               key={report.id}
-              className="cursor-pointer hover:shadow-md transition-shadow"
-              onClick={() => navigate(`/maintenance/failure-reports/${report.id}`)}
+              className="hover:shadow-md transition-shadow"
             >
               <CardContent className="p-6">
                 <div className="flex items-start justify-between">
@@ -153,17 +161,25 @@ export function FailureReportList() {
                       )}
                     </div>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      navigate(`/maintenance/failure-reports/${report.id}`);
-                    }}
-                  >
-                    <Eye className="w-4 h-4 mr-2" />
-                    {t('maintenance.viewDetails')}
-                  </Button>
+                  <div className="flex gap-2">
+                    {report.status === 'open' && (
+                      <Button
+                        variant="default"
+                        size="sm"
+                        onClick={() => handleAcceptRequest(report.id)}
+                      >
+                        {t('maintenance.acceptRequest')}
+                      </Button>
+                    )}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => navigate(`/maintenance/failure-reports/${report.id}`)}
+                    >
+                      <Eye className="w-4 h-4 mr-2" />
+                      {t('maintenance.viewDetails')}
+                    </Button>
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -196,4 +212,5 @@ function StatusBadge({ status }: { status: MaintenanceStatus }) {
     </span>
   );
 }
+
 

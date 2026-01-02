@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useFactory } from '../context/FactoryContext';
 import { useLanguage } from '../context/LanguageContext';
-import { FileText, FolderOpen, Book, CheckCircle, Clock, FileEdit, Archive, Search } from 'lucide-react';
+import { FileText, FolderOpen, Book, CheckCircle, Clock, FileEdit, Archive, Search, Download, Upload, Send, Plus } from 'lucide-react';
 
 export function HRDepartment() {
   const { hrDocuments, updateDocumentStatus } = useFactory();
@@ -9,6 +9,8 @@ export function HRDepartment() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
+  const [uploadModalOpen, setUploadModalOpen] = useState<string | null>(null);
+  const [sendModalOpen, setSendModalOpen] = useState<string | null>(null);
 
   const categories = ['all', 'policy', 'handbook', 'form', 'manual'];
   const statuses = ['all', 'draft', 'pending', 'approved', 'archived'];
@@ -141,33 +143,63 @@ export function HRDepartment() {
       {/* Document Workflow Section */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
         <WorkflowColumn
-          title={t('hr.inProcess')}
+          title={t('hr.hrDepartment')}
+          stage="hr"
           count={hrDocuments.filter(d => d.status === 'pending' || d.status === 'draft').length}
           documents={filteredDocuments.filter(d => d.status === 'pending' || d.status === 'draft')}
           getStatusIcon={getStatusIcon}
           getStatusColor={getStatusColor}
           getCategoryIcon={getCategoryIcon}
           onStatusChange={updateDocumentStatus}
+          onUploadClick={() => setUploadModalOpen('hr')}
+          onSendClick={() => setSendModalOpen('hr')}
         />
         <WorkflowColumn
-          title={t('hr.approved')}
+          title={t('hr.accounting')}
+          stage="accounting"
           count={hrDocuments.filter(d => d.status === 'approved').length}
           documents={filteredDocuments.filter(d => d.status === 'approved')}
           getStatusIcon={getStatusIcon}
           getStatusColor={getStatusColor}
           getCategoryIcon={getCategoryIcon}
           onStatusChange={updateDocumentStatus}
+          onUploadClick={() => setUploadModalOpen('accounting')}
+          onSendClick={() => setSendModalOpen('accounting')}
         />
         <WorkflowColumn
-          title={t('hr.archived')}
+          title={t('hr.director')}
+          stage="director"
           count={hrDocuments.filter(d => d.status === 'archived').length}
           documents={filteredDocuments.filter(d => d.status === 'archived')}
           getStatusIcon={getStatusIcon}
           getStatusColor={getStatusColor}
           getCategoryIcon={getCategoryIcon}
           onStatusChange={updateDocumentStatus}
+          onUploadClick={() => setUploadModalOpen('director')}
+          onSendClick={() => setSendModalOpen('director')}
         />
       </div>
+
+      {/* Upload Document Modal */}
+      {uploadModalOpen && (
+        <UploadDocumentModal
+          stage={uploadModalOpen}
+          onClose={() => setUploadModalOpen(null)}
+        />
+      )}
+
+      {/* Send to Next Stage Modal */}
+      {sendModalOpen && (
+        <SendToNextStageModal
+          stage={sendModalOpen}
+          onClose={() => setSendModalOpen(null)}
+          onSend={(note) => {
+            // UI only - placeholder
+            alert(t('hr.send'));
+            setSendModalOpen(null);
+          }}
+        />
+      )}
 
       {/* Document Library */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
@@ -215,16 +247,25 @@ function StatCard({ icon, title, value, color }: StatCardProps) {
 
 interface WorkflowColumnProps {
   title: string;
+  stage: string;
   count: number;
   documents: any[];
   getStatusIcon: (status: string) => React.ReactNode;
   getStatusColor: (status: string) => string;
   getCategoryIcon: (category: string) => React.ReactNode;
   onStatusChange: (id: string, status: any) => void;
+  onUploadClick: () => void;
+  onSendClick: () => void;
 }
 
-function WorkflowColumn({ title, count, documents, getStatusIcon, getStatusColor, getCategoryIcon, onStatusChange }: WorkflowColumnProps) {
+function WorkflowColumn({ title, stage, count, documents, getStatusIcon, getStatusColor, getCategoryIcon, onStatusChange, onUploadClick, onSendClick }: WorkflowColumnProps) {
   const { t } = useLanguage();
+  
+  const getNextStage = () => {
+    if (stage === 'hr') return 'accounting';
+    if (stage === 'accounting') return 'director';
+    return null;
+  };
   
   return (
     <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
@@ -234,6 +275,27 @@ function WorkflowColumn({ title, count, documents, getStatusIcon, getStatusColor
           {count}
         </span>
       </div>
+      
+      {/* Action Buttons */}
+      <div className="flex gap-2 mb-4">
+        <button
+          onClick={onUploadClick}
+          className="flex-1 px-3 py-2 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors text-sm font-medium flex items-center justify-center gap-2"
+        >
+          <Plus className="w-4 h-4" />
+          {t('hr.uploadDocument')}
+        </button>
+        {getNextStage() && (
+          <button
+            onClick={onSendClick}
+            className="flex-1 px-3 py-2 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 rounded-lg hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors text-sm font-medium flex items-center justify-center gap-2"
+          >
+            <Send className="w-4 h-4" />
+            {t('hr.sendToNextStage')}
+          </button>
+        )}
+      </div>
+      
       <div className="space-y-3 max-h-96 overflow-y-auto">
         {documents.length === 0 ? (
           <p className="text-center text-gray-500 dark:text-gray-400 py-8 text-sm">{t('hr.noDocuments')}</p>
@@ -257,22 +319,16 @@ function WorkflowColumn({ title, count, documents, getStatusIcon, getStatusColor
                     </span>
                   </div>
                   <div className="flex gap-2 mt-3">
-                    {doc.status === 'pending' && (
-                      <button
-                        onClick={() => onStatusChange(doc.id, 'approved')}
-                        className="text-xs px-2 py-1 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 rounded hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors"
-                      >
-                        {t('hr.approve')}
-                      </button>
-                    )}
-                    {doc.status === 'approved' && (
-                      <button
-                        onClick={() => onStatusChange(doc.id, 'archived')}
-                        className="text-xs px-2 py-1 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 rounded hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors"
-                      >
-                        {t('hr.archive')}
-                      </button>
-                    )}
+                    <button
+                      onClick={() => {
+                        // UI only - placeholder for download
+                        alert(t('hr.download'));
+                      }}
+                      className="text-xs px-2 py-1 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 rounded hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors flex items-center gap-1"
+                    >
+                      <Download className="w-3 h-3" />
+                      {t('hr.download')}
+                    </button>
                   </div>
                 </div>
               </div>
@@ -302,6 +358,133 @@ function LibraryFolder({ icon, title, count }: LibraryFolderProps) {
         <h4 className="font-medium text-gray-900 dark:text-white">{title}</h4>
       </div>
       <p className="text-sm text-gray-500 dark:text-gray-400">{count} {t('hr.documents')}</p>
+    </div>
+  );
+}
+
+interface UploadDocumentModalProps {
+  stage: string;
+  onClose: () => void;
+}
+
+function UploadDocumentModal({ stage, onClose }: UploadDocumentModalProps) {
+  const { t } = useLanguage();
+  const [file, setFile] = useState<File | null>(null);
+  const [note, setNote] = useState('');
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    // UI only - placeholder
+    alert(t('hr.upload'));
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-md w-full p-6">
+        <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">{t('hr.uploadDocument')}</h3>
+        <form onSubmit={handleSubmit}>
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              {t('hr.uploadDocument')}
+            </label>
+            <input
+              type="file"
+              onChange={(e) => setFile(e.target.files?.[0] || null)}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              required
+            />
+          </div>
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              {t('hr.note')}
+            </label>
+            <textarea
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              rows={3}
+              placeholder={t('hr.notePlaceholder')}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+            />
+          </div>
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+            >
+              {t('productionDetail.cancel')}
+            </button>
+            <button
+              type="submit"
+              className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              {t('hr.upload')}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+interface SendToNextStageModalProps {
+  stage: string;
+  onClose: () => void;
+  onSend: (note: string) => void;
+}
+
+function SendToNextStageModal({ stage, onClose, onSend }: SendToNextStageModalProps) {
+  const { t } = useLanguage();
+  const [note, setNote] = useState('');
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onSend(note);
+  };
+
+  const getNextStageName = () => {
+    if (stage === 'hr') return t('hr.accounting');
+    if (stage === 'accounting') return t('hr.director');
+    return '';
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-md w-full p-6">
+        <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+          {t('hr.sendToNextStage')} - {getNextStageName()}
+        </h3>
+        <form onSubmit={handleSubmit}>
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              {t('hr.note')}
+            </label>
+            <textarea
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              rows={4}
+              placeholder={t('hr.notePlaceholder')}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+            />
+          </div>
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+            >
+              {t('productionDetail.cancel')}
+            </button>
+            <button
+              type="submit"
+              className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+            >
+              {t('hr.send')}
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }
