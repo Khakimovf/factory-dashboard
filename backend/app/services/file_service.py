@@ -6,7 +6,7 @@ from typing import Tuple
 
 from fastapi import UploadFile, HTTPException
 
-from app.config import UPLOAD_DIR, ALLOWED_EXTENSIONS, MAX_FILE_SIZE
+from app.core.config import settings
 
 
 class FileService:
@@ -34,8 +34,8 @@ class FileService:
         file_ext = Path(file.filename).suffix.lower()
         
         # Validate extension
-        if file_ext not in ALLOWED_EXTENSIONS:
-            allowed = ", ".join(ALLOWED_EXTENSIONS)
+        if file_ext not in settings.allowed_extensions_set:
+            allowed = ", ".join(settings.allowed_extensions_set)
             raise HTTPException(
                 status_code=400,
                 detail=f"File type not allowed. Allowed types: {allowed}"
@@ -67,8 +67,8 @@ class FileService:
         # Reset file pointer
         await file.seek(0)
         
-        if file_size > MAX_FILE_SIZE:
-            max_size_mb = MAX_FILE_SIZE / (1024 * 1024)
+        if file_size > settings.max_file_size_bytes:
+            max_size_mb = settings.MAX_FILE_SIZE_MB
             raise HTTPException(
                 status_code=400,
                 detail=f"File size exceeds maximum allowed size of {max_size_mb}MB"
@@ -116,7 +116,7 @@ class FileService:
         Returns:
             Path to saved file
         """
-        file_path = UPLOAD_DIR / filename
+        file_path = settings.upload_dir_path / filename
         
         # Write file content
         with open(file_path, "wb") as f:
@@ -139,8 +139,8 @@ class FileService:
         stat = file_path.stat()
         # Return relative path from backend directory (e.g., "uploads/filename.pdf")
         try:
-            # UPLOAD_DIR.parent is the backend directory
-            file_path_str = str(file_path.relative_to(UPLOAD_DIR.parent))
+            # settings.upload_dir_path.parent is the backend directory
+            file_path_str = str(file_path.relative_to(settings.upload_dir_path.parent))
         except ValueError:
             # Fallback if path calculation fails
             file_path_str = str(file_path)

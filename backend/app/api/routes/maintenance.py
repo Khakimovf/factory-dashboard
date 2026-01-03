@@ -1,7 +1,7 @@
 """Maintenance routes."""
 from datetime import datetime
 from typing import List, Optional
-from fastapi import APIRouter, HTTPException, status, UploadFile, File
+from fastapi import APIRouter, Depends, status, UploadFile, File
 from fastapi.responses import JSONResponse
 
 from app.models.maintenance import (
@@ -10,8 +10,10 @@ from app.models.maintenance import (
     FailureReportUpdate,
     MaintenanceStatus
 )
-from app.services.maintenance_service import get_maintenance_service
+from app.services.maintenance_service import MaintenanceService
 from app.services.file_service import FileService
+from app.core.dependencies import get_maintenance_service, get_file_service
+from app.core.exceptions import NotFoundError, FileUploadError
 
 router = APIRouter(prefix="/maintenance", tags=["maintenance"])
 
@@ -23,7 +25,10 @@ router = APIRouter(prefix="/maintenance", tags=["maintenance"])
     summary="Create a failure report",
     description="Create a new failure report by line master",
 )
-async def create_failure_report(report_data: FailureReportCreate):
+async def create_failure_report(
+    report_data: FailureReportCreate,
+    service: MaintenanceService = Depends(get_maintenance_service)
+):
     """
     Create a new failure report.
     
@@ -35,15 +40,7 @@ async def create_failure_report(report_data: FailureReportCreate):
     
     Returns the created failure report.
     """
-    service = get_maintenance_service()
-    try:
-        report = service.create_failure_report(report_data)
-        return report
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error creating failure report: {str(e)}"
-        )
+    return await service.create_failure_report(report_data)
 
 
 @router.get(
@@ -54,7 +51,8 @@ async def create_failure_report(report_data: FailureReportCreate):
 )
 async def get_failure_reports(
     status_filter: Optional[MaintenanceStatus] = None,
-    line_id: Optional[str] = None
+    line_id: Optional[str] = None,
+    service: MaintenanceService = Depends(get_maintenance_service)
 ):
     """
     Get all failure reports.
@@ -64,18 +62,10 @@ async def get_failure_reports(
     
     Returns a list of failure reports.
     """
-    service = get_maintenance_service()
-    try:
-        reports = service.get_all_failure_reports(
-            status=status_filter,
-            line_id=line_id
-        )
-        return reports
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error fetching failure reports: {str(e)}"
-        )
+    return await service.get_all_failure_reports(
+        status=status_filter,
+        line_id=line_id
+    )
 
 
 @router.get(
@@ -84,7 +74,10 @@ async def get_failure_reports(
     summary="Get failure report by ID",
     description="Get a specific failure report by its ID",
 )
-async def get_failure_report(report_id: str):
+async def get_failure_report(
+    report_id: str,
+    service: MaintenanceService = Depends(get_maintenance_service)
+):
     """
     Get a failure report by ID.
     
@@ -92,16 +85,7 @@ async def get_failure_report(report_id: str):
     
     Returns the failure report.
     """
-    service = get_maintenance_service()
-    report = service.get_failure_report(report_id)
-    
-    if not report:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Failure report with ID {report_id} not found"
-        )
-    
-    return report
+    return await service.get_failure_report(report_id)
 
 
 @router.patch(
@@ -112,7 +96,8 @@ async def get_failure_report(report_id: str):
 )
 async def update_failure_report(
     report_id: str,
-    update_data: FailureReportUpdate
+    update_data: FailureReportUpdate,
+    service: MaintenanceService = Depends(get_maintenance_service)
 ):
     """
     Update a failure report.
@@ -122,16 +107,7 @@ async def update_failure_report(
     
     Returns the updated failure report.
     """
-    service = get_maintenance_service()
-    report = service.update_failure_report(report_id, update_data)
-    
-    if not report:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Failure report with ID {report_id} not found"
-        )
-    
-    return report
+    return await service.update_failure_report(report_id, update_data)
 
 
 @router.post(
@@ -140,7 +116,10 @@ async def update_failure_report(
     summary="Mark worker arrived",
     description="Mark that maintenance worker has arrived at the line",
 )
-async def mark_worker_arrived(report_id: str):
+async def mark_worker_arrived(
+    report_id: str,
+    service: MaintenanceService = Depends(get_maintenance_service)
+):
     """
     Mark that maintenance worker has arrived.
     
@@ -149,16 +128,7 @@ async def mark_worker_arrived(report_id: str):
     This endpoint is called when the line master clicks "Worker arrived".
     Returns the updated failure report.
     """
-    service = get_maintenance_service()
-    report = service.mark_worker_arrived(report_id)
-    
-    if not report:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Failure report with ID {report_id} not found"
-        )
-    
-    return report
+    return await service.mark_worker_arrived(report_id)
 
 
 @router.post(
@@ -169,7 +139,9 @@ async def mark_worker_arrived(report_id: str):
 )
 async def upload_photo_to_report(
     report_id: str,
-    file: UploadFile = File(..., description="Photo file to upload")
+    file: UploadFile = File(..., description="Photo file to upload"),
+    service: MaintenanceService = Depends(get_maintenance_service),
+    file_service: FileService = Depends(get_file_service)
 ):
     """
     Upload a photo to a failure report.
@@ -179,52 +151,24 @@ async def upload_photo_to_report(
     
     Returns the updated failure report with photo URL.
     """
-    service = get_maintenance_service()
-    report = service.get_failure_report(report_id)
-    
-    if not report:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Failure report with ID {report_id} not found"
-        )
+    # Verify report exists
+    await service.get_failure_report(report_id)
     
     # Validate and save file
-    file_service = FileService()
+    file_ext, content_type = file_service.validate_file(file)
     
-    try:
-        file_ext, content_type = file_service.validate_file(file)
-        
-        # Only allow image files for photos
-        if file_ext not in [".jpg", ".jpeg", ".png"]:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Only image files (JPG, PNG) are allowed for photo reports"
-            )
-        
-        file_size = await file_service.validate_file_size(file)
-        unique_filename = file_service.generate_unique_filename(file.filename)
-        file_path = await file_service.save_file(file, unique_filename)
-        file_info = file_service.get_file_info(file_path)
-        
-        # Add photo URL to report
-        photo_url = file_info["file_path"]
-        report = service.add_photo_to_report(report_id, photo_url)
-        
-        if not report:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Failure report with ID {report_id} not found"
-            )
-        
-        return report
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error uploading photo: {str(e)}"
-        )
+    # Only allow image files for photos
+    if file_ext not in [".jpg", ".jpeg", ".png"]:
+        raise FileUploadError("Only image files (JPG, PNG) are allowed for photo reports")
+    
+    await file_service.validate_file_size(file)
+    unique_filename = file_service.generate_unique_filename(file.filename)
+    file_path = await file_service.save_file(file, unique_filename)
+    file_info = file_service.get_file_info(file_path)
+    
+    # Add photo URL to report
+    photo_url = file_info["file_path"]
+    return await service.add_photo_to_report(report_id, photo_url)
 
 
 @router.delete(
@@ -233,21 +177,16 @@ async def upload_photo_to_report(
     summary="Delete failure report",
     description="Delete a failure report",
 )
-async def delete_failure_report(report_id: str):
+async def delete_failure_report(
+    report_id: str,
+    service: MaintenanceService = Depends(get_maintenance_service)
+):
     """
     Delete a failure report.
     
     - **report_id**: Failure report ID
     """
-    service = get_maintenance_service()
-    deleted = service.delete_failure_report(report_id)
-    
-    if not deleted:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Failure report with ID {report_id} not found"
-        )
-    
+    await service.delete_failure_report(report_id)
     return JSONResponse(status_code=status.HTTP_204_NO_CONTENT, content=None)
 
 

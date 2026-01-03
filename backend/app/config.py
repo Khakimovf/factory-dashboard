@@ -1,28 +1,10 @@
-"""Application configuration."""
-import os
-from pathlib import Path
+"""Application configuration (deprecated - use app.core.config instead)."""
+from app.core.config import settings
 
-# Base directory
-BASE_DIR = Path(__file__).parent.parent
-
-# Upload directory
-UPLOAD_DIR = BASE_DIR / "uploads"
-UPLOAD_DIR.mkdir(exist_ok=True)
-
-# Allowed file extensions
-ALLOWED_EXTENSIONS = {".pdf", ".docx", ".jpg", ".jpeg", ".png"}
-
-# Max file size (10MB)
-MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB in bytes
-
-# API settings
-API_PREFIX = "/api/v1"
-
-# CORS settings
-ALLOWED_ORIGINS = [
-    "http://localhost:3000",
-    "http://localhost:5173",
-    "http://localhost:4173",
-    "http://127.0.0.1:3000",
-    "http://127.0.0.1:5173",
-]
+# Backward compatibility exports
+BASE_DIR = settings.BASE_DIR
+UPLOAD_DIR = settings.upload_dir_path
+ALLOWED_EXTENSIONS = settings.allowed_extensions_set
+MAX_FILE_SIZE = settings.max_file_size_bytes
+API_PREFIX = settings.API_PREFIX
+ALLOWED_ORIGINS = settings.allowed_origins_list

@@ -1,5 +1,5 @@
 /** Maintenance API service */
-const API_BASE_URL = 'http://localhost:8000/api/v1/maintenance';
+import { apiClient, ApiClientError } from '../api/client';
 
 export type MaintenanceStatus = 'open' | 'in_progress' | 'closed';
 
@@ -40,27 +40,6 @@ export interface FailureReportUpdate {
 }
 
 class MaintenanceApiService {
-  private async request<T>(
-    endpoint: string,
-    options: RequestInit = {}
-  ): Promise<T> {
-    const url = `${API_BASE_URL}${endpoint}`;
-    const response = await fetch(url, {
-      ...options,
-      headers: {
-        'Content-Type': 'application/json',
-        ...options.headers,
-      },
-    });
-
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({ detail: 'Unknown error' }));
-      throw new Error(error.detail || `HTTP error! status: ${response.status}`);
-    }
-
-    return response.json();
-  }
-
   async getFailureReports(
     statusFilter?: MaintenanceStatus,
     lineId?: string
@@ -70,62 +49,44 @@ class MaintenanceApiService {
     if (lineId) params.append('line_id', lineId);
     
     const query = params.toString() ? `?${params.toString()}` : '';
-    return this.request<FailureReport[]>(`/failure-reports${query}`);
+    return apiClient.get<FailureReport[]>(`/maintenance/failure-reports${query}`);
   }
 
   async getFailureReport(reportId: string): Promise<FailureReport> {
-    return this.request<FailureReport>(`/failure-reports/${reportId}`);
+    return apiClient.get<FailureReport>(`/maintenance/failure-reports/${reportId}`);
   }
 
   async createFailureReport(data: FailureReportCreate): Promise<FailureReport> {
-    return this.request<FailureReport>('/failure-reports', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
+    return apiClient.post<FailureReport>('/maintenance/failure-reports', data);
   }
 
   async updateFailureReport(
     reportId: string,
     data: FailureReportUpdate
   ): Promise<FailureReport> {
-    return this.request<FailureReport>(`/failure-reports/${reportId}`, {
-      method: 'PATCH',
-      body: JSON.stringify(data),
-    });
+    return apiClient.patch<FailureReport>(`/maintenance/failure-reports/${reportId}`, data);
   }
 
   async markWorkerArrived(reportId: string): Promise<FailureReport> {
-    return this.request<FailureReport>(`/failure-reports/${reportId}/worker-arrived`, {
-      method: 'POST',
-    });
+    return apiClient.post<FailureReport>(`/maintenance/failure-reports/${reportId}/worker-arrived`);
   }
 
   async uploadPhoto(reportId: string, file: File): Promise<FailureReport> {
-    const formData = new FormData();
-    formData.append('file', file);
-
-    const url = `${API_BASE_URL}/failure-reports/${reportId}/photos`;
-    const response = await fetch(url, {
-      method: 'POST',
-      body: formData,
-    });
-
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({ detail: 'Unknown error' }));
-      throw new Error(error.detail || `HTTP error! status: ${response.status}`);
-    }
-
-    return response.json();
+    return apiClient.upload<FailureReport>(
+      `/maintenance/failure-reports/${reportId}/photos`,
+      file
+    );
   }
 
   async deleteFailureReport(reportId: string): Promise<void> {
-    await this.request<void>(`/failure-reports/${reportId}`, {
-      method: 'DELETE',
-    });
+    await apiClient.delete<void>(`/maintenance/failure-reports/${reportId}`);
   }
 }
 
 export const maintenanceApi = new MaintenanceApiService();
+
+// Export error class for error handling
+export { ApiClientError };
 
 
 

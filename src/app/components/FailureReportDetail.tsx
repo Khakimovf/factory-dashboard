@@ -219,12 +219,12 @@ export function FailureReportDetail() {
                   {report.photo_urls.map((url, index) => (
                     <div key={index} className="relative group">
                       <img
-                        src={`http://localhost:8000/${url}`}
+                        src={`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'}/${url}`}
                         alt={`Photo ${index + 1}`}
                         className="w-full h-32 object-cover rounded-lg border border-gray-200 dark:border-gray-700"
                       />
                       <a
-                        href={`http://localhost:8000/${url}`}
+                        href={`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'}/${url}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 transition-opacity rounded-lg flex items-center justify-center"

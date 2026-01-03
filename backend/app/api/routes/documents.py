@@ -4,7 +4,9 @@ from fastapi import APIRouter, UploadFile, File, HTTPException, status
 from pathlib import Path
 
 from app.models.document import DocumentMetadata
+from fastapi import Depends
 from app.services.file_service import FileService
+from app.core.dependencies import get_file_service
 
 router = APIRouter(prefix="/documents", tags=["documents"])
 
@@ -16,7 +18,10 @@ router = APIRouter(prefix="/documents", tags=["documents"])
     summary="Upload a document",
     description="Upload a document file (PDF, DOCX, JPG) and receive metadata",
 )
-async def upload_document(file: UploadFile = File(..., description="Document file to upload")):
+async def upload_document(
+    file: UploadFile = File(..., description="Document file to upload"),
+    file_service: FileService = Depends(get_file_service)
+):
     """
     Upload a document file.
     
@@ -24,31 +29,15 @@ async def upload_document(file: UploadFile = File(..., description="Document fil
     
     Returns document metadata including filename, upload date, and status.
     """
-    file_service = FileService()
-    
     # Validate file
-    try:
-        file_ext, content_type = file_service.validate_file(file)
-        file_size = await file_service.validate_file_size(file)
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Error validating file: {str(e)}"
-        )
+    file_ext, content_type = file_service.validate_file(file)
+    await file_service.validate_file_size(file)
     
     # Generate unique filename
     unique_filename = file_service.generate_unique_filename(file.filename)
     
     # Save file
-    try:
-        file_path = await file_service.save_file(file, unique_filename)
-    except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Error saving file: {str(e)}"
-        )
+    file_path = await file_service.save_file(file, unique_filename)
     
     # Get file info
     file_info = file_service.get_file_info(file_path)
