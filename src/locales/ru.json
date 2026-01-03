@@ -3,7 +3,8 @@
     "language": "Язык",
     "theme": "Тема",
     "profile": "Профиль",
-    "logout": "Выход"
+    "logout": "Выход",
+    "auditLog": "Журнал аудита"
   },
   "sidebar": {
     "title": "Менеджер завода",
@@ -265,5 +266,51 @@
   "common": {
     "userName": "Пользователь",
     "id": "ID"
+  },
+  "auditLog": {
+    "title": "Журнал аудита системы",
+    "subtitle": "Просмотр всех действий пользователей в системе",
+    "accessDenied": "У вас нет доступа к этой странице",
+    "filters": "Фильтры",
+    "clearFilters": "Очистить фильтры",
+    "filter": {
+      "date": "Дата",
+      "role": "Роль",
+      "module": "Модуль",
+      "action": "Действие",
+      "result": "Результат",
+      "all": "Все"
+    },
+    "module": {
+      "warehouse": "Склад",
+      "production": "Производство",
+      "maintenance": "Обслуживание"
+    },
+    "action": {
+      "created": "Создано",
+      "updated": "Обновлено",
+      "deleted": "Удалено",
+      "assigned": "Назначено",
+      "approved": "Одобрено",
+      "rejected": "Отклонено",
+      "uploaded": "Загружено",
+      "fixed": "Исправлено",
+      "status_changed": "Статус изменен"
+    },
+    "result": {
+      "success": "Успешно",
+      "failed": "Ошибка"
+    },
+    "column": {
+      "dateTime": "Дата и время",
+      "user": "Пользователь",
+      "role": "Роль",
+      "module": "Модуль",
+      "action": "Действие",
+      "target": "Цель",
+      "result": "Результат"
+    },
+    "entries": "Записи",
+    "noEntries": "Записи не найдены"
   }
 }

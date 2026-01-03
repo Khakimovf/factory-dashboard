@@ -3,7 +3,8 @@
     "language": "Til",
     "theme": "Mavzu",
     "profile": "Profil",
-    "logout": "Chiqish"
+    "logout": "Chiqish",
+    "auditLog": "Audit jurnali"
   },
   "sidebar": {
     "title": "Zavod Menejeri",
@@ -265,5 +266,51 @@
   "common": {
     "userName": "Foydalanuvchi",
     "id": "ID"
+  },
+  "auditLog": {
+    "title": "Tizim audit jurnali",
+    "subtitle": "Tizimdagi barcha foydalanuvchi harakatlarini ko'rish",
+    "accessDenied": "Sizda bu sahifaga kirish huquqi yo'q",
+    "filters": "Filtrlash",
+    "clearFilters": "Filtrlarni tozalash",
+    "filter": {
+      "date": "Sana",
+      "role": "Rol",
+      "module": "Modul",
+      "action": "Harakat",
+      "result": "Natija",
+      "all": "Hammasi"
+    },
+    "module": {
+      "warehouse": "Ombor",
+      "production": "Ishlab chiqarish",
+      "maintenance": "Ta'mirlash"
+    },
+    "action": {
+      "created": "Yaratildi",
+      "updated": "Yangilandi",
+      "deleted": "O'chirildi",
+      "assigned": "Tayinlandi",
+      "approved": "Tasdiqlandi",
+      "rejected": "Rad etildi",
+      "uploaded": "Yuklandi",
+      "fixed": "Tuzatildi",
+      "status_changed": "Holat o'zgardi"
+    },
+    "result": {
+      "success": "Muvaffaqiyatli",
+      "failed": "Xatolik"
+    },
+    "column": {
+      "dateTime": "Sana va vaqt",
+      "user": "Foydalanuvchi",
+      "role": "Rol",
+      "module": "Modul",
+      "action": "Harakat",
+      "target": "Maqsad",
+      "result": "Natija"
+    },
+    "entries": "Yozuvlar",
+    "noEntries": "Yozuvlar topilmadi"
   }
 }
