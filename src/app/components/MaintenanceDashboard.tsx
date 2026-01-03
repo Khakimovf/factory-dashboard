@@ -3,9 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../context/LanguageContext';
 import { useFactory } from '../context/FactoryContext';
 import { maintenanceApi, FailureReport, MaintenanceStatus } from '../services/maintenanceApi';
-import { Wrench, AlertCircle, Clock, CheckCircle, Eye, Factory } from 'lucide-react';
+import { Wrench, AlertCircle, Clock, CheckCircle, Eye, Factory, X, Upload } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
+import { Input } from './ui/input';
+import { Label } from './ui/label';
+import { Textarea } from './ui/textarea';
 
 export function MaintenanceDashboard() {
   const { t } = useLanguage();
@@ -45,10 +48,10 @@ export function MaintenanceDashboard() {
     return reports.filter(r => r.line_id === lineId && r.status === 'open');
   };
 
-  // Get main production lines (A, B, C or first 3)
+  // Get main production lines (A, B, D)
   const mainLines = productionLines.filter(l => 
-    l.name.includes('Assembly Line') || l.name.includes('Line')
-  ).slice(0, 3);
+    l.name.includes('Assembly Line')
+  );
 
   return (
     <div className="p-8 bg-gray-50 dark:bg-gray-900">
@@ -208,6 +211,8 @@ function StatusBadge({ status }: { status: MaintenanceStatus }) {
   );
 }
 
+type WorkflowStatus = 'new' | 'worker_assigned' | 'in_progress' | 'completed';
+
 interface LineDetailModalProps {
   lineId: string;
   onClose: () => void;
@@ -219,6 +224,14 @@ function LineDetailModal({ lineId, onClose, onAccept }: LineDetailModalProps) {
   const { productionLines } = useFactory();
   const [reports, setReports] = useState<FailureReport[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  // Workflow state (UI-only)
+  const [workflowStatus, setWorkflowStatus] = useState<WorkflowStatus>('new');
+  const [assignedTime, setAssignedTime] = useState<string | null>(null);
+  const [completionTime, setCompletionTime] = useState<string | null>(null);
+  const [photos, setPhotos] = useState<File[]>([]);
+  const [photoComment, setPhotoComment] = useState('');
+  const [photoPreview, setPhotoPreview] = useState<string[]>([]);
 
   useEffect(() => {
     const loadLineReports = async () => {
@@ -228,6 +241,8 @@ function LineDetailModal({ lineId, onClose, onAccept }: LineDetailModalProps) {
         setReports(data.filter(r => r.status === 'open'));
       } catch (error) {
         console.error('Error loading line reports:', error);
+        // For UI-only, initialize with mock data if API fails
+        setReports([]);
       } finally {
         setLoading(false);
       }
@@ -238,9 +253,71 @@ function LineDetailModal({ lineId, onClose, onAccept }: LineDetailModalProps) {
   const line = productionLines.find(l => l.id === lineId);
   const latestReport = reports[0] || null;
 
+  // If no report found, create a mock one for UI demonstration
+  const displayReport = latestReport || {
+    id: 'mock-1',
+    line_id: lineId,
+    line_name: line?.name || '',
+    description: 'Mock failure description - API connection unavailable',
+    reported_by: 'Line Master',
+    status: 'open' as MaintenanceStatus,
+    created_at: new Date().toISOString(),
+    photo_urls: [],
+  };
+
+  const handleWorkerSent = () => {
+    const now = new Date().toISOString();
+    setAssignedTime(now);
+    setWorkflowStatus('worker_assigned');
+  };
+
+  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    setPhotos(files);
+    
+    // Create preview URLs
+    const previews = files.map(file => URL.createObjectURL(file));
+    setPhotoPreview(previews);
+  };
+
+  const handleFailureResolved = () => {
+    const now = new Date().toISOString();
+    setCompletionTime(now);
+    setWorkflowStatus('completed');
+  };
+
+  const getStatusLabel = (status: WorkflowStatus): string => {
+    switch (status) {
+      case 'new':
+        return t('maintenance.statusNew');
+      case 'worker_assigned':
+        return t('maintenance.statusInProgress'); // Show "Jarayonda" after worker assigned
+      case 'in_progress':
+        return t('maintenance.statusInProgress');
+      case 'completed':
+        return t('maintenance.statusCompleted');
+      default:
+        return t('maintenance.statusNew');
+    }
+  };
+
+  const getStatusColor = (status: WorkflowStatus): string => {
+    switch (status) {
+      case 'new':
+        return 'bg-blue-100 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400';
+      case 'worker_assigned':
+      case 'in_progress':
+        return 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/20 dark:text-yellow-400';
+      case 'completed':
+        return 'bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-400';
+      default:
+        return 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300';
+    }
+  };
+
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-2xl w-full p-6">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 overflow-y-auto">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-4xl w-full p-6 my-8">
         <div className="flex items-center justify-between mb-6">
           <div>
             <h3 className="text-2xl font-semibold text-gray-900 dark:text-white">{line?.name}</h3>
@@ -248,9 +325,9 @@ function LineDetailModal({ lineId, onClose, onAccept }: LineDetailModalProps) {
           </div>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-1"
           >
-            <span className="text-2xl">&times;</span>
+            <X className="w-6 h-6" />
           </button>
         </div>
 
@@ -258,8 +335,16 @@ function LineDetailModal({ lineId, onClose, onAccept }: LineDetailModalProps) {
           <div className="text-center py-8 text-gray-500">
             {t('maintenance.loading')}
           </div>
-        ) : latestReport ? (
-          <div className="space-y-4">
+        ) : (
+          <div className="space-y-6">
+            {/* Status Badge */}
+            <div className="flex items-center gap-3">
+              <span className={`px-4 py-2 rounded-lg text-sm font-medium ${getStatusColor(workflowStatus)}`}>
+                {getStatusLabel(workflowStatus)}
+              </span>
+            </div>
+
+            {/* Failure Details */}
             <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4">
               <div className="flex items-center gap-2 mb-3">
                 <AlertCircle className="w-5 h-5 text-red-500" />
@@ -267,44 +352,177 @@ function LineDetailModal({ lineId, onClose, onAccept }: LineDetailModalProps) {
               </div>
               <div className="space-y-3">
                 <div>
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">{t('maintenance.descriptionHint')}</p>
-                  <p className="text-gray-900 dark:text-white">{latestReport.description}</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">{t('maintenance.description')}</p>
+                  <p className="text-gray-900 dark:text-white">{displayReport.description}</p>
                 </div>
-                <div>
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">{t('maintenance.reportedBy')}</p>
-                  <p className="text-gray-900 dark:text-white">{latestReport.reported_by}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">{t('maintenance.createdAt')}</p>
-                  <p className="text-gray-900 dark:text-white">{new Date(latestReport.created_at).toLocaleString()}</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">{t('maintenance.failureDetectedTime')}</p>
+                    <p className="text-gray-900 dark:text-white">{new Date(displayReport.created_at).toLocaleString()}</p>
+                  </div>
+                  {assignedTime && (
+                    <div>
+                      <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">{t('maintenance.assignedTime')}</p>
+                      <p className="text-gray-900 dark:text-white">{new Date(assignedTime).toLocaleString()}</p>
+                    </div>
+                  )}
+                  {completionTime && (
+                    <div>
+                      <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">{t('maintenance.completionTime')}</p>
+                      <p className="text-gray-900 dark:text-white">{new Date(completionTime).toLocaleString()}</p>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
 
-            <div className="flex gap-3 pt-4">
-              <button
-                onClick={onClose}
-                className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-              >
-                {t('productionDetail.cancel')}
-              </button>
-              <button
-                onClick={() => onAccept(latestReport.id)}
-                className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
-              >
-                {t('maintenance.acceptRequest')}
-              </button>
-            </div>
-          </div>
-        ) : (
-          <div className="text-center py-8">
-            <p className="text-gray-500 dark:text-gray-400">{t('maintenance.noRequests')}</p>
-            <button
-              onClick={onClose}
-              className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              {t('productionDetail.cancel')}
-            </button>
+            {/* Worker Assignment Section */}
+            {workflowStatus === 'new' && (
+              <div className="flex gap-3">
+                <Button
+                  onClick={handleWorkerSent}
+                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  {t('maintenance.workerSent')}
+                </Button>
+                <Button
+                  onClick={onClose}
+                  variant="outline"
+                  className="flex-1"
+                >
+                  {t('productionDetail.cancel')}
+                </Button>
+              </div>
+            )}
+
+            {/* Photo Upload Section - After Worker Assigned */}
+            {(workflowStatus === 'worker_assigned' || workflowStatus === 'in_progress') && (
+              <div className="bg-white dark:bg-gray-700/30 rounded-lg p-4 border border-gray-200 dark:border-gray-600">
+                <h4 className="font-semibold text-gray-900 dark:text-white mb-4">{t('maintenance.uploadPhotoReport')}</h4>
+                
+                <div className="space-y-4">
+                  {/* Photo Upload Input */}
+                  <div>
+                    <Label htmlFor="photo-upload" className="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                      {t('maintenance.photoUpload')}
+                    </Label>
+                    <div className="flex items-center gap-3">
+                      <label
+                        htmlFor="photo-upload"
+                        className="flex items-center gap-2 px-4 py-2 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 cursor-pointer transition-colors"
+                      >
+                        <Upload className="w-4 h-4" />
+                        {t('maintenance.selectPhotos')}
+                      </label>
+                      <Input
+                        id="photo-upload"
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        onChange={handlePhotoChange}
+                        className="hidden"
+                      />
+                      {photos.length > 0 && (
+                        <span className="text-sm text-gray-600 dark:text-gray-400">
+                          {photos.length} {t('maintenance.selectedPhotos')}
+                        </span>
+                      )}
+                    </div>
+                    
+                    {/* Photo Previews */}
+                    {photoPreview.length > 0 && (
+                      <div className="grid grid-cols-3 gap-2 mt-3">
+                        {photoPreview.map((preview, index) => (
+                          <div key={index} className="relative rounded-lg overflow-hidden border border-gray-200 dark:border-gray-600">
+                            <img src={preview} alt={`Preview ${index + 1}`} className="w-full h-24 object-cover" />
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Photo Comment */}
+                  <div>
+                    <Label htmlFor="photo-comment" className="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                      {t('maintenance.photoComment')}
+                    </Label>
+                    <Textarea
+                      id="photo-comment"
+                      value={photoComment}
+                      onChange={(e) => setPhotoComment(e.target.value)}
+                      placeholder={t('maintenance.photoCommentPlaceholder')}
+                      className="min-h-[80px]"
+                    />
+                  </div>
+
+                  {/* Failure Resolved Button */}
+                  <Button
+                    onClick={handleFailureResolved}
+                    className="w-full bg-green-600 hover:bg-green-700 text-white"
+                  >
+                    {t('maintenance.failureResolved')}
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* Completion Report */}
+            {workflowStatus === 'completed' && (
+              <div className="bg-green-50 dark:bg-green-900/10 rounded-lg p-4 border border-green-200 dark:border-green-800">
+                <div className="flex items-center gap-2 mb-4">
+                  <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400" />
+                  <h4 className="font-semibold text-gray-900 dark:text-white">{t('maintenance.completionReport')}</h4>
+                </div>
+                
+                <div className="space-y-3">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">{t('maintenance.failureDetectedTime')}</p>
+                      <p className="text-gray-900 dark:text-white font-medium">{new Date(displayReport.created_at).toLocaleString()}</p>
+                    </div>
+                    {assignedTime && (
+                      <div>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">{t('maintenance.assignedTime')}</p>
+                        <p className="text-gray-900 dark:text-white font-medium">{new Date(assignedTime).toLocaleString()}</p>
+                      </div>
+                    )}
+                    {completionTime && (
+                      <div>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">{t('maintenance.completionTime')}</p>
+                        <p className="text-gray-900 dark:text-white font-medium">{new Date(completionTime).toLocaleString()}</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Uploaded Photos */}
+                  {photoPreview.length > 0 && (
+                    <div>
+                      <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">{t('maintenance.photoReports')}</p>
+                      <div className="grid grid-cols-4 gap-2">
+                        {photoPreview.map((preview, index) => (
+                          <div key={index} className="relative rounded-lg overflow-hidden border border-gray-200 dark:border-gray-600">
+                            <img src={preview} alt={`Photo ${index + 1}`} className="w-full h-32 object-cover" />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <p className="text-sm text-green-600 dark:text-green-400 font-medium mt-4">
+                    {t('maintenance.reportGenerated')}
+                  </p>
+                </div>
+
+                <div className="mt-6">
+                  <Button
+                    onClick={onClose}
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                  >
+                    {t('productionDetail.cancel')}
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>

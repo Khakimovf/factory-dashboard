@@ -245,7 +245,22 @@
     "acceptRequest": "Принято",
     "lineRequests": "Запросы от линий",
     "lineRequestDetails": "Детали запроса линии",
-    "noRequests": "Нет запросов"
+    "noRequests": "Нет запросов",
+    "workerSent": "Рабочий отправлен",
+    "failureResolved": "Неисправность устранена",
+    "statusNew": "Новый",
+    "statusWorkerAssigned": "Рабочий назначен",
+    "statusInProgress": "В процессе",
+    "statusCompleted": "Завершен",
+    "failureDetectedTime": "Неисправность обнаружена",
+    "assignedTime": "Время назначения",
+    "completionTime": "Время завершения",
+    "uploadPhotoReport": "Загрузить фотоотчет",
+    "photoUpload": "Загрузить фотографию",
+    "photoComment": "Комментарий",
+    "photoCommentPlaceholder": "Напишите краткий комментарий...",
+    "completionReport": "Итоговый отчет",
+    "reportGenerated": "Отчет создан"
   },
   "common": {
     "userName": "Пользователь",

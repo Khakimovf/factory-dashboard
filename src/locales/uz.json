@@ -245,7 +245,22 @@
     "acceptRequest": "Qabul qilindi",
     "lineRequests": "Liniyalardan kelgan so'rovlar",
     "lineRequestDetails": "Liniya so'rov tafsilotlari",
-    "noRequests": "So'rovlar yo'q"
+    "noRequests": "So'rovlar yo'q",
+    "workerSent": "Hodim yuborildi",
+    "failureResolved": "Nosozlik bartaraf etildi",
+    "statusNew": "Yangi",
+    "statusWorkerAssigned": "Hodim tayinlandi",
+    "statusInProgress": "Jarayonda",
+    "statusCompleted": "Tugallandi",
+    "failureDetectedTime": "Nosozlik aniqlandi",
+    "assignedTime": "Tayinlangan vaqti",
+    "completionTime": "Tugallanish vaqti",
+    "uploadPhotoReport": "Foto hisobot yuklash",
+    "photoUpload": "Fotosurat yuklash",
+    "photoComment": "Izoh",
+    "photoCommentPlaceholder": "Qisqa izoh yozing...",
+    "completionReport": "Yakuniy hisobot",
+    "reportGenerated": "Hisobot yaratildi"
   },
   "common": {
     "userName": "Foydalanuvchi",

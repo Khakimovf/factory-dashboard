@@ -72,7 +72,7 @@ const initialProductionLines: ProductionLine[] = [
   },
   {
     id: '3',
-    name: 'Quality Control Station',
+    name: 'Assembly Line D',
     status: 'idle',
     efficiency: 78,
     requiredMaterials: [
