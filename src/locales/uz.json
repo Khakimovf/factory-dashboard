@@ -61,6 +61,27 @@
     "responsiblePerson": "Mas'ul shaxs",
     "responsiblePersonPlaceholder": "Mas'ul shaxs ismini kiriting...",
     "noMaterials": "Materiallar topilmadi",
+    "backToWarehouse": "Omborga qaytish",
+    "requests": {
+      "title": "Ishlab chiqarish so'rovlari",
+      "subtitle": "Ishlab chiqarish liniyalaridan kelgan material so'rovlari",
+      "productionLine": "Ishlab chiqarish liniyasi",
+      "material": "Material",
+      "materialId": "Material ID",
+      "quantity": "Miqdor",
+      "requestDate": "So'rov sanasi",
+      "status": "Holat",
+      "actions": "Amallar",
+      "statusNew": "Yangi",
+      "statusAccepted": "Qabul qilindi",
+      "statusSent": "Yuborildi",
+      "accept": "Qabul qilish",
+      "markAsSent": "Yuborildi deb belgilash",
+      "completed": "Tugallandi",
+      "noRequests": "So'rovlar topilmadi",
+      "acceptedSuccess": "So'rov qabul qilindi",
+      "sentSuccess": "So'rov yuborildi deb belgilandi"
+    },
     "addMaterial": "➕ Detal qo'shish",
     "addMaterialTitle": "Yangi detal qo'shish",
     "materialId": "Detal ID",
@@ -284,7 +305,14 @@
     "photoComment": "Izoh",
     "photoCommentPlaceholder": "Qisqa izoh yozing...",
     "completionReport": "Yakuniy hisobot",
-    "reportGenerated": "Hisobot yaratildi"
+    "reportGenerated": "Hisobot yaratildi",
+    "lineStatus": {
+      "normal": "Normal",
+      "issueReported": "Muammo bor",
+      "technicianAssigned": "Ta'mirlash jarayonda"
+    },
+    "sendTechnician": "Hodim yuborildi",
+    "statusUpdated": "Holat yangilandi"
   },
   "common": {
     "userName": "Foydalanuvchi",

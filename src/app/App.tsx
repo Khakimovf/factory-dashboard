@@ -3,6 +3,7 @@ import { Header } from './components/Header';
 import { Sidebar } from './components/Sidebar';
 import { Dashboard } from './components/Dashboard';
 import { Warehouse } from './components/Warehouse';
+import { MaterialRequests } from './components/MaterialRequests';
 import { ProductionLines } from './components/ProductionLines';
 import { ProductionLineDetail } from './components/ProductionLineDetail';
 import { HRDepartment } from './components/HRDepartment';
@@ -33,6 +34,7 @@ export default function App() {
                     <Routes>
                       <Route path="/" element={<Dashboard />} />
                       <Route path="/warehouse" element={<Warehouse />} />
+                      <Route path="/warehouse/requests" element={<MaterialRequests />} />
                       <Route path="/production-lines" element={<ProductionLines />} />
                       <Route path="/production-lines/:id" element={<ProductionLineDetail />} />
                       <Route path="/hr" element={<HRDepartment />} />

@@ -61,6 +61,27 @@
     "responsiblePerson": "Ответственное лицо",
     "responsiblePersonPlaceholder": "Введите имя ответственного лица...",
     "noMaterials": "Материалы не найдены",
+    "backToWarehouse": "Вернуться на склад",
+    "requests": {
+      "title": "Запросы производства",
+      "subtitle": "Запросы материалов от производственных линий",
+      "productionLine": "Производственная линия",
+      "material": "Материал",
+      "materialId": "ID материала",
+      "quantity": "Количество",
+      "requestDate": "Дата запроса",
+      "status": "Статус",
+      "actions": "Действия",
+      "statusNew": "Новый",
+      "statusAccepted": "Принято",
+      "statusSent": "Отправлено",
+      "accept": "Принять",
+      "markAsSent": "Отметить как отправленное",
+      "completed": "Завершено",
+      "noRequests": "Запросы не найдены",
+      "acceptedSuccess": "Запрос принят",
+      "sentSuccess": "Запрос отмечен как отправленный"
+    },
     "addMaterial": "➕ Добавить деталь",
     "addMaterialTitle": "Добавить новую деталь",
     "materialId": "ID детали",
@@ -284,7 +305,14 @@
     "photoComment": "Комментарий",
     "photoCommentPlaceholder": "Напишите краткий комментарий...",
     "completionReport": "Итоговый отчет",
-    "reportGenerated": "Отчет создан"
+    "reportGenerated": "Отчет создан",
+    "lineStatus": {
+      "normal": "Норма",
+      "issueReported": "Проблема",
+      "technicianAssigned": "Ремонт в процессе"
+    },
+    "sendTechnician": "Рабочий отправлен",
+    "statusUpdated": "Статус обновлен"
   },
   "common": {
     "userName": "Пользователь",

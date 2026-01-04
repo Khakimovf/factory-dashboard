@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useFactory } from '../context/FactoryContext';
 import { useLanguage } from '../context/LanguageContext';
-import { Package, AlertTriangle, CheckCircle, Search, ArrowLeft, User } from 'lucide-react';
+import { Package, AlertTriangle, CheckCircle, Search, ArrowLeft, User, FileText } from 'lucide-react';
 import { Material } from '../context/FactoryContext';
 import { Button } from './ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from './ui/dialog';
@@ -9,6 +9,7 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { toast } from 'sonner';
+import { Link } from 'react-router-dom';
 
 export function Warehouse() {
   const { materials, addMaterial, updateMaterialQuantity } = useFactory();
@@ -69,9 +70,18 @@ export function Warehouse() {
   if (!selectedRow) {
     return (
       <div className="p-8 bg-gray-50 dark:bg-gray-900">
-        <div className="mb-8">
-          <h2 className="text-3xl font-semibold text-gray-900 dark:text-white">{t('warehouse.title')}</h2>
-          <p className="text-gray-500 dark:text-gray-400 mt-1">{t('warehouse.subtitle')}</p>
+        <div className="mb-8 flex items-center justify-between">
+          <div>
+            <h2 className="text-3xl font-semibold text-gray-900 dark:text-white">{t('warehouse.title')}</h2>
+            <p className="text-gray-500 dark:text-gray-400 mt-1">{t('warehouse.subtitle')}</p>
+          </div>
+          <Link
+            to="/warehouse/requests"
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-sm font-medium"
+          >
+            <FileText className="w-4 h-4" />
+            {t('warehouse.requests.title')}
+          </Link>
         </div>
 
         {/* Row Selection Cards */}
@@ -123,20 +133,29 @@ export function Warehouse() {
       </div>
 
       {/* Header with Back Button */}
-      <div className="mb-6 flex items-center gap-4">
-        <button
-          onClick={() => setSelectedRow(null)}
-          className="flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
-        >
-          <ArrowLeft className="w-5 h-5" />
-          {t('warehouse.backToRows')}
-        </button>
-        <div>
-          <h2 className="text-3xl font-semibold text-gray-900 dark:text-white">
-            {t('warehouse.row')} {selectedRow}
-          </h2>
-          <p className="text-gray-500 dark:text-gray-400 mt-1">{t('warehouse.rowDetailSubtitle')}</p>
+      <div className="mb-6 flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <button
+            onClick={() => setSelectedRow(null)}
+            className="flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+          >
+            <ArrowLeft className="w-5 h-5" />
+            {t('warehouse.backToRows')}
+          </button>
+          <div>
+            <h2 className="text-3xl font-semibold text-gray-900 dark:text-white">
+              {t('warehouse.row')} {selectedRow}
+            </h2>
+            <p className="text-gray-500 dark:text-gray-400 mt-1">{t('warehouse.rowDetailSubtitle')}</p>
+          </div>
         </div>
+        <Link
+          to="/warehouse/requests"
+          className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-sm font-medium"
+        >
+          <FileText className="w-4 h-4" />
+          {t('warehouse.requests.title')}
+        </Link>
       </div>
 
       {/* Responsible Person Field */}
