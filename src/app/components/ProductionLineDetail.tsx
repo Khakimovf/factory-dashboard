@@ -2,19 +2,28 @@ import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useFactory } from '../context/FactoryContext';
 import { useLanguage } from '../context/LanguageContext';
+import { useDailyProductionPlan } from '../context/DailyProductionPlanContext';
 import { maintenanceApi } from '../services/maintenanceApi';
 import { ArrowLeft, Package, PlayCircle, PauseCircle, Settings, Plus } from 'lucide-react';
+import { Button } from './ui/button';
+import { Badge } from './ui/badge';
+import { LinePlanModal } from './hr/LinePlanModal';
 
 export function ProductionLineDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { productionLines, materials, updateProductionLine, requestMaterials } = useFactory();
   const { t } = useLanguage();
+  const { getTodayLinePlan } = useDailyProductionPlan();
   const [showMaterialModal, setShowMaterialModal] = useState(false);
   const [maintenanceDescription, setMaintenanceDescription] = useState('');
   const [maintenanceDateTime, setMaintenanceDateTime] = useState('');
+  const [showProductionPlan, setShowProductionPlan] = useState(false);
 
   const line = productionLines.find(l => l.id === id);
+  
+  // Get today's plan for this line
+  const todayPlan = line ? getTodayLinePlan(line.id) : null;
 
   if (!line) {
     return (
@@ -112,8 +121,22 @@ export function ProductionLineDetail() {
               </div>
 
               <div className="flex items-center justify-between py-3 border-t border-gray-200 dark:border-gray-700">
-                <span className="text-sm text-gray-600 dark:text-gray-400">{t('productionDetail.dailyOutput')}</span>
-                <span className="text-lg font-semibold text-gray-900 dark:text-white">{line.output}</span>
+                {todayPlan ? (
+                  <Button
+                    onClick={() => setShowProductionPlan(true)}
+                    variant="outline"
+                    size="sm"
+                    className="w-full text-sm"
+                  >
+                    {t('productionDetail.todayPlan')}
+                  </Button>
+                ) : (
+                  <div className="w-full text-center">
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                      {t('linePlan.noPlanToday')}
+                    </p>
+                  </div>
+                )}
               </div>
 
               <div className="flex items-center justify-between py-3 border-t border-gray-200 dark:border-gray-700">
@@ -292,6 +315,16 @@ export function ProductionLineDetail() {
           existingMaterials={line.requiredMaterials.map(m => m.materialId)}
         />
       )}
+
+      {/* Production Plan Modal */}
+      {line && (
+        <LinePlanModal
+          open={showProductionPlan}
+          onClose={() => setShowProductionPlan(false)}
+          lineId={line.id}
+          lineName={line.name}
+        />
+      )}
     </div>
   );
 }
@@ -302,6 +335,7 @@ interface AddMaterialModalProps {
   onAdd: (materialId: string, quantity: number) => void;
   existingMaterials: string[];
 }
+
 
 function AddMaterialModal({ onClose, onAdd, existingMaterials }: AddMaterialModalProps) {
   const { materials } = useFactory();

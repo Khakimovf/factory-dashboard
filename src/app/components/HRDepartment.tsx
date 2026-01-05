@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { useFactory } from '../context/FactoryContext';
 import { useLanguage } from '../context/LanguageContext';
-import { FileText, FolderOpen, Book, CheckCircle, Clock, FileEdit, Archive, Search, Download, Upload, Send, Plus } from 'lucide-react';
+import { FileText, FolderOpen, Book, CheckCircle, Clock, FileEdit, Archive, Search, Download, Upload, Send, Plus, Calendar, Factory } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Button } from './ui/button';
 
 export function HRDepartment() {
   const { hrDocuments, updateDocumentStatus } = useFactory();
@@ -67,9 +69,25 @@ export function HRDepartment() {
 
   return (
     <div className="p-8">
-      <div className="mb-8">
-        <h2 className="text-3xl font-semibold text-gray-900 dark:text-white">{t('hr.title')}</h2>
-        <p className="text-gray-500 dark:text-gray-400 mt-1">{t('hr.subtitle')}</p>
+      <div className="mb-8 flex items-center justify-between">
+        <div>
+          <h2 className="text-3xl font-semibold text-gray-900 dark:text-white">{t('hr.title')}</h2>
+          <p className="text-gray-500 dark:text-gray-400 mt-1">{t('hr.subtitle')}</p>
+        </div>
+        <div className="flex gap-3">
+          <Link to="/hr/production-plan">
+            <Button variant="outline" className="flex items-center gap-2">
+              <Calendar className="w-4 h-4" />
+              {t('hr.dailyProductionPlan')}
+            </Button>
+          </Link>
+          <Link to="/hr/line-plans">
+            <Button className="flex items-center gap-2">
+              <Factory className="w-4 h-4" />
+              {t('hr.linePlanEntry')}
+            </Button>
+          </Link>
+        </div>
       </div>
 
       {/* Stats */}
