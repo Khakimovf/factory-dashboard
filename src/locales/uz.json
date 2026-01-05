@@ -230,7 +230,52 @@
     "category": "Kategoriya",
     "status": "Holat",
     "dailyProductionPlan": "Kunlik ishlab chiqarish rejasi",
-    "linePlanEntry": "Liniyalarga kunlik reja berish"
+    "linePlanEntry": "Liniyalarga kunlik reja berish",
+    "tabDocuments": "Hujjatlar",
+    "tabEmployees": "Xodimlar",
+    "tabStats": "Statistikalar",
+    "stats": {
+      "totalEmployees": "Jami xodimlar soni",
+      "activeEmployees": "Faol xodimlar",
+      "hiredToday": "Bugun ishga kirganlar",
+      "employeesByDepartment": "Xodimlar bo'limlar bo'yicha",
+      "noData": "Ma'lumotlar mavjud emas"
+    },
+    "employees": {
+      "title": "Xodimlar kartasi",
+      "addEmployee": "Xodim qo'shish",
+      "employeeId": "Xodim ID",
+      "fullName": "F.I.Sh.",
+      "department": "Bo'lim",
+      "position": "Lavozim",
+      "employmentDate": "Ishga kirgan sana",
+      "status": "Holat",
+      "statusActive": "Faol",
+      "statusInactive": "Faol emas",
+      "viewCard": "Kartani ochish",
+      "cardTitle": "Xodim kartasi",
+      "documents": "Hujjatlar",
+      "notes": "Eslatmalar",
+      "notesPlaceholder": "Ichki xizmat eslatmalarini yozish uchun maydon",
+      "close": "Yopish",
+      "contract": "Mehnat shartnomasi",
+      "order": "Qabul qilish buyrug'i",
+      "actions": "Amallar",
+      "view": "Ko'rish",
+      "edit": "Tahrirlash",
+      "editEmployee": "Xodimni tahrirlash",
+      "save": "Saqlash",
+      "cancel": "Bekor qilish",
+      "selectDepartment": "Bo'limni tanlang",
+      "noEmployees": "Xodimlar ro'yxati bo'sh",
+      "confirmDelete": "Bu xodimni o'chirishni tasdiqlaysizmi?",
+      "validation": {
+        "fullNameRequired": "F.I.Sh. kiritilishi shart",
+        "departmentRequired": "Bo'lim tanlanishi shart",
+        "positionRequired": "Lavozim kiritilishi shart",
+        "dateRequired": "Ishga kirgan sana kiritilishi shart"
+      }
+    }
   },
   "maintenance": {
     "title": "Ta'mirlash va texnik xizmat",

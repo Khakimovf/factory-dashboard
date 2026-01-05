@@ -230,7 +230,51 @@
     "category": "Категория",
     "status": "Статус",
     "dailyProductionPlan": "Ежедневный план производства",
-    "linePlanEntry": "Назначение ежедневного плана линиям"
+    "linePlanEntry": "Назначение ежедневного плана линиям",
+    "tabDocuments": "Документы",
+    "tabEmployees": "Сотрудники",
+    "tabStats": "Статистика",
+    "stats": {
+      "totalEmployees": "Общее количество сотрудников",
+      "activeEmployees": "Активные сотрудники",
+      "hiredToday": "Приняты сегодня",
+      "employeesByDepartment": "Сотрудники по подразделениям",
+      "noData": "Нет данных для отображения"
+    },
+    "employees": {
+      "title": "Карты сотрудников",
+      "addEmployee": "Добавить сотрудника",
+      "employeeId": "ID сотрудника",
+      "fullName": "ФИО",
+      "department": "Подразделение",
+      "position": "Должность",
+      "employmentDate": "Дата приема на работу",
+      "status": "Статус",
+      "statusActive": "Активен",
+      "statusInactive": "Не активен",
+      "cardTitle": "Карта сотрудника",
+      "documents": "Документы",
+      "notes": "Заметки",
+      "notesPlaceholder": "Поле для внутренних служебных заметок",
+      "close": "Закрыть",
+      "contract": "Трудовой договор",
+      "order": "Приказ о приеме",
+      "actions": "Действия",
+      "view": "Просмотр",
+      "edit": "Редактировать",
+      "editEmployee": "Редактировать сотрудника",
+      "save": "Сохранить",
+      "cancel": "Отмена",
+      "selectDepartment": "Выберите подразделение",
+      "noEmployees": "Список сотрудников пуст",
+      "confirmDelete": "Вы уверены, что хотите удалить этого сотрудника?",
+      "validation": {
+        "fullNameRequired": "ФИО обязательно",
+        "departmentRequired": "Подразделение обязательно",
+        "positionRequired": "Должность обязательна",
+        "dateRequired": "Дата приема обязательна"
+      }
+    }
   },
   "maintenance": {
     "title": "Ремонт и техническое обслуживание",

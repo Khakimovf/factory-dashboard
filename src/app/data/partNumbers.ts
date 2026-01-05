@@ -36,3 +36,4 @@ export function getPartNumbersForProduct(productOption: 'MIDNIGHT' | 'URBAN'): s
   return productOption === 'MIDNIGHT' ? MIDNIGHT_PART_NUMBERS : URBAN_PART_NUMBERS;
 }
 
+

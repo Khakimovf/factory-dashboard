@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { useFactory } from '../context/FactoryContext';
 import { useLanguage } from '../context/LanguageContext';
-import { FileText, FolderOpen, Book, CheckCircle, Clock, FileEdit, Archive, Search, Download, Upload, Send, Plus, Calendar, Factory } from 'lucide-react';
-import { Link } from 'react-router-dom';
-import { Button } from './ui/button';
+import { FileText, FolderOpen, Book, CheckCircle, Clock, FileEdit, Archive, Search, Download, Upload, Send, Plus } from 'lucide-react';
+import { hrEmployees } from '../data/hrEmployees';
+import { HRSubNav } from './hr/HRSubNav';
 
 export function HRDepartment() {
   const { hrDocuments, updateDocumentStatus } = useFactory();
@@ -67,30 +67,96 @@ export function HRDepartment() {
     }
   };
 
+  const totalEmployees = hrEmployees.length;
+  const activeEmployees = hrEmployees.filter(e => e.status === 'active').length;
+  const hiredToday = hrEmployees.filter(e => {
+    const d = new Date(e.employmentDate);
+    const today = new Date();
+    return d.getFullYear() === today.getFullYear() &&
+      d.getMonth() === today.getMonth() &&
+      d.getDate() === today.getDate();
+  }).length;
+
+  const employeesByDepartmentMap = new Map<string, number>();
+  hrEmployees.forEach(e => {
+    employeesByDepartmentMap.set(e.department, (employeesByDepartmentMap.get(e.department) || 0) + 1);
+  });
+  const employeesByDepartment = Array.from(employeesByDepartmentMap.entries()).map(
+    ([department, count]) => ({ department, count }),
+  );
+  const maxDeptCount = employeesByDepartment.reduce(
+    (max, item) => (item.count > max ? item.count : max),
+    0,
+  );
+
+
   return (
     <div className="p-8">
-      <div className="mb-8 flex items-center justify-between">
+      <div className="mb-4">
         <div>
           <h2 className="text-3xl font-semibold text-gray-900 dark:text-white">{t('hr.title')}</h2>
           <p className="text-gray-500 dark:text-gray-400 mt-1">{t('hr.subtitle')}</p>
         </div>
-        <div className="flex gap-3">
-          <Link to="/hr/production-plan">
-            <Button variant="outline" className="flex items-center gap-2">
-              <Calendar className="w-4 h-4" />
-              {t('hr.dailyProductionPlan')}
-            </Button>
-          </Link>
-          <Link to="/hr/line-plans">
-            <Button className="flex items-center gap-2">
-              <Factory className="w-4 h-4" />
-              {t('hr.linePlanEntry')}
-            </Button>
-          </Link>
+        <HRSubNav />
+      </div>
+
+      {/* HR Dashboard Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6 mt-6">
+        <StatCard
+          icon={<FileText className="w-6 h-6" />}
+          title={t('hr.stats.totalEmployees')}
+          value={totalEmployees}
+          color="blue"
+        />
+        <StatCard
+          icon={<CheckCircle className="w-6 h-6" />}
+          title={t('hr.stats.activeEmployees')}
+          value={activeEmployees}
+          color="green"
+        />
+        <StatCard
+          icon={<Clock className="w-6 h-6" />}
+          title={t('hr.stats.hiredToday')}
+          value={hiredToday}
+          color="yellow"
+        />
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-1 gap-6 mb-8">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+          <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-4">
+            {t('hr.stats.employeesByDepartment')}
+          </h3>
+          <div className="space-y-3">
+            {employeesByDepartment.map(item => {
+              const percentage = maxDeptCount ? Math.round((item.count / maxDeptCount) * 100) : 0;
+              return (
+                <div key={item.department} className="flex items-center gap-3">
+                  <span className="w-32 text-xs text-gray-600 dark:text-gray-300 truncate">
+                    {item.department}
+                  </span>
+                  <div className="flex-1 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                    <div
+                      className="h-2 rounded-full bg-blue-500"
+                      style={{ width: `${percentage}%` }}
+                    />
+                  </div>
+                  <span className="w-8 text-right text-xs font-medium text-gray-900 dark:text-white">
+                    {item.count}
+                  </span>
+                </div>
+              );
+            })}
+            {employeesByDepartment.length === 0 && (
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                {t('hr.stats.noData')}
+              </p>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* Stats */}
+      {/* Document Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
         <StatCard
           icon={<FileText className="w-6 h-6" />}
