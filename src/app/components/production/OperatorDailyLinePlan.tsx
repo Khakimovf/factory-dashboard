@@ -31,21 +31,21 @@ export function OperatorDailyLinePlan() {
           </p>
         </div>
 
-        {/* Production Lines Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {/* Production Lines Grid – match ProductionLines card sizing */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {productionLines.map(line => (
             <Card
               key={line.id}
-              className="cursor-pointer hover:shadow-lg transition-all border-2 hover:border-blue-500 dark:hover:border-blue-400"
+              className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-0 hover:shadow-md transition-all cursor-pointer min-h-[180px]"
               onClick={() => setSelectedLineId(line.id)}
             >
               <CardContent className="p-6">
-                <div className="flex items-start gap-4">
+                <div className="flex items-center gap-4">
                   <div className="w-12 h-12 rounded-lg bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center flex-shrink-0">
                     <Factory className="w-6 h-6 text-blue-600 dark:text-blue-400" />
                   </div>
                   <div className="flex-1">
-                    <h3 className="font-semibold text-gray-900 dark:text-white text-lg mb-1">
+                    <h3 className="font-semibold text-gray-900 dark:text-white">
                       {line.name}
                     </h3>
                     <p className="text-sm text-gray-500 dark:text-gray-400">
@@ -71,5 +71,7 @@ export function OperatorDailyLinePlan() {
     </div>
   );
 }
+
+
 
 

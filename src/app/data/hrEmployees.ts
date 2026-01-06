@@ -7,6 +7,9 @@ export interface Employee {
   position: string;
   employmentDate: string; // ISO string
   status: EmployeeStatus;
+  // Optional document references (file name or URL in this mock setup)
+  laborContract?: File | string;
+  hiringOrder?: File | string;
 }
 
 // Simple mock employees dataset for HR module UI
@@ -44,5 +47,7 @@ export const hrEmployees: Employee[] = [
     status: 'active',
   },
 ];
+
+
 
 

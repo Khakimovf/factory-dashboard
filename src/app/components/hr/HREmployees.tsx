@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useLanguage } from '../../context/LanguageContext';
 import { HRSubNav } from './HRSubNav';
 import { hrEmployees, Employee, EmployeeStatus } from '../../data/hrEmployees';
-import { Download, FileText, Eye, Edit2, X } from 'lucide-react';
+import { Download, FileText, Eye, Edit2, X, Search } from 'lucide-react';
 
 export function HREmployees() {
   const { t } = useLanguage();
@@ -10,6 +10,10 @@ export function HREmployees() {
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [departmentFilter, setDepartmentFilter] = useState<string>('all');
+  const [positionFilter, setPositionFilter] = useState<string>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | EmployeeStatus>('all');
 
   const handleDelete = (employeeId: string) => {
     if (confirm(t('hr.employees.confirmDelete'))) {
@@ -17,21 +21,63 @@ export function HREmployees() {
     }
   };
 
+  // Distinct lists for dropdowns, derived from the current employee list
+  const departments = useMemo(
+    () => Array.from(new Set(employees.map(e => e.department))).sort(),
+    [employees],
+  );
+  const positions = useMemo(
+    () => Array.from(new Set(employees.map(e => e.position))).sort(),
+    [employees],
+  );
+
+  // Combined filtering logic: search + department + position + status
+  const filteredEmployees = useMemo(
+    () =>
+      employees.filter((employee) => {
+        const term = searchTerm.trim().toLowerCase();
+
+        const matchesSearch =
+          term.length === 0 ||
+          employee.employeeId.toLowerCase().includes(term) ||
+          employee.fullName.toLowerCase().includes(term) ||
+          employee.position.toLowerCase().includes(term);
+
+        const matchesDepartment =
+          departmentFilter === 'all' || employee.department === departmentFilter;
+
+        const matchesPosition =
+          positionFilter === 'all' || employee.position === positionFilter;
+
+        const matchesStatus =
+          statusFilter === 'all' || employee.status === statusFilter;
+
+        return matchesSearch && matchesDepartment && matchesPosition && matchesStatus;
+      }),
+    [employees, searchTerm, departmentFilter, positionFilter, statusFilter],
+  );
+
+  const hasActiveFilters =
+    searchTerm.trim().length > 0 ||
+    departmentFilter !== 'all' ||
+    positionFilter !== 'all' ||
+    statusFilter !== 'all';
+
   return (
     <div className="p-8 bg-gray-50 dark:bg-gray-900">
       <div className="max-w-7xl mx-auto">
-        <div className="mb-4">
+        <div className="mb-6">
           <h2 className="text-3xl font-semibold text-gray-900 dark:text-white">
             {t('hr.title')}
           </h2>
-          <p className="text-gray-500 dark:text-gray-400 mt-1">
+          <p className="text-gray-500 dark:text-gray-400 mt-2">
             {t('hr.subtitle')}
           </p>
           <HRSubNav />
         </div>
 
-        <div className="flex items-center justify-between mb-4 mt-6">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+        <div className="flex items-center justify-between mb-5 mt-6">
+          <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
             {t('hr.employees.title')}
           </h3>
           <button
@@ -40,6 +86,77 @@ export function HREmployees() {
           >
             <span>+ {t('hr.employees.addEmployee')}</span>
           </button>
+        </div>
+
+        {/* Filters */}
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 mb-4">
+          <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-end">
+            {/* Global search */}
+            <div className="flex-1 w-full relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="ID, F.I.Sh. yoki lavozim bo‘yicha qidirish"
+                className="w-full pl-9 pr-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-white rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+
+            {/* Dropdown filters */}
+            <div className="flex flex-wrap gap-2 w-full lg:w-auto">
+              <select
+                value={departmentFilter}
+                onChange={(e) => setDepartmentFilter(e.target.value)}
+                className="px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-white rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent min-w-[160px]"
+              >
+                <option value="all">Barcha bo‘limlar</option>
+                {departments.map((dept) => (
+                  <option key={dept} value={dept}>
+                    {dept}
+                  </option>
+                ))}
+              </select>
+
+              <select
+                value={positionFilter}
+                onChange={(e) => setPositionFilter(e.target.value)}
+                className="px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-white rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent min-w-[160px]"
+              >
+                <option value="all">Barcha lavozimlar</option>
+                {positions.map((pos) => (
+                  <option key={pos} value={pos}>
+                    {pos}
+                  </option>
+                ))}
+              </select>
+
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value as 'all' | EmployeeStatus)}
+                className="px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-white rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent min-w-[140px]"
+              >
+                <option value="all">{t('hr.all')}</option>
+                <option value="active">{t('hr.employees.statusActive')}</option>
+                <option value="inactive">{t('hr.employees.statusInactive')}</option>
+              </select>
+
+              {hasActiveFilters && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearchTerm('');
+                    setDepartmentFilter('all');
+                    setPositionFilter('all');
+                    setStatusFilter('all');
+                  }}
+                  className="px-3 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg text-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                >
+                  Filtrlarni tozalash
+                </button>
+              )}
+            </div>
+          </div>
         </div>
 
         {employees.length === 0 ? (
@@ -77,7 +194,17 @@ export function HREmployees() {
                 </tr>
               </thead>
               <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                {employees.map((employee) => (
+                {filteredEmployees.length === 0 && (
+                  <tr>
+                    <td
+                      colSpan={7}
+                      className="px-4 py-6 text-center text-sm text-gray-500 dark:text-gray-400"
+                    >
+                      Mos keladigan xodim topilmadi
+                    </td>
+                  </tr>
+                )}
+                {filteredEmployees.map((employee) => (
                   <tr key={employee.employeeId} className="hover:bg-gray-50 dark:hover:bg-gray-800/70">
                     <td className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-white">
                       {employee.employeeId}
@@ -176,11 +303,6 @@ interface EmployeeCardModalProps {
 function EmployeeCardModal({ employee, onClose }: EmployeeCardModalProps) {
   const { t } = useLanguage();
 
-  const mockDocuments = [
-    { id: 'DOC-001', name: t('hr.employees.contract'), type: 'PDF' },
-    { id: 'DOC-002', name: t('hr.employees.order'), type: 'PDF' },
-  ];
-
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
@@ -227,23 +349,50 @@ function EmployeeCardModal({ employee, onClose }: EmployeeCardModalProps) {
                 {t('hr.employees.documents')}
               </h4>
               <div className="space-y-2">
-                {mockDocuments.map((doc) => (
-                  <div
-                    key={doc.id}
-                    className="flex items-center justify-between px-3 py-2 rounded-lg bg-gray-50 dark:bg-gray-900/40"
-                  >
+                {/* Labor contract document (if uploaded) */}
+                {employee.laborContract ? (
+                  <div className="flex items-center justify-between px-3 py-2 rounded-lg bg-gray-50 dark:bg-gray-900/40">
                     <div className="flex items-center gap-2">
-                      <span className="text-sm text-gray-900 dark:text-white">{doc.name}</span>
+                      <span className="text-sm text-gray-900 dark:text-white">
+                        {t('hr.employees.contract')}
+                      </span>
                       <span className="text-xs text-gray-500 dark:text-gray-400">
-                        ({doc.type})
+                        (PDF)
                       </span>
                     </div>
+                    {/* In this mock setup we only have file name, but keep download button for UX parity */}
                     <button className="text-xs inline-flex items-center gap-1 text-blue-600 dark:text-blue-400 hover:underline">
                       <Download className="w-3 h-3" />
                       {t('hr.download')}
                     </button>
                   </div>
-                ))}
+                ) : null}
+
+                {/* Hiring order document (if uploaded) */}
+                {employee.hiringOrder ? (
+                  <div className="flex items-center justify-between px-3 py-2 rounded-lg bg-gray-50 dark:bg-gray-900/40">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-gray-900 dark:text-white">
+                        {t('hr.employees.order')}
+                      </span>
+                      <span className="text-xs text-gray-500 dark:text-gray-400">
+                        (PDF)
+                      </span>
+                    </div>
+                    {/* Same as above – mock download action */}
+                    <button className="text-xs inline-flex items-center gap-1 text-blue-600 dark:text-blue-400 hover:underline">
+                      <Download className="w-3 h-3" />
+                      {t('hr.download')}
+                    </button>
+                  </div>
+                ) : null}
+
+                {/* If no documents are attached, show explicit message */}
+                {!employee.laborContract && !employee.hiringOrder && (
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    Hujjat yuklanmagan
+                  </p>
+                )}
               </div>
             </div>
 
@@ -279,6 +428,14 @@ function EmployeeFormModal({ employees, employee, onClose, onSave }: EmployeeFor
     position: employee?.position || '',
     employmentDate: employee?.employmentDate ? new Date(employee.employmentDate).toISOString().split('T')[0] : '',
     status: (employee?.status || 'active') as EmployeeStatus,
+  });
+  // Local state for optional document uploads (PDF files)
+  const [documents, setDocuments] = useState<{
+    laborContract: File | null;
+    hiringOrder: File | null;
+  }>({
+    laborContract: null,
+    hiringOrder: null,
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -328,6 +485,9 @@ function EmployeeFormModal({ employees, employee, onClose, onSave }: EmployeeFor
       position: formData.position.trim(),
       employmentDate: new Date(formData.employmentDate).toISOString(),
       status: formData.status,
+      // In this mock implementation we persist only the file name as a reference
+      laborContract: documents.laborContract?.name || employee?.laborContract,
+      hiringOrder: documents.hiringOrder?.name || employee?.hiringOrder,
     };
 
     onSave(employeeData);
@@ -452,6 +612,56 @@ function EmployeeFormModal({ employees, employee, onClose, onSave }: EmployeeFor
                   {t('hr.employees.statusInactive')}
                 </span>
               </label>
+            </div>
+          </div>
+
+          {/* Optional employee documents (local-only, PDF) */}
+          <div className="space-y-3">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              {t('hr.employees.documents')}
+            </label>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                Mehnat shartnomasi (PDF)
+              </label>
+              <input
+                type="file"
+                accept="application/pdf"
+                onChange={(e) =>
+                  setDocuments((prev) => ({
+                    ...prev,
+                    laborContract: e.target.files?.[0] || null,
+                  }))
+                }
+                className="w-full text-xs text-gray-700 dark:text-gray-300 file:mr-3 file:px-3 file:py-1.5 file:rounded-md file:border-0 file:text-xs file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 dark:file:bg-blue-900/30 dark:file:text-blue-300 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+              {documents.laborContract && (
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                  {documents.laborContract.name}
+                </p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                Qabul qilish buyrug‘i (PDF)
+              </label>
+              <input
+                type="file"
+                accept="application/pdf"
+                onChange={(e) =>
+                  setDocuments((prev) => ({
+                    ...prev,
+                    hiringOrder: e.target.files?.[0] || null,
+                  }))
+                }
+                className="w-full text-xs text-gray-700 dark:text-gray-300 file:mr-3 file:px-3 file:py-1.5 file:rounded-md file:border-0 file:text-xs file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 dark:file:bg-blue-900/30 dark:file:text-blue-300 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+              {documents.hiringOrder && (
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                  {documents.hiringOrder.name}
+                </p>
+              )}
             </div>
           </div>
 

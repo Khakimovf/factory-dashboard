@@ -12,6 +12,7 @@ import { DailyProductionPlanForm } from './components/DailyProductionPlanForm';
 import { DailyLinePlanEntry } from './components/hr/DailyLinePlanEntry';
 import { HREmployees } from './components/hr/HREmployees';
 import { HRStatsPage } from './components/hr/HRStatsPage';
+import { HRDocumentLibrary } from './components/hr/HRDocumentLibrary';
 import { MaintenanceDashboard } from './components/MaintenanceDashboard';
 import { FailureReportList } from './components/FailureReportList';
 import { FailureReportDetail } from './components/FailureReportDetail';
@@ -48,6 +49,7 @@ export default function App() {
                       <Route path="/hr" element={<HRDepartment />} />
                       <Route path="/hr/employees" element={<HREmployees />} />
                       <Route path="/hr/stats" element={<HRStatsPage />} />
+                      <Route path="/hr/library" element={<HRDocumentLibrary />} />
                       <Route path="/hr/production-plan" element={<DailyProductionPlanForm />} />
                       <Route path="/hr/line-plans" element={<DailyLinePlanEntry />} />
                       <Route path="/maintenance" element={<MaintenanceDashboard />} />

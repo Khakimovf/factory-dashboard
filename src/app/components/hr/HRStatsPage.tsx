@@ -34,12 +34,12 @@ export function HRStatsPage() {
 
   return (
     <div className="p-8 bg-gray-50 dark:bg-gray-900">
-      <div className="max-w-6xl mx-auto">
-        <div className="mb-4">
+      <div className="max-w-7xl mx-auto">
+        <div className="mb-6">
           <h2 className="text-3xl font-semibold text-gray-900 dark:text-white">
             {t('hr.title')}
           </h2>
-          <p className="text-gray-500 dark:text-gray-400 mt-1">
+          <p className="text-gray-500 dark:text-gray-400 mt-2">
             {t('hr.subtitle')}
           </p>
           <HRSubNav />

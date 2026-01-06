@@ -1,18 +1,24 @@
 import { NavLink } from 'react-router-dom';
 import { useLanguage } from '../../context/LanguageContext';
+import { FileText, Users, BarChart3, Library } from 'lucide-react';
 
 export function HRSubNav() {
   const { t } = useLanguage();
 
   const tabs = [
-    { to: '/hr/employees', label: t('hr.tabEmployees') },
-    { to: '/hr', label: t('hr.tabDocuments') },
-    { to: '/hr/stats', label: t('hr.tabStats') },
+    // Documents: primary workflow hub for HR
+    { to: '/hr', label: t('hr.tabDocuments'), icon: <FileText className="w-4 h-4" /> },
+    // Employees: people-centric view
+    { to: '/hr/employees', label: t('hr.tabEmployees'), icon: <Users className="w-4 h-4" /> },
+    // Statistics: analytical overview
+    { to: '/hr/stats', label: t('hr.tabStats'), icon: <BarChart3 className="w-4 h-4" /> },
+    // Document library: reference materials
+    { to: '/hr/library', label: t('hr.documentLibrary'), icon: <Library className="w-4 h-4" /> },
   ];
 
   return (
-    <div className="mt-6 border-b border-gray-200 dark:border-gray-700">
-      <nav className="flex flex-wrap gap-4 -mb-px text-sm font-medium">
+    <div className="mt-8">
+      <nav className="flex flex-wrap gap-4 text-base font-medium">
         {tabs.map((tab) => (
           <NavLink
             key={tab.to}
@@ -20,14 +26,18 @@ export function HRSubNav() {
             end={tab.to === '/hr'}
             className={({ isActive }) =>
               [
-                'px-3 pb-2 border-b-2 transition-colors',
+                'inline-flex items-center gap-2 px-5 py-2.5 rounded-full transition-colors transition-shadow',
+                'border border-transparent',
                 isActive
-                  ? 'border-blue-600 text-blue-600 dark:text-blue-400'
-                  : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:border-gray-300 dark:hover:border-gray-500',
+                  ? 'bg-blue-600 text-white shadow-sm dark:bg-blue-500'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700',
               ].join(' ')
             }
           >
-            {tab.label}
+            <span className="flex items-center justify-center rounded-full bg-black/5 dark:bg-white/10 p-1">
+              {tab.icon}
+            </span>
+            <span>{tab.label}</span>
           </NavLink>
         ))}
       </nav>
