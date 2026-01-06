@@ -9,7 +9,10 @@ export type UserRole =
   | 'hr' 
   | 'warehouse' 
   | 'maintenance' 
-  | 'line_master';
+  | 'line_master'
+  | 'ADMIN'
+  | 'WAREHOUSE_MANAGER'
+  | 'WAREHOUSE_STAFF';
 
 /**
  * Get current user role (mock implementation)
@@ -34,5 +37,29 @@ export function isSystemOwner(): boolean {
  */
 export function setMockUserRole(role: UserRole): void {
   localStorage.setItem('mock_user_role', role);
+}
+
+/**
+ * Check if user can add materials (ADMIN or WAREHOUSE_MANAGER)
+ */
+export function canAddMaterials(): boolean {
+  const role = getCurrentUserRole();
+  return role === 'ADMIN' || role === 'WAREHOUSE_MANAGER';
+}
+
+/**
+ * Check if user can update material quantities
+ */
+export function canUpdateQuantities(): boolean {
+  const role = getCurrentUserRole();
+  return role === 'ADMIN' || role === 'WAREHOUSE_MANAGER' || role === 'WAREHOUSE_STAFF';
+}
+
+/**
+ * Check if user can delete materials (ADMIN only, future feature)
+ */
+export function canDeleteMaterials(): boolean {
+  const role = getCurrentUserRole();
+  return role === 'ADMIN';
 }
 

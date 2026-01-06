@@ -7,6 +7,8 @@ export interface Material {
   unit: string;
   minStock: number;
   category: string;
+  createdAt?: string;
+  createdByRole?: string;
 }
 
 export interface ProductionLine {
@@ -34,6 +36,8 @@ interface FactoryContextType {
   updateProductionLine: (id: string, updates: Partial<ProductionLine>) => void;
   requestMaterials: (materialId: string, quantity: number) => void;
   updateDocumentStatus: (id: string, status: HRDocument['status']) => void;
+  addMaterial: (material: Omit<Material, 'id' | 'createdAt' | 'createdByRole'> & { materialId: string }) => void;
+  updateMaterialQuantity: (materialId: string, quantity: number) => void;
 }
 
 const FactoryContext = createContext<FactoryContextType | undefined>(undefined);
@@ -121,6 +125,34 @@ export function FactoryProvider({ children }: { children: ReactNode }) {
     ));
   };
 
+  const addMaterial = (materialData: Omit<Material, 'id' | 'createdAt' | 'createdByRole'> & { materialId: string }) => {
+    // Check if material with this ID already exists
+    if (materials.some(m => m.id === materialData.materialId)) {
+      throw new Error('Bu detal allaqachon mavjud');
+    }
+
+    const newMaterial: Material = {
+      id: materialData.materialId,
+      name: materialData.name || `Material ${materialData.materialId}`,
+      quantity: materialData.quantity,
+      unit: materialData.unit,
+      minStock: materialData.minStock || 0,
+      category: materialData.category || 'Raw Material',
+      createdAt: new Date().toISOString(),
+      createdByRole: 'ADMIN', // This should come from auth context in production
+    };
+    
+    setMaterials([...materials, newMaterial]);
+  };
+
+  const updateMaterialQuantity = (materialId: string, quantity: number) => {
+    setMaterials(materials.map(material =>
+      material.id === materialId 
+        ? { ...material, quantity: Math.max(0, quantity) }
+        : material
+    ));
+  };
+
   return (
     <FactoryContext.Provider
       value={{
@@ -131,6 +163,8 @@ export function FactoryProvider({ children }: { children: ReactNode }) {
         updateProductionLine,
         requestMaterials,
         updateDocumentStatus,
+        addMaterial,
+        updateMaterialQuantity,
       }}
     >
       {children}

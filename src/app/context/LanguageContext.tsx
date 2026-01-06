@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, ReactNode } from 'react';
+import { createContext, useContext, useState, useMemo, useCallback, ReactNode } from 'react';
 import uzTranslations from '../../locales/uz.json';
 import ruTranslations from '../../locales/ru.json';
 
@@ -15,48 +15,60 @@ function flattenTranslations(obj: any, prefix = ''): Record<string, string> {
   const result: Record<string, string> = {};
   
   for (const key in obj) {
-    const newKey = prefix ? `${prefix}.${key}` : key;
-    
-    if (typeof obj[key] === 'object' && obj[key] !== null && !Array.isArray(obj[key])) {
-      Object.assign(result, flattenTranslations(obj[key], newKey));
-    } else {
-      result[newKey] = obj[key];
+    if (Object.prototype.hasOwnProperty.call(obj, key)) {
+      const newKey = prefix ? `${prefix}.${key}` : key;
+      
+      if (typeof obj[key] === 'object' && obj[key] !== null && !Array.isArray(obj[key])) {
+        Object.assign(result, flattenTranslations(obj[key], newKey));
+      } else {
+        result[newKey] = String(obj[key]);
+      }
     }
   }
   
   return result;
 }
 
+// Pre-compute translations at module level for performance
 const translations = {
   uz: flattenTranslations(uzTranslations),
   ru: flattenTranslations(ruTranslations),
-};
+} as const;
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
 export function LanguageProvider({ children }: { children: ReactNode }) {
   const [language, setLanguage] = useState<Language>(() => {
     const saved = localStorage.getItem('language');
-    return (saved as Language) || 'uz';
+    return (saved === 'uz' || saved === 'ru') ? saved : 'uz';
   });
 
-  const t = (key: string): string => {
+  const t = useCallback((key: string): string => {
     return translations[language][key] || key;
-  };
+  }, [language]);
 
-  const handleSetLanguage = (lang: Language) => {
+  const handleSetLanguage = useCallback((lang: Language) => {
     setLanguage(lang);
     localStorage.setItem('language', lang);
-  };
+  }, []);
+
+  const value = useMemo<LanguageContextType>(
+    () => ({
+      language,
+      setLanguage: handleSetLanguage,
+      t,
+    }),
+    [language, handleSetLanguage, t]
+  );
 
   return (
-    <LanguageContext.Provider value={{ language, setLanguage: handleSetLanguage, t }}>
+    <LanguageContext.Provider value={value}>
       {children}
     </LanguageContext.Provider>
   );
 }
 
-export function useLanguage() {
+export function useLanguage(): LanguageContextType {
   const context = useContext(LanguageContext);
   if (context === undefined) {
     throw new Error('useLanguage must be used within a LanguageProvider');

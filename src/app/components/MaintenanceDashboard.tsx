@@ -1,57 +1,101 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../context/LanguageContext';
 import { useFactory } from '../context/FactoryContext';
-import { maintenanceApi, FailureReport, MaintenanceStatus } from '../services/maintenanceApi';
 import { Wrench, AlertCircle, Clock, CheckCircle, Eye, Factory, X, Upload } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Textarea } from './ui/textarea';
+import { Badge } from './ui/badge';
+import { toast } from 'sonner';
+
+type LineMaintenanceStatus = 'NORMAL' | 'ISSUE_REPORTED' | 'TECHNICIAN_ASSIGNED';
+
+interface LineWithStatus {
+  id: string;
+  name: string;
+  status: LineMaintenanceStatus;
+}
 
 export function MaintenanceDashboard() {
   const { t } = useLanguage();
   const { productionLines } = useFactory();
   const navigate = useNavigate();
-  const [reports, setReports] = useState<FailureReport[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [statusFilter, setStatusFilter] = useState<MaintenanceStatus | 'all'>('all');
   const [selectedLine, setSelectedLine] = useState<string | null>(null);
 
-  useEffect(() => {
-    loadReports();
-  }, [statusFilter]);
+  // Local mock data for line statuses - no backend calls
+  const [lineStatuses, setLineStatuses] = useState<Record<string, LineMaintenanceStatus>>({
+    '1': 'ISSUE_REPORTED', // Assembly Line A
+    '2': 'NORMAL', // Assembly Line B
+    '3': 'TECHNICIAN_ASSIGNED', // Assembly Line D
+  });
 
-  const loadReports = async () => {
-    try {
-      setLoading(true);
-      const status = statusFilter === 'all' ? undefined : statusFilter;
-      const data = await maintenanceApi.getFailureReports(status);
-      setReports(data);
-    } catch (error) {
-      console.error('Error loading failure reports:', error);
-    } finally {
-      setLoading(false);
+  // Get main production lines (A, B, D) with status
+  const mainLines: LineWithStatus[] = productionLines
+    .filter(l => l.name.includes('Assembly Line'))
+    .map(line => ({
+      id: line.id,
+      name: line.name,
+      status: lineStatuses[line.id] || 'NORMAL',
+    }));
+
+  const getStatusColor = (status: LineMaintenanceStatus) => {
+    switch (status) {
+      case 'NORMAL':
+        return {
+          border: 'border-blue-500 dark:border-blue-400',
+          bg: 'bg-blue-50 dark:bg-blue-900/10',
+          hover: 'hover:border-blue-600 dark:hover:border-blue-300',
+          icon: 'text-blue-600 dark:text-blue-400',
+        };
+      case 'ISSUE_REPORTED':
+        return {
+          border: 'border-red-500 dark:border-red-400',
+          bg: 'bg-red-50 dark:bg-red-900/10',
+          hover: 'hover:border-red-600 dark:hover:border-red-300',
+          icon: 'text-red-600 dark:text-red-400',
+        };
+      case 'TECHNICIAN_ASSIGNED':
+        return {
+          border: 'border-yellow-500 dark:border-yellow-400',
+          bg: 'bg-yellow-50 dark:bg-yellow-900/10',
+          hover: 'hover:border-yellow-600 dark:hover:border-yellow-300',
+          icon: 'text-yellow-600 dark:text-yellow-400',
+        };
     }
   };
 
-  const openReports = reports.filter(r => r.status === 'open').length;
-  const inProgressReports = reports.filter(r => r.status === 'in_progress').length;
-  const closedReports = reports.filter(r => r.status === 'closed').length;
-  const totalReports = reports.length;
-
-  // Get reports for each line
-  const getLineReports = (lineId: string) => {
-    const line = productionLines.find(l => l.id === lineId);
-    if (!line) return [];
-    return reports.filter(r => r.line_id === lineId && r.status === 'open');
+  const getStatusLabel = (status: LineMaintenanceStatus) => {
+    switch (status) {
+      case 'NORMAL':
+        return t('maintenance.lineStatus.normal');
+      case 'ISSUE_REPORTED':
+        return t('maintenance.lineStatus.issueReported');
+      case 'TECHNICIAN_ASSIGNED':
+        return t('maintenance.lineStatus.technicianAssigned');
+    }
   };
 
-  // Get main production lines (A, B, D)
-  const mainLines = productionLines.filter(l => 
-    l.name.includes('Assembly Line')
-  );
+  const getStatusBadgeColor = (status: LineMaintenanceStatus) => {
+    switch (status) {
+      case 'NORMAL':
+        return 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400';
+      case 'ISSUE_REPORTED':
+        return 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400';
+      case 'TECHNICIAN_ASSIGNED':
+        return 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400';
+    }
+  };
+
+  const handleUpdateStatus = (lineId: string, newStatus: LineMaintenanceStatus) => {
+    setLineStatuses(prev => ({
+      ...prev,
+      [lineId]: newStatus,
+    }));
+    toast.success(t('maintenance.statusUpdated'));
+  };
 
   return (
     <div className="p-8 bg-gray-50 dark:bg-gray-900">
@@ -67,30 +111,24 @@ export function MaintenanceDashboard() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+        <StatCard
+          icon={<CheckCircle className="w-6 h-6" />}
+          title={t('maintenance.lineStatus.normal')}
+          value={mainLines.filter(l => l.status === 'NORMAL').length}
+          color="blue"
+        />
         <StatCard
           icon={<AlertCircle className="w-6 h-6" />}
-          title={t('maintenance.open')}
-          value={openReports}
+          title={t('maintenance.lineStatus.issueReported')}
+          value={mainLines.filter(l => l.status === 'ISSUE_REPORTED').length}
           color="red"
         />
         <StatCard
           icon={<Clock className="w-6 h-6" />}
-          title={t('maintenance.inProgress')}
-          value={inProgressReports}
+          title={t('maintenance.lineStatus.technicianAssigned')}
+          value={mainLines.filter(l => l.status === 'TECHNICIAN_ASSIGNED').length}
           color="yellow"
-        />
-        <StatCard
-          icon={<CheckCircle className="w-6 h-6" />}
-          title={t('maintenance.closed')}
-          value={closedReports}
-          color="green"
-        />
-        <StatCard
-          icon={<Wrench className="w-6 h-6" />}
-          title={t('maintenance.totalReports')}
-          value={totalReports}
-          color="blue"
         />
       </div>
 
@@ -102,40 +140,30 @@ export function MaintenanceDashboard() {
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {mainLines.map(line => {
-              const lineReports = getLineReports(line.id);
-              const hasRequest = lineReports.length > 0;
-              const latestReport = lineReports[0] || null;
+              const colors = getStatusColor(line.status);
 
               return (
                 <div
                   key={line.id}
                   onClick={() => setSelectedLine(line.id)}
-                  className={`border-2 rounded-lg p-4 cursor-pointer transition-all ${
-                    hasRequest
-                      ? 'border-red-500 bg-red-50 dark:bg-red-900/10 hover:border-red-600 hover:shadow-md'
-                      : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-gray-300 dark:hover:border-gray-600 hover:shadow-md'
-                  }`}
+                  className={`border-2 rounded-lg p-4 cursor-pointer transition-all ${colors.border} ${colors.bg} ${colors.hover} hover:shadow-md`}
                 >
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-3">
-                      <Factory className={`w-6 h-6 ${hasRequest ? 'text-red-600 dark:text-red-400' : 'text-gray-600 dark:text-gray-400'}`} />
+                      <Factory className={`w-6 h-6 ${colors.icon}`} />
                       <h3 className="font-semibold text-gray-900 dark:text-white">{line.name}</h3>
                     </div>
-                    {hasRequest && (
-                      <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
-                    )}
+                    <div className={`w-3 h-3 rounded-full ${
+                      line.status === 'NORMAL' ? 'bg-blue-500' :
+                      line.status === 'ISSUE_REPORTED' ? 'bg-red-500 animate-pulse' :
+                      'bg-yellow-500'
+                    }`}></div>
                   </div>
-                  {hasRequest && latestReport && (
-                    <div className="text-sm text-gray-600 dark:text-gray-400">
-                      <p className="truncate">{latestReport.description}</p>
-                      <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
-                        {new Date(latestReport.created_at).toLocaleString()}
-                      </p>
-                    </div>
-                  )}
-                  {!hasRequest && (
-                    <p className="text-sm text-gray-500 dark:text-gray-400">{t('maintenance.noRequests')}</p>
-                  )}
+                  <div className="flex items-center justify-between">
+                    <Badge className={getStatusBadgeColor(line.status)}>
+                      {getStatusLabel(line.status)}
+                    </Badge>
+                  </div>
                 </div>
               );
             })}
@@ -147,16 +175,9 @@ export function MaintenanceDashboard() {
       {selectedLine && (
         <LineDetailModal
           lineId={selectedLine}
+          lineStatus={lineStatuses[selectedLine] || 'NORMAL'}
           onClose={() => setSelectedLine(null)}
-          onAccept={async (reportId: string) => {
-            try {
-              await maintenanceApi.updateFailureReport(reportId, { status: 'in_progress' });
-              loadReports();
-              setSelectedLine(null);
-            } catch (error) {
-              console.error('Error updating report:', error);
-            }
-          }}
+          onStatusUpdate={(newStatus) => handleUpdateStatus(selectedLine, newStatus)}
         />
       )}
     </div>
@@ -195,80 +216,49 @@ function StatCard({ icon, title, value, color }: StatCardProps) {
   );
 }
 
-function StatusBadge({ status }: { status: MaintenanceStatus }) {
-  const { t } = useLanguage();
-  
-  const statusClasses = {
-    open: 'bg-red-100 text-red-700 dark:bg-red-900/20 dark:text-red-400',
-    in_progress: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/20 dark:text-yellow-400',
-    closed: 'bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-400',
-  };
-
-  return (
-    <span className={`px-2 py-1 rounded text-xs font-medium ${statusClasses[status]}`}>
-      {t(`maintenance.status.${status}`)}
-    </span>
-  );
-}
-
 type WorkflowStatus = 'new' | 'worker_assigned' | 'in_progress' | 'completed';
 
 interface LineDetailModalProps {
   lineId: string;
+  lineStatus: LineMaintenanceStatus;
   onClose: () => void;
-  onAccept: (reportId: string) => void;
+  onStatusUpdate: (status: LineMaintenanceStatus) => void;
 }
 
-function LineDetailModal({ lineId, onClose, onAccept }: LineDetailModalProps) {
+function LineDetailModal({ lineId, lineStatus, onClose, onStatusUpdate }: LineDetailModalProps) {
   const { t } = useLanguage();
   const { productionLines } = useFactory();
-  const [reports, setReports] = useState<FailureReport[]>([]);
-  const [loading, setLoading] = useState(true);
   
   // Workflow state (UI-only)
-  const [workflowStatus, setWorkflowStatus] = useState<WorkflowStatus>('new');
+  const [workflowStatus, setWorkflowStatus] = useState<WorkflowStatus>(
+    lineStatus === 'ISSUE_REPORTED' ? 'new' :
+    lineStatus === 'TECHNICIAN_ASSIGNED' ? 'worker_assigned' : 'new'
+  );
   const [assignedTime, setAssignedTime] = useState<string | null>(null);
   const [completionTime, setCompletionTime] = useState<string | null>(null);
   const [photos, setPhotos] = useState<File[]>([]);
   const [photoComment, setPhotoComment] = useState('');
   const [photoPreview, setPhotoPreview] = useState<string[]>([]);
 
-  useEffect(() => {
-    const loadLineReports = async () => {
-      try {
-        setLoading(true);
-        const data = await maintenanceApi.getFailureReports(undefined, lineId);
-        setReports(data.filter(r => r.status === 'open'));
-      } catch (error) {
-        console.error('Error loading line reports:', error);
-        // For UI-only, initialize with mock data if API fails
-        setReports([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-    loadLineReports();
-  }, [lineId]);
-
   const line = productionLines.find(l => l.id === lineId);
-  const latestReport = reports[0] || null;
 
-  // If no report found, create a mock one for UI demonstration
-  const displayReport = latestReport || {
+  // Mock report data - local only
+  const displayReport = {
     id: 'mock-1',
     line_id: lineId,
     line_name: line?.name || '',
-    description: 'Mock failure description - API connection unavailable',
+    description: lineStatus === 'ISSUE_REPORTED' || lineStatus === 'TECHNICIAN_ASSIGNED' 
+      ? 'Uskunada nosozlik aniqlandi. Tekshirish talab qilinadi.'
+      : 'Hozirgi vaqtda muammolar yo\'q.',
     reported_by: 'Line Master',
-    status: 'open' as MaintenanceStatus,
     created_at: new Date().toISOString(),
-    photo_urls: [],
   };
 
   const handleWorkerSent = () => {
     const now = new Date().toISOString();
     setAssignedTime(now);
     setWorkflowStatus('worker_assigned');
+    onStatusUpdate('TECHNICIAN_ASSIGNED');
   };
 
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -331,12 +321,7 @@ function LineDetailModal({ lineId, onClose, onAccept }: LineDetailModalProps) {
           </button>
         </div>
 
-        {loading ? (
-          <div className="text-center py-8 text-gray-500">
-            {t('maintenance.loading')}
-          </div>
-        ) : (
-          <div className="space-y-6">
+        <div className="space-y-6">
             {/* Status Badge */}
             <div className="flex items-center gap-3">
               <span className={`px-4 py-2 rounded-lg text-sm font-medium ${getStatusColor(workflowStatus)}`}>
@@ -377,13 +362,13 @@ function LineDetailModal({ lineId, onClose, onAccept }: LineDetailModalProps) {
             </div>
 
             {/* Worker Assignment Section */}
-            {workflowStatus === 'new' && (
+            {lineStatus === 'ISSUE_REPORTED' && (
               <div className="flex gap-3">
                 <Button
                   onClick={handleWorkerSent}
                   className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
                 >
-                  {t('maintenance.workerSent')}
+                  {t('maintenance.sendTechnician')}
                 </Button>
                 <Button
                   onClick={onClose}
@@ -524,9 +509,8 @@ function LineDetailModal({ lineId, onClose, onAccept }: LineDetailModalProps) {
               </div>
             )}
           </div>
-        )}
+        </div>
       </div>
-    </div>
   );
 }
 

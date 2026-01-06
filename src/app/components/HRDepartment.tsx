@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { useFactory } from '../context/FactoryContext';
 import { useLanguage } from '../context/LanguageContext';
-import { FileText, FolderOpen, Book, CheckCircle, Clock, FileEdit, Archive, Search, Download, Upload, Send, Plus } from 'lucide-react';
+import { FileText, FolderOpen, Book, CheckCircle, Clock, FileEdit, Archive, Search, Download, Upload, Send, Plus, Eye } from 'lucide-react';
+import { hrEmployees } from '../data/hrEmployees';
+import { HRSubNav } from './hr/HRSubNav';
 
 export function HRDepartment() {
   const { hrDocuments, updateDocumentStatus } = useFactory();
@@ -65,39 +67,37 @@ export function HRDepartment() {
     }
   };
 
+  const totalEmployees = hrEmployees.length;
+  const activeEmployees = hrEmployees.filter(e => e.status === 'active').length;
+  const hiredToday = hrEmployees.filter(e => {
+    const d = new Date(e.employmentDate);
+    const today = new Date();
+    return d.getFullYear() === today.getFullYear() &&
+      d.getMonth() === today.getMonth() &&
+      d.getDate() === today.getDate();
+  }).length;
+
+  const employeesByDepartmentMap = new Map<string, number>();
+  hrEmployees.forEach(e => {
+    employeesByDepartmentMap.set(e.department, (employeesByDepartmentMap.get(e.department) || 0) + 1);
+  });
+  const employeesByDepartment = Array.from(employeesByDepartmentMap.entries()).map(
+    ([department, count]) => ({ department, count }),
+  );
+  const maxDeptCount = employeesByDepartment.reduce(
+    (max, item) => (item.count > max ? item.count : max),
+    0,
+  );
+
+
   return (
     <div className="p-8">
-      <div className="mb-8">
-        <h2 className="text-3xl font-semibold text-gray-900 dark:text-white">{t('hr.title')}</h2>
-        <p className="text-gray-500 dark:text-gray-400 mt-1">{t('hr.subtitle')}</p>
-      </div>
-
-      {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-        <StatCard
-          icon={<FileText className="w-6 h-6" />}
-          title={t('hr.totalDocuments')}
-          value={hrDocuments.length}
-          color="blue"
-        />
-        <StatCard
-          icon={<Clock className="w-6 h-6" />}
-          title={t('hr.pendingApproval')}
-          value={hrDocuments.filter(d => d.status === 'pending').length}
-          color="yellow"
-        />
-        <StatCard
-          icon={<CheckCircle className="w-6 h-6" />}
-          title={t('hr.approved')}
-          value={hrDocuments.filter(d => d.status === 'approved').length}
-          color="green"
-        />
-        <StatCard
-          icon={<FileEdit className="w-6 h-6" />}
-          title={t('hr.draft')}
-          value={hrDocuments.filter(d => d.status === 'draft').length}
-          color="gray"
-        />
+      <div className="mb-6">
+        <div>
+          <h2 className="text-3xl font-semibold text-gray-900 dark:text-white">{t('hr.title')}</h2>
+          <p className="text-gray-500 dark:text-gray-400 mt-2">{t('hr.subtitle')}</p>
+        </div>
+        <HRSubNav />
       </div>
 
       {/* Filters */}
@@ -140,45 +140,57 @@ export function HRDepartment() {
         </div>
       </div>
 
-      {/* Document Workflow Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-        <WorkflowColumn
-          title={t('hr.hrDepartment')}
-          stage="hr"
-          count={hrDocuments.filter(d => d.status === 'pending' || d.status === 'draft').length}
-          documents={filteredDocuments.filter(d => d.status === 'pending' || d.status === 'draft')}
-          getStatusIcon={getStatusIcon}
-          getStatusColor={getStatusColor}
-          getCategoryIcon={getCategoryIcon}
-          onStatusChange={updateDocumentStatus}
-          onUploadClick={() => setUploadModalOpen('hr')}
-          onSendClick={() => setSendModalOpen('hr')}
-        />
-        <WorkflowColumn
-          title={t('hr.accounting')}
-          stage="accounting"
-          count={hrDocuments.filter(d => d.status === 'approved').length}
-          documents={filteredDocuments.filter(d => d.status === 'approved')}
-          getStatusIcon={getStatusIcon}
-          getStatusColor={getStatusColor}
-          getCategoryIcon={getCategoryIcon}
-          onStatusChange={updateDocumentStatus}
-          onUploadClick={() => setUploadModalOpen('accounting')}
-          onSendClick={() => setSendModalOpen('accounting')}
-        />
-        <WorkflowColumn
-          title={t('hr.director')}
-          stage="director"
-          count={hrDocuments.filter(d => d.status === 'archived').length}
-          documents={filteredDocuments.filter(d => d.status === 'archived')}
-          getStatusIcon={getStatusIcon}
-          getStatusColor={getStatusColor}
-          getCategoryIcon={getCategoryIcon}
-          onStatusChange={updateDocumentStatus}
-          onUploadClick={() => setUploadModalOpen('director')}
-          onSendClick={() => setSendModalOpen('director')}
-        />
-      </div>
+      {/* Document Workflow Section – active documents */}
+      <section className="mb-8">
+        <div className="flex items-baseline justify-between mb-3">
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+              {t('hr.documentLibrary')} – faol hujjatlar
+            </h3>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              HR → Buxgalteriya → Direktor bo‘ylab tasdiqlash va nazorat jarayoni.
+            </p>
+          </div>
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <WorkflowColumn
+            title={t('hr.hrDepartment')}
+            stage="hr"
+            count={hrDocuments.filter(d => d.status === 'pending' || d.status === 'draft').length}
+            documents={filteredDocuments.filter(d => d.status === 'pending' || d.status === 'draft')}
+            getStatusIcon={getStatusIcon}
+            getStatusColor={getStatusColor}
+            getCategoryIcon={getCategoryIcon}
+            onStatusChange={updateDocumentStatus}
+            onUploadClick={() => setUploadModalOpen('hr')}
+            onSendClick={() => setSendModalOpen('hr')}
+          />
+          <WorkflowColumn
+            title={t('hr.accounting')}
+            stage="accounting"
+            count={hrDocuments.filter(d => d.status === 'approved').length}
+            documents={filteredDocuments.filter(d => d.status === 'approved')}
+            getStatusIcon={getStatusIcon}
+            getStatusColor={getStatusColor}
+            getCategoryIcon={getCategoryIcon}
+            onStatusChange={updateDocumentStatus}
+            onUploadClick={() => setUploadModalOpen('accounting')}
+            onSendClick={() => setSendModalOpen('accounting')}
+          />
+          <WorkflowColumn
+            title={t('hr.director')}
+            stage="director"
+            count={hrDocuments.filter(d => d.status === 'archived').length}
+            documents={filteredDocuments.filter(d => d.status === 'archived')}
+            getStatusIcon={getStatusIcon}
+            getStatusColor={getStatusColor}
+            getCategoryIcon={getCategoryIcon}
+            onStatusChange={updateDocumentStatus}
+            onUploadClick={() => setUploadModalOpen('director')}
+            onSendClick={() => setSendModalOpen('director')}
+          />
+        </div>
+      </section>
 
       {/* Upload Document Modal */}
       {uploadModalOpen && (
@@ -201,16 +213,6 @@ export function HRDepartment() {
         />
       )}
 
-      {/* Document Library */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">{t('hr.documentLibrary')}</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <LibraryFolder icon={<Book />} title={t('hr.handbooks')} count={hrDocuments.filter(d => d.category === 'handbook').length} />
-          <LibraryFolder icon={<FileText />} title={t('hr.policies')} count={hrDocuments.filter(d => d.category === 'policy').length} />
-          <LibraryFolder icon={<FileText />} title={t('hr.forms')} count={hrDocuments.filter(d => d.category === 'form').length} />
-          <LibraryFolder icon={<FolderOpen />} title={t('hr.manuals')} count={hrDocuments.filter(d => d.category === 'manual').length} />
-        </div>
-      </div>
     </div>
   );
 }
@@ -275,26 +277,27 @@ function WorkflowColumn({ title, stage, count, documents, getStatusIcon, getStat
           {count}
         </span>
       </div>
-      
-      {/* Action Buttons */}
-      <div className="flex gap-2 mb-4">
-        <button
-          onClick={onUploadClick}
-          className="flex-1 px-3 py-2 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors text-sm font-medium flex items-center justify-center gap-2"
-        >
-          <Plus className="w-4 h-4" />
-          {t('hr.uploadDocument')}
-        </button>
-        {getNextStage() && (
+      {/* Column-level actions: primary actions for HR and Accounting only */}
+      {stage !== 'director' && (
+        <div className="flex gap-2 mb-4">
           <button
-            onClick={onSendClick}
-            className="flex-1 px-3 py-2 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 rounded-lg hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors text-sm font-medium flex items-center justify-center gap-2"
+            onClick={onUploadClick}
+            className="flex-1 px-3 py-2 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors text-sm font-medium flex items-center justify-center gap-2"
           >
-            <Send className="w-4 h-4" />
-            {t('hr.sendToNextStage')}
+            <Plus className="w-4 h-4" />
+            {t('hr.uploadDocument')}
           </button>
-        )}
-      </div>
+          {getNextStage() && (
+            <button
+              onClick={onSendClick}
+              className="flex-1 px-3 py-2 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 rounded-lg hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors text-sm font-medium flex items-center justify-center gap-2"
+            >
+              <Send className="w-4 h-4" />
+              {t('hr.sendToNextStage')}
+            </button>
+          )}
+        </div>
+      )}
       
       <div className="space-y-3 max-h-96 overflow-y-auto">
         {documents.length === 0 ? (
@@ -318,17 +321,61 @@ function WorkflowColumn({ title, stage, count, documents, getStatusIcon, getStat
                       {t(`hr.${doc.category}`)}
                     </span>
                   </div>
-                  <div className="flex gap-2 mt-3">
+                  {/* Document-level actions: view / edit / workflow actions */}
+                  <div className="flex flex-wrap gap-2 mt-3">
+                    {/* View is the primary local action */}
                     <button
                       onClick={() => {
-                        // UI only - placeholder for download
-                        alert(t('hr.download'));
+                        // UI-only placeholder for opening a detailed view
+                        alert(t('hr.viewDocument') || 'Hujjatni ko‘rish');
                       }}
-                      className="text-xs px-2 py-1 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 rounded hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors flex items-center gap-1"
+                      className="text-xs px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors flex items-center gap-1"
                     >
-                      <Download className="w-3 h-3" />
-                      {t('hr.download')}
+                      <Eye className="w-3 h-3" />
+                      {t('hr.view') || 'Ko‘rish'}
                     </button>
+                    {/* Edit as a secondary action */}
+                    <button
+                      onClick={() => {
+                        // UI-only placeholder for edit
+                        alert(t('hr.editDocument') || 'Hujjatni tahrirlash');
+                      }}
+                      className="text-xs px-3 py-1 bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-100 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors flex items-center gap-1"
+                    >
+                      <FileEdit className="w-3 h-3" />
+                      {t('hr.edit') || 'Tahrirlash'}
+                    </button>
+                    {/* Workflow-specific actions */}
+                    {stage !== 'director' && getNextStage() && (
+                      <button
+                        onClick={onSendClick}
+                        className="text-xs px-3 py-1 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 rounded hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors flex items-center gap-1"
+                      >
+                        <Send className="w-3 h-3" />
+                        {t('hr.sendToNextStage')}
+                      </button>
+                    )}
+                    {stage === 'director' && (
+                      <>
+                        <button
+                          onClick={() => {
+                            // UI-only placeholder for approval
+                            alert(t('hr.approved') || 'Tasdiqlash');
+                          }}
+                          className="text-xs px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 transition-colors flex items-center gap-1"
+                        >
+                          <CheckCircle className="w-3 h-3" />
+                          {t('hr.approved') || 'Tasdiqlash'}
+                        </button>
+                        <button
+                          onClick={onSendClick}
+                          className="text-xs px-3 py-1 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 rounded hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors flex items-center gap-1"
+                        >
+                          <FileText className="w-3 h-3" />
+                          {t('hr.reject') || 'Rad etish'}
+                        </button>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>
@@ -336,28 +383,6 @@ function WorkflowColumn({ title, stage, count, documents, getStatusIcon, getStat
           ))
         )}
       </div>
-    </div>
-  );
-}
-
-interface LibraryFolderProps {
-  icon: React.ReactNode;
-  title: string;
-  count: number;
-}
-
-function LibraryFolder({ icon, title, count }: LibraryFolderProps) {
-  const { t } = useLanguage();
-  
-  return (
-    <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:shadow-md transition-all cursor-pointer">
-      <div className="flex items-center gap-3 mb-3">
-        <div className="w-10 h-10 rounded-lg bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center text-blue-600 dark:text-blue-400">
-          {icon}
-        </div>
-        <h4 className="font-medium text-gray-900 dark:text-white">{title}</h4>
-      </div>
-      <p className="text-sm text-gray-500 dark:text-gray-400">{count} {t('hr.documents')}</p>
     </div>
   );
 }
@@ -440,12 +465,19 @@ function SendToNextStageModal({ stage, onClose, onSend }: SendToNextStageModalPr
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    // For director rejections, a comment is mandatory
+    if (stage === 'director' && !note.trim()) {
+      alert(t('hr.rejectCommentRequired') || 'Rad etish uchun izoh kiritish shart');
+      return;
+    }
     onSend(note);
   };
 
   const getNextStageName = () => {
     if (stage === 'hr') return t('hr.accounting');
     if (stage === 'accounting') return t('hr.director');
+    // For director we treat this modal as a rejection comment dialog
+    if (stage === 'director') return t('hr.director');
     return '';
   };
 
@@ -453,7 +485,9 @@ function SendToNextStageModal({ stage, onClose, onSend }: SendToNextStageModalPr
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-md w-full p-6">
         <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-          {t('hr.sendToNextStage')} - {getNextStageName()}
+          {stage === 'director'
+            ? (t('hr.rejectTitle') || 'Hujjatni rad etish')
+            : `${t('hr.sendToNextStage')} - ${getNextStageName()}`}
         </h3>
         <form onSubmit={handleSubmit}>
           <div className="mb-4">

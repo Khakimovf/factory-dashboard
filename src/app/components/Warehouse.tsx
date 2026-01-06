@@ -1,11 +1,18 @@
 import { useState } from 'react';
 import { useFactory } from '../context/FactoryContext';
 import { useLanguage } from '../context/LanguageContext';
-import { Package, AlertTriangle, CheckCircle, Search, ArrowLeft, User } from 'lucide-react';
+import { Package, AlertTriangle, CheckCircle, Search, ArrowLeft, User, FileText } from 'lucide-react';
 import { Material } from '../context/FactoryContext';
+import { Button } from './ui/button';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from './ui/dialog';
+import { Input } from './ui/input';
+import { Label } from './ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import { toast } from 'sonner';
+import { Link } from 'react-router-dom';
 
 export function Warehouse() {
-  const { materials } = useFactory();
+  const { materials, addMaterial, updateMaterialQuantity } = useFactory();
   const { t } = useLanguage();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
@@ -16,6 +23,19 @@ export function Warehouse() {
     C: '',
     D: '',
   });
+  
+  // Add Material Modal State
+  const [isAddMaterialOpen, setIsAddMaterialOpen] = useState(false);
+  const [newMaterial, setNewMaterial] = useState({
+    materialId: '',
+    unit: '',
+    quantity: '',
+    minStock: '',
+  });
+  const [materialError, setMaterialError] = useState('');
+  
+  // Quantity editing state
+  const [editingQuantity, setEditingQuantity] = useState<Record<string, string>>({});
 
   const categories = ['all', ...Array.from(new Set(materials.map(m => m.category)))];
 
@@ -50,9 +70,18 @@ export function Warehouse() {
   if (!selectedRow) {
     return (
       <div className="p-8 bg-gray-50 dark:bg-gray-900">
-        <div className="mb-8">
-          <h2 className="text-3xl font-semibold text-gray-900 dark:text-white">{t('warehouse.title')}</h2>
-          <p className="text-gray-500 dark:text-gray-400 mt-1">{t('warehouse.subtitle')}</p>
+        <div className="mb-8 flex items-center justify-between">
+          <div>
+            <h2 className="text-3xl font-semibold text-gray-900 dark:text-white">{t('warehouse.title')}</h2>
+            <p className="text-gray-500 dark:text-gray-400 mt-1">{t('warehouse.subtitle')}</p>
+          </div>
+          <Link
+            to="/warehouse/requests"
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-sm font-medium"
+          >
+            <FileText className="w-4 h-4" />
+            {t('warehouse.requests.title')}
+          </Link>
         </div>
 
         {/* Row Selection Cards */}
@@ -104,20 +133,29 @@ export function Warehouse() {
       </div>
 
       {/* Header with Back Button */}
-      <div className="mb-6 flex items-center gap-4">
-        <button
-          onClick={() => setSelectedRow(null)}
-          className="flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
-        >
-          <ArrowLeft className="w-5 h-5" />
-          {t('warehouse.backToRows')}
-        </button>
-        <div>
-          <h2 className="text-3xl font-semibold text-gray-900 dark:text-white">
-            {t('warehouse.row')} {selectedRow}
-          </h2>
-          <p className="text-gray-500 dark:text-gray-400 mt-1">{t('warehouse.rowDetailSubtitle')}</p>
+      <div className="mb-6 flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <button
+            onClick={() => setSelectedRow(null)}
+            className="flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+          >
+            <ArrowLeft className="w-5 h-5" />
+            {t('warehouse.backToRows')}
+          </button>
+          <div>
+            <h2 className="text-3xl font-semibold text-gray-900 dark:text-white">
+              {t('warehouse.row')} {selectedRow}
+            </h2>
+            <p className="text-gray-500 dark:text-gray-400 mt-1">{t('warehouse.rowDetailSubtitle')}</p>
+          </div>
         </div>
+        <Link
+          to="/warehouse/requests"
+          className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-sm font-medium"
+        >
+          <FileText className="w-4 h-4" />
+          {t('warehouse.requests.title')}
+        </Link>
       </div>
 
       {/* Responsible Person Field */}
@@ -157,7 +195,7 @@ export function Warehouse() {
         />
       </div>
 
-      {/* Filters */}
+      {/* Filters and Add Material Button */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 mb-4">
         <div className="flex flex-col md:flex-row gap-4">
           <div className="flex-1 relative">
@@ -170,7 +208,7 @@ export function Warehouse() {
               className="w-full pl-9 pr-4 py-2 text-sm border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 items-center">
             {categories.map(category => (
               <button
                 key={category}
@@ -184,6 +222,16 @@ export function Warehouse() {
                 {category === 'all' ? t('warehouse.all') : category}
               </button>
             ))}
+            <Button
+              onClick={() => {
+                setIsAddMaterialOpen(true);
+                setNewMaterial({ materialId: '', unit: '', quantity: '', minStock: '' });
+                setMaterialError('');
+              }}
+              className="ml-auto"
+            >
+              {t('warehouse.addMaterial')}
+            </Button>
           </div>
         </div>
       </div>
@@ -229,7 +277,39 @@ export function Warehouse() {
                     </td>
                     <td className="px-4 py-2">
                       <div>
-                        <p className="font-semibold text-sm text-gray-900 dark:text-white">{material.quantity} {material.unit}</p>
+                        <div className="flex items-center gap-2">
+                          <Input
+                            type="number"
+                            value={editingQuantity[material.id] !== undefined ? editingQuantity[material.id] : material.quantity}
+                            onChange={(e) => {
+                              const value = e.target.value;
+                              setEditingQuantity({ ...editingQuantity, [material.id]: value });
+                            }}
+                            onBlur={(e) => {
+                              const newQuantity = parseFloat(e.target.value);
+                              if (!isNaN(newQuantity) && newQuantity >= 0 && newQuantity !== material.quantity) {
+                                updateMaterialQuantity(material.id, newQuantity);
+                                toast.success(t('warehouse.quantityUpdated'));
+                                const updated = { ...editingQuantity };
+                                delete updated[material.id];
+                                setEditingQuantity(updated);
+                              } else {
+                                const updated = { ...editingQuantity };
+                                delete updated[material.id];
+                                setEditingQuantity(updated);
+                              }
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                e.currentTarget.blur();
+                              }
+                            }}
+                            className="w-24 h-8 text-sm"
+                            min="0"
+                            step="0.01"
+                          />
+                          <span className="text-sm text-gray-600 dark:text-gray-400">{material.unit}</span>
+                        </div>
                         <div className="mt-1 w-24 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
                           <div
                             className={`h-full transition-all ${
@@ -265,8 +345,148 @@ export function Warehouse() {
           </table>
         </div>
       </div>
+
+      {/* Add Material Dialog */}
+      <Dialog open={isAddMaterialOpen} onOpenChange={setIsAddMaterialOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>{t('warehouse.addMaterialTitle')}</DialogTitle>
+            <DialogDescription>
+              {t('warehouse.addMaterialTitle')}
+            </DialogDescription>
+          </DialogHeader>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              handleAddMaterial();
+            }}
+            className="space-y-4"
+          >
+            <div className="space-y-2">
+              <Label htmlFor="materialId">{t('warehouse.materialId')} *</Label>
+              <Input
+                id="materialId"
+                type="text"
+                value={newMaterial.materialId}
+                onChange={(e) => {
+                  setNewMaterial({ ...newMaterial, materialId: e.target.value });
+                  setMaterialError('');
+                }}
+                placeholder={t('warehouse.materialIdPlaceholder')}
+                required
+                className={materialError ? 'border-red-500' : ''}
+              />
+              {materialError && (
+                <p className="text-sm text-red-500 dark:text-red-400">{materialError}</p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="unit">{t('warehouse.measurementUnit')} *</Label>
+              <Select
+                value={newMaterial.unit}
+                onValueChange={(value) => setNewMaterial({ ...newMaterial, unit: value })}
+                required
+              >
+                <SelectTrigger id="unit">
+                  <SelectValue placeholder={t('warehouse.selectUnit')} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="kg">{t('warehouse.kg')}</SelectItem>
+                  <SelectItem value="litr">{t('warehouse.litr')}</SelectItem>
+                  <SelectItem value="dona">{t('warehouse.dona')}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="quantity">{t('warehouse.initialQuantity')} *</Label>
+              <Input
+                id="quantity"
+                type="number"
+                value={newMaterial.quantity}
+                onChange={(e) => setNewMaterial({ ...newMaterial, quantity: e.target.value })}
+                placeholder={t('warehouse.initialQuantityPlaceholder')}
+                required
+                min="0.01"
+                step="0.01"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="minStock">{t('warehouse.minStock')}</Label>
+              <Input
+                id="minStock"
+                type="number"
+                value={newMaterial.minStock}
+                onChange={(e) => setNewMaterial({ ...newMaterial, minStock: e.target.value })}
+                placeholder={t('warehouse.minStockPlaceholder')}
+                min="0"
+                step="0.01"
+              />
+            </div>
+
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setIsAddMaterialOpen(false);
+                  setNewMaterial({ materialId: '', unit: '', quantity: '', minStock: '' });
+                  setMaterialError('');
+                }}
+              >
+                {t('warehouse.cancel')}
+              </Button>
+              <Button type="submit">{t('warehouse.save')}</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
+
+  function handleAddMaterial() {
+    // Validation
+    if (!newMaterial.materialId.trim()) {
+      setMaterialError(t('warehouse.materialIdRequired'));
+      return;
+    }
+
+    if (!newMaterial.unit) {
+      return;
+    }
+
+    const quantity = parseFloat(newMaterial.quantity);
+    if (isNaN(quantity) || quantity <= 0) {
+      setMaterialError(t('warehouse.initialQuantityMin'));
+      return;
+    }
+
+    const minStock = newMaterial.minStock ? parseFloat(newMaterial.minStock) : 0;
+
+    try {
+      addMaterial({
+        materialId: newMaterial.materialId.trim(),
+        name: `Material ${newMaterial.materialId.trim()}`,
+        unit: newMaterial.unit,
+        quantity,
+        minStock,
+        category: 'Raw Material', // Default category, can be enhanced later
+      });
+
+      toast.success(t('warehouse.materialAdded'));
+      setIsAddMaterialOpen(false);
+      setNewMaterial({ materialId: '', unit: '', quantity: '', minStock: '' });
+      setMaterialError('');
+    } catch (error: any) {
+      if (error.message === 'Bu detal allaqachon mavjud') {
+        setMaterialError(t('warehouse.materialExists'));
+      } else {
+        setMaterialError(error.message || 'Xatolik yuz berdi');
+      }
+    }
+  }
 }
 
 interface SummaryCardProps {
