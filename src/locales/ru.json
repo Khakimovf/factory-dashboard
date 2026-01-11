@@ -238,8 +238,14 @@
       "totalEmployees": "Общее количество сотрудников",
       "activeEmployees": "Активные сотрудники",
       "hiredToday": "Приняты сегодня",
+      "sickEmployees": "Больные сотрудники",
+      "vacationEmployees": "Сотрудники в отпуске",
+      "absentEmployees": "Отсутствующие сотрудники",
       "employeesByDepartment": "Сотрудники по подразделениям",
-      "noData": "Нет данных для отображения"
+      "noData": "Нет данных для отображения",
+      "noEmployeesWithStatus": "Сотрудники с таким статусом не найдены",
+      "reason": "Причина",
+      "date": "Дата"
     },
     "employees": {
       "title": "Карты сотрудников",
@@ -251,6 +257,9 @@
       "employmentDate": "Дата приема на работу",
       "status": "Статус",
       "statusActive": "Активен",
+      "statusSick": "Больной",
+      "statusVacation": "В отпуске",
+      "statusAbsent": "Отсутствует",
       "statusInactive": "Не активен",
       "cardTitle": "Карта сотрудника",
       "documents": "Документы",

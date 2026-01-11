@@ -238,8 +238,14 @@
       "totalEmployees": "Jami xodimlar soni",
       "activeEmployees": "Faol xodimlar",
       "hiredToday": "Bugun ishga kirganlar",
+      "sickEmployees": "Kasal xodimlar",
+      "vacationEmployees": "Ta'tilda bo'lgan xodimlar",
+      "absentEmployees": "Yo'q xodimlar",
       "employeesByDepartment": "Xodimlar bo'limlar bo'yicha",
-      "noData": "Ma'lumotlar mavjud emas"
+      "noData": "Ma'lumotlar mavjud emas",
+      "noEmployeesWithStatus": "Bu holatdagi xodimlar topilmadi",
+      "reason": "Sabab",
+      "date": "Sana"
     },
     "employees": {
       "title": "Xodimlar kartasi",
@@ -251,6 +257,9 @@
       "employmentDate": "Ishga kirgan sana",
       "status": "Holat",
       "statusActive": "Faol",
+      "statusSick": "Kasal",
+      "statusVacation": "Ta'tilda",
+      "statusAbsent": "Yo'q",
       "statusInactive": "Faol emas",
       "viewCard": "Kartani ochish",
       "cardTitle": "Xodim kartasi",

@@ -225,11 +225,23 @@ export function HREmployees() {
                         className={
                           employee.status === 'active'
                             ? 'inline-flex px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-400'
+                            : employee.status === 'sick'
+                            ? 'inline-flex px-2 py-1 text-xs font-medium rounded-full bg-orange-100 text-orange-700 dark:bg-orange-900/20 dark:text-orange-400'
+                            : employee.status === 'vacation'
+                            ? 'inline-flex px-2 py-1 text-xs font-medium rounded-full bg-purple-100 text-purple-700 dark:bg-purple-900/20 dark:text-purple-400'
+                            : employee.status === 'absent'
+                            ? 'inline-flex px-2 py-1 text-xs font-medium rounded-full bg-red-100 text-red-700 dark:bg-red-900/20 dark:text-red-400'
                             : 'inline-flex px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
                         }
                       >
                         {employee.status === 'active'
                           ? t('hr.employees.statusActive')
+                          : employee.status === 'sick'
+                          ? t('hr.employees.statusSick')
+                          : employee.status === 'vacation'
+                          ? t('hr.employees.statusVacation')
+                          : employee.status === 'absent'
+                          ? t('hr.employees.statusAbsent')
                           : t('hr.employees.statusInactive')}
                       </span>
                     </td>
@@ -334,6 +346,12 @@ function EmployeeCardModal({ employee, onClose }: EmployeeCardModalProps) {
                 value={
                   employee.status === 'active'
                     ? t('hr.employees.statusActive')
+                    : employee.status === 'sick'
+                    ? t('hr.employees.statusSick')
+                    : employee.status === 'vacation'
+                    ? t('hr.employees.statusVacation')
+                    : employee.status === 'absent'
+                    ? t('hr.employees.statusAbsent')
                     : t('hr.employees.statusInactive')
                 }
               />
