@@ -12,7 +12,8 @@ export type UserRole =
   | 'line_master'
   | 'ADMIN'
   | 'WAREHOUSE_MANAGER'
-  | 'WAREHOUSE_STAFF';
+  | 'WAREHOUSE_STAFF'
+  | 'EMPLOYEE';
 
 /**
  * Get current user role (mock implementation)
@@ -30,6 +31,13 @@ export function getCurrentUserRole(): UserRole {
  */
 export function isSystemOwner(): boolean {
   return getCurrentUserRole() === 'system_owner';
+}
+
+/**
+ * Check if current user is an employee
+ */
+export function isEmployee(): boolean {
+  return getCurrentUserRole() === 'EMPLOYEE';
 }
 
 /**

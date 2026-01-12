@@ -1,6 +1,6 @@
 import { NavLink } from 'react-router-dom';
 import { useLanguage } from '../../context/LanguageContext';
-import { FileText, Users, BarChart3, Library } from 'lucide-react';
+import { FileText, Users, BarChart3, Library, UserCircle } from 'lucide-react';
 
 export function HRSubNav() {
   const { t } = useLanguage();
@@ -14,6 +14,8 @@ export function HRSubNav() {
     { to: '/hr/stats', label: t('hr.tabStats'), icon: <BarChart3 className="w-4 h-4" /> },
     // Document library: reference materials
     { to: '/hr/library', label: t('hr.documentLibrary'), icon: <Library className="w-4 h-4" /> },
+    // My Cabinet: Employee Self-Service (visible for all roles - temporary)
+    { to: '/hr/my-cabinet', label: t('hr.tabMyCabinet'), icon: <UserCircle className="w-4 h-4" /> },
   ];
 
   return (

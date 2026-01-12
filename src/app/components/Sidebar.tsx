@@ -1,7 +1,7 @@
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Package, Factory, Users, Wrench, FileText, Send } from 'lucide-react';
+import { LayoutDashboard, Package, Factory, Users, Wrench, FileText, Send, UserCircle } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
-import { isSystemOwner } from '../utils/roleUtils';
+import { isSystemOwner, isEmployee } from '../utils/roleUtils';
 
 const navItems = [
   { path: '/', label: 'sidebar.dashboard', icon: LayoutDashboard },
@@ -28,7 +28,7 @@ export function Sidebar() {
       
       <nav className="flex-1 p-4 space-y-1 flex flex-col">
         <div className="flex-1">
-          {navItems.map(({ path, label, icon: Icon }) => {
+          {navItems.map(({ path, label, icon: Icon }, index) => {
             // Check exact match first, then check if pathname starts with path
             // But avoid matching parent paths when on child routes (except for root)
             const isExactMatch = location.pathname === path;
@@ -43,18 +43,33 @@ export function Sidebar() {
             const isActive = isExactMatch || isParentMatch;
             
             return (
-              <Link
-                key={path}
-                to={path}
-                className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
-                  isActive
-                    ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400'
-                    : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
-                }`}
-              >
-                <Icon className="w-5 h-5" />
-                <span className="font-medium">{t(label)}</span>
-              </Link>
+              <div key={path}>
+                <Link
+                  to={path}
+                  className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
+                    isActive
+                      ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400'
+                      : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+                  }`}
+                >
+                  <Icon className="w-5 h-5" />
+                  <span className="font-medium">{t(label)}</span>
+                </Link>
+                {/* Insert Employee Cabinet menu item right after HR */}
+                {path === '/hr' && (
+                  <Link
+                    to="/employee/cabinet"
+                    className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
+                      location.pathname.startsWith('/employee/cabinet')
+                        ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400'
+                        : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+                    }`}
+                  >
+                    <UserCircle className="w-5 h-5" />
+                    <span className="font-medium">{t('sidebar.employeeCabinet')}</span>
+                  </Link>
+                )}
+              </div>
             );
           })}
         </div>
@@ -62,7 +77,7 @@ export function Sidebar() {
         {isSystemOwner() && (
           <Link
             to={auditLogPath}
-            className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all mt-auto ${
+            className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${isEmployee() ? '' : 'mt-auto'} ${
               isAuditLogActive
                 ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400'
                 : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'

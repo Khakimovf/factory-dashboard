@@ -13,6 +13,10 @@ import { DailyLinePlanEntry } from './components/hr/DailyLinePlanEntry';
 import { HREmployees } from './components/hr/HREmployees';
 import { HRStatsPage } from './components/hr/HRStatsPage';
 import { HRDocumentLibrary } from './components/hr/HRDocumentLibrary';
+import { HRMyCabinet } from './components/hr/HRMyCabinet';
+import { EmployeeCabinet } from './components/EmployeeCabinet';
+import { EmployeeCabinetPage } from './pages/employee/EmployeeCabinetPage';
+import { EmployeeSelfService } from './components/ess/EmployeeSelfService';
 import { MaintenanceDashboard } from './components/MaintenanceDashboard';
 import { FailureReportList } from './components/FailureReportList';
 import { FailureReportDetail } from './components/FailureReportDetail';
@@ -50,8 +54,11 @@ export default function App() {
                       <Route path="/hr/employees" element={<HREmployees />} />
                       <Route path="/hr/stats" element={<HRStatsPage />} />
                       <Route path="/hr/library" element={<HRDocumentLibrary />} />
+                      <Route path="/hr/my-cabinet" element={<HRMyCabinet />} />
                       <Route path="/hr/production-plan" element={<DailyProductionPlanForm />} />
                       <Route path="/hr/line-plans" element={<DailyLinePlanEntry />} />
+                      <Route path="/employee/cabinet" element={<EmployeeCabinetPage />} />
+                      <Route path="/ess" element={<EmployeeSelfService />} />
                       <Route path="/maintenance" element={<MaintenanceDashboard />} />
                       <Route path="/maintenance/failure-reports" element={<FailureReportList />} />
                       <Route path="/maintenance/failure-reports/new" element={<CreateFailureReport />} />
