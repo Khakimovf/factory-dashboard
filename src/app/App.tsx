@@ -1,3 +1,4 @@
+import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { Header } from './components/Header';
 import { Sidebar } from './components/Sidebar';
@@ -6,6 +7,7 @@ import { Warehouse } from './components/Warehouse';
 import { MaterialRequests } from './components/MaterialRequests';
 import { ProductionLines } from './components/ProductionLines';
 import { ProductionLineDetail } from './components/ProductionLineDetail';
+import { ProductionLivePage } from './pages/production/ProductionLivePage';
 import { OperatorDailyLinePlan } from './components/production/OperatorDailyLinePlan';
 import { HRDepartment } from './components/HRDepartment';
 import { DailyProductionPlanForm } from './components/DailyProductionPlanForm';
@@ -13,7 +15,6 @@ import { DailyLinePlanEntry } from './components/hr/DailyLinePlanEntry';
 import { HREmployees } from './components/hr/HREmployees';
 import { HRStatsPage } from './components/hr/HRStatsPage';
 import { HRDocumentLibrary } from './components/hr/HRDocumentLibrary';
-import { HRMyCabinet } from './components/hr/HRMyCabinet';
 import { EmployeeCabinet } from './components/EmployeeCabinet';
 import { EmployeeCabinetPage } from './pages/employee/EmployeeCabinetPage';
 import { EmployeeSelfService } from './components/ess/EmployeeSelfService';
@@ -23,6 +24,14 @@ import { FailureReportDetail } from './components/FailureReportDetail';
 import { CreateFailureReport } from './components/CreateFailureReport';
 import { UploadPhotoReport } from './components/UploadPhotoReport';
 import { SystemAuditLog } from './components/SystemAuditLog';
+import { RolesPermissionsPage } from './pages/admin/RolesPermissionsPage';
+import { SuppliersPage } from './pages/suppliers/SuppliersPage';
+import { SupplierDetailPage } from './pages/suppliers/SupplierDetailPage';
+import { SuppliersLayout } from './pages/suppliers/SuppliersLayout';
+import { QualityControlPage } from './pages/qc/QualityControlPage';
+import { OrdersPage } from './pages/orders/OrdersPage';
+import { FinishedGoodsPage } from './pages/finished-goods/FinishedGoodsPage';
+import { CanteenPage } from './pages/canteen/CanteenPage';
 import { FactoryProvider } from './context/FactoryContext';
 import { AuditLogProvider } from './context/AuditLogContext';
 import { ThemeProvider } from './context/ThemeContext';
@@ -49,12 +58,16 @@ export default function App() {
                       <Route path="/warehouse/requests" element={<MaterialRequests />} />
                       <Route path="/production-lines" element={<ProductionLines />} />
                       <Route path="/production-lines/operator-plans" element={<OperatorDailyLinePlan />} />
+                      <Route path="/production-lines/:id/live" element={<ProductionLivePage />} />
                       <Route path="/production-lines/:id" element={<ProductionLineDetail />} />
+                      <Route path="/qc" element={<QualityControlPage />} />
+                      <Route path="/orders" element={<OrdersPage />} />
+                      <Route path="/finished-goods" element={<FinishedGoodsPage />} />
                       <Route path="/hr" element={<HRDepartment />} />
                       <Route path="/hr/employees" element={<HREmployees />} />
+                      <Route path="/canteen" element={<CanteenPage />} />
                       <Route path="/hr/stats" element={<HRStatsPage />} />
                       <Route path="/hr/library" element={<HRDocumentLibrary />} />
-                      <Route path="/hr/my-cabinet" element={<HRMyCabinet />} />
                       <Route path="/hr/production-plan" element={<DailyProductionPlanForm />} />
                       <Route path="/hr/line-plans" element={<DailyLinePlanEntry />} />
                       <Route path="/employee/cabinet" element={<EmployeeCabinetPage />} />
@@ -65,6 +78,11 @@ export default function App() {
                       <Route path="/maintenance/failure-reports/:id" element={<FailureReportDetail />} />
                       <Route path="/maintenance/failure-reports/:id/upload-photos" element={<UploadPhotoReport />} />
                       <Route path="/audit-log" element={<SystemAuditLog />} />
+                      <Route path="/roles-permissions" element={<RolesPermissionsPage />} />
+                      <Route path="/suppliers" element={<SuppliersLayout />}>
+                        <Route index element={<SuppliersPage />} />
+                        <Route path=":id" element={<SupplierDetailPage />} />
+                      </Route>
                     </Routes>
                   </main>
                 </div>

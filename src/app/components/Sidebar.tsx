@@ -1,15 +1,20 @@
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Package, Factory, Users, Wrench, FileText, Send, UserCircle } from 'lucide-react';
+import { LayoutDashboard, Package, Factory, Users, Wrench, FileText, Send, UserCircle, Shield, Truck, ClipboardCheck, ShoppingCart, Box, Utensils } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
-import { isSystemOwner, isEmployee } from '../utils/roleUtils';
+import { isSystemOwner, isEmployee, isAdmin } from '../utils/roleUtils';
 
 const navItems = [
   { path: '/', label: 'sidebar.dashboard', icon: LayoutDashboard },
   { path: '/warehouse', label: 'sidebar.warehouse', icon: Package },
   { path: '/production-lines', label: 'sidebar.productionLines', icon: Factory },
   { path: '/production-lines/operator-plans', label: 'sidebar.operatorPlans', icon: Send },
+  { path: '/qc', label: 'sidebar.qc', icon: ClipboardCheck },
+  { path: '/orders', label: 'sidebar.orders', icon: ShoppingCart },
+  { path: '/finished-goods', label: 'sidebar.finishedGoods', icon: Box },
   { path: '/maintenance', label: 'sidebar.maintenance', icon: Wrench },
   { path: '/hr', label: 'sidebar.hr', icon: Users },
+  { path: '/canteen', label: 'sidebar.canteen', icon: Utensils },
+  { path: '/suppliers', label: 'sidebar.suppliers', icon: Truck },
 ];
 
 export function Sidebar() {
@@ -73,6 +78,20 @@ export function Sidebar() {
             );
           })}
         </div>
+
+        {isAdmin() && (
+          <Link
+            to="/roles-permissions"
+            className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
+              location.pathname.startsWith('/roles-permissions')
+                ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400'
+                : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+            }`}
+          >
+            <Shield className="w-5 h-5" />
+            <span className="font-medium">{t('sidebar.rolesPermissions')}</span>
+          </Link>
+        )}
         
         {isSystemOwner() && (
           <Link

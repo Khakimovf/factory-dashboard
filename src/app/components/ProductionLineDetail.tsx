@@ -4,7 +4,7 @@ import { useFactory } from '../context/FactoryContext';
 import { useLanguage } from '../context/LanguageContext';
 import { useDailyProductionPlan } from '../context/DailyProductionPlanContext';
 import { maintenanceApi } from '../services/maintenanceApi';
-import { ArrowLeft, Package, PlayCircle, PauseCircle, Settings, Plus } from 'lucide-react';
+import { ArrowLeft, Package, PlayCircle, PauseCircle, Settings, Plus, Activity } from 'lucide-react';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { LinePlanModal } from './hr/LinePlanModal';
@@ -21,9 +21,14 @@ export function ProductionLineDetail() {
   const [showProductionPlan, setShowProductionPlan] = useState(false);
 
   const line = productionLines.find(l => l.id === id);
-  
+ 
   // Get today's plan for this line
   const todayPlan = line ? getTodayLinePlan(line.id) : null;
+
+  // Mocked production progress data for the statistics card (UI-only)
+  const PRODUCTION_PLAN = 1000;
+  const PRODUCTION_FACT = 356;
+  const PRODUCTION_REMAINING = 644;
 
   if (!line) {
     return (
@@ -57,9 +62,22 @@ export function ProductionLineDetail() {
           {t('productionDetail.backToLines')}
         </button>
         <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-3xl font-semibold text-gray-900 dark:text-white">{line.name}</h2>
-            <p className="text-gray-500 dark:text-gray-400 mt-1">{t('productionDetail.lineId')}: {line.id}</p>
+          <div className="flex items-center gap-4">
+            <div>
+              <h2 className="text-3xl font-semibold text-gray-900 dark:text-white">{line.name}</h2>
+              <p className="text-gray-500 dark:text-gray-400 mt-1">
+                {t('productionDetail.lineId')}: {line.id}
+              </p>
+            </div>
+            <Button
+              onClick={() => navigate(`/production-lines/${line.id}/live`)}
+              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg shadow-sm"
+            >
+              <Activity className="w-4 h-4" />
+              <span className="text-sm font-medium">
+                {t('productionDetail.liveProduction')}
+              </span>
+            </Button>
           </div>
           <div className="flex gap-2">
             <button
@@ -117,6 +135,36 @@ export function ProductionLineDetail() {
                     }`}
                     style={{ width: `${line.efficiency}%` }}
                   />
+                </div>
+              </div>
+
+              {/* Production progress KPIs */}
+              <div className="py-3 border-t border-gray-200 dark:border-gray-700">
+                <div className="flex items-center justify-between gap-6">
+                  <div>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      {t('productionDetail.plan')}
+                    </p>
+                    <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                      {PRODUCTION_PLAN}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      {t('productionDetail.fact')}
+                    </p>
+                    <p className="text-sm font-semibold text-blue-600 dark:text-blue-400">
+                      {PRODUCTION_FACT}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      {t('productionDetail.remaining')}
+                    </p>
+                    <p className="text-sm font-semibold text-green-600 dark:text-green-400">
+                      {PRODUCTION_REMAINING}
+                    </p>
+                  </div>
                 </div>
               </div>
 
