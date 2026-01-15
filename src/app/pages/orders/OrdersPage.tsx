@@ -153,7 +153,7 @@ export function OrdersPage() {
         </Button>
       </div>
 
-      {/* Filters */}
+      {/* Filterlar va buyurtmalar ro‘yxati */}
       <div className="mb-6 flex items-center gap-4">
         <Select value={selectedStatus} onValueChange={setSelectedStatus}>
           <SelectTrigger className="w-48">
@@ -168,7 +168,6 @@ export function OrdersPage() {
         </Select>
       </div>
 
-      {/* Orders Table */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">

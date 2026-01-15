@@ -84,6 +84,7 @@ export function Warehouse() {
           </Link>
         </div>
 
+
         {/* Row Selection Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {(['A', 'B', 'C', 'D'] as const).map(row => {

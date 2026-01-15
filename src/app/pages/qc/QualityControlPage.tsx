@@ -64,7 +64,7 @@ export interface QCInspection {
   actionUpdatedAt?: string;
 }
 
-const initialInspections: QCInspection[] = [
+export const initialInspections: QCInspection[] = [
   {
     id: '1',
     lineId: '1',
@@ -261,19 +261,19 @@ export function QualityControlPage() {
       defectTypes: [],
       totalDefects: 0,
       status: 'pending',
-       notes: '',
-       inspectionType: 'IN_PROCESS',
-       severity: 'MINOR',
-       category: 'Functional',
-       rootCause: 'Unknown',
-       decision: undefined,
-       correctiveAction: undefined,
-       lineStatus: 'RUNNING',
-       maintenanceCreated: false,
-       reworkLinked: false,
-       warehouseBlocked: false,
-       decisionDate: undefined,
-       actionUpdatedAt: undefined,
+      notes: '',
+      inspectionType: 'IN_PROCESS',
+      severity: 'MINOR',
+      category: 'Functional',
+      rootCause: 'Unknown',
+      decision: undefined,
+      correctiveAction: undefined,
+      lineStatus: 'RUNNING',
+      maintenanceCreated: false,
+      reworkLinked: false,
+      warehouseBlocked: false,
+      decisionDate: undefined,
+      actionUpdatedAt: undefined,
     });
     setIsDialogOpen(true);
   };
@@ -357,30 +357,7 @@ export function QualityControlPage() {
         </Button>
       </div>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-          <div className="flex items-center gap-3 mb-2">
-            <AlertTriangle className="w-5 h-5 text-orange-600 dark:text-orange-400" />
-            <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400">{t('qc.todayDefects')}</h3>
-          </div>
-          <p className="text-3xl font-semibold text-gray-900 dark:text-white">{todayDefects}</p>
-        </div>
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-          <div className="flex items-center gap-3 mb-2">
-            <XCircle className="w-5 h-5 text-red-600 dark:text-red-400" />
-            <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400">{t('qc.rejectedCount')}</h3>
-          </div>
-          <p className="text-3xl font-semibold text-gray-900 dark:text-white">{rejectedCount}</p>
-        </div>
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-          <div className="flex items-center gap-3 mb-2">
-            <CheckCircle className="w-5 h-5 text-yellow-600 dark:text-yellow-400" />
-            <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400">{t('qc.pendingCount')}</h3>
-          </div>
-          <p className="text-3xl font-semibold text-gray-900 dark:text-white">{pendingCount}</p>
-        </div>
-      </div>
+      {/* faqat ro‘yxat va boshqaruv amallari */}
 
       {/* Filters */}
       <div className="mb-6 flex items-center gap-4">

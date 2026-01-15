@@ -22,7 +22,7 @@ export interface FinishedProduct {
   lastUpdated: string;
 }
 
-const initialProducts: FinishedProduct[] = [
+export const initialFinishedProducts: FinishedProduct[] = [
   {
     id: '1',
     productName: 'Vagon detallari',
@@ -71,7 +71,7 @@ const initialProducts: FinishedProduct[] = [
 
 export function FinishedGoodsPage() {
   const { t } = useLanguage();
-  const [products, setProducts] = useState<FinishedProduct[]>(initialProducts);
+  const [products, setProducts] = useState<FinishedProduct[]>(initialFinishedProducts);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStatus, setSelectedStatus] = useState<string>('all');

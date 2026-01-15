@@ -52,35 +52,7 @@ export function ProductionLines() {
         </button>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-        <StatCard
-          label={t('production.totalLines')}
-          value={productionLines.length}
-          icon={<Factory className="w-6 h-6" />}
-          color="blue"
-        />
-        <StatCard
-          label={t('production.active')}
-          value={productionLines.filter(l => l.status === 'active').length}
-          icon={<PlayCircle className="w-6 h-6" />}
-          color="green"
-        />
-        <StatCard
-          label={t('production.idle')}
-          value={productionLines.filter(l => l.status === 'idle').length}
-          icon={<PauseCircle className="w-6 h-6" />}
-          color="yellow"
-        />
-        <StatCard
-          label={t('production.avgEfficiency')}
-          value={`${Math.round(productionLines.reduce((sum, l) => sum + l.efficiency, 0) / productionLines.length)}%`}
-          icon={<Activity className="w-6 h-6" />}
-          color="purple"
-        />
-      </div>
-
-      {/* Production Lines Grid */}
+      {/* Liniyalar ro‘yxati va tezkor amallar */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {productionLines.map(line => (
           <div
@@ -139,7 +111,6 @@ export function ProductionLines() {
         ))}
       </div>
 
-      {/* Add Modal */}
       {showAddModal && (
         <AddLineModal
           onClose={() => setShowAddModal(false)}
@@ -149,36 +120,6 @@ export function ProductionLines() {
           }}
         />
       )}
-    </div>
-  );
-}
-
-interface StatCardProps {
-  label: string;
-  value: string | number;
-  icon: React.ReactNode;
-  color: 'blue' | 'green' | 'yellow' | 'purple';
-}
-
-function StatCard({ label, value, icon, color }: StatCardProps) {
-  const colorClasses = {
-    blue: 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400',
-    green: 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400',
-    yellow: 'bg-yellow-50 dark:bg-yellow-900/20 text-yellow-600 dark:text-yellow-400',
-    purple: 'bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400',
-  };
-
-  return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-gray-600 dark:text-gray-400 text-sm mb-1">{label}</p>
-          <p className="text-2xl font-semibold text-gray-900 dark:text-white">{value}</p>
-        </div>
-        <div className={`w-12 h-12 rounded-lg ${colorClasses[color]} flex items-center justify-center`}>
-          {icon}
-        </div>
-      </div>
     </div>
   );
 }

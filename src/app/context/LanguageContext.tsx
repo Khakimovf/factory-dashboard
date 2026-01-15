@@ -1,8 +1,9 @@
 import { createContext, useContext, useState, useMemo, useCallback, ReactNode } from 'react';
 import uzTranslations from '../../locales/uz.json';
 import ruTranslations from '../../locales/ru.json';
+import krTranslations from '../../locales/kr.json';
 
-type Language = 'uz' | 'ru';
+type Language = 'uz' | 'ru' | 'kr';
 
 interface LanguageContextType {
   language: Language;
@@ -33,6 +34,7 @@ function flattenTranslations(obj: any, prefix = ''): Record<string, string> {
 const translations = {
   uz: flattenTranslations(uzTranslations),
   ru: flattenTranslations(ruTranslations),
+  kr: flattenTranslations(krTranslations),
 } as const;
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
@@ -40,7 +42,7 @@ const LanguageContext = createContext<LanguageContextType | undefined>(undefined
 export function LanguageProvider({ children }: { children: ReactNode }) {
   const [language, setLanguage] = useState<Language>(() => {
     const saved = localStorage.getItem('language');
-    return (saved === 'uz' || saved === 'ru') ? saved : 'uz';
+    return saved === 'uz' || saved === 'ru' || saved === 'kr' ? (saved as Language) : 'uz';
   });
 
   const t = useCallback((key: string): string => {

@@ -32,6 +32,7 @@ import { QualityControlPage } from './pages/qc/QualityControlPage';
 import { OrdersPage } from './pages/orders/OrdersPage';
 import { FinishedGoodsPage } from './pages/finished-goods/FinishedGoodsPage';
 import { CanteenPage } from './pages/canteen/CanteenPage';
+import ReportsPage from './pages/reports/ReportsPage';
 import { FactoryProvider } from './context/FactoryContext';
 import { AuditLogProvider } from './context/AuditLogContext';
 import { ThemeProvider } from './context/ThemeContext';
@@ -63,6 +64,7 @@ export default function App() {
                       <Route path="/qc" element={<QualityControlPage />} />
                       <Route path="/orders" element={<OrdersPage />} />
                       <Route path="/finished-goods" element={<FinishedGoodsPage />} />
+                      <Route path="/reports" element={<ReportsPage />} />
                       <Route path="/hr" element={<HRDepartment />} />
                       <Route path="/hr/employees" element={<HREmployees />} />
                       <Route path="/canteen" element={<CanteenPage />} />

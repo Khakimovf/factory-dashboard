@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Package, Factory, Users, Wrench, FileText, Send, UserCircle, Shield, Truck, ClipboardCheck, ShoppingCart, Box, Utensils } from 'lucide-react';
+import { LayoutDashboard, Package, Factory, Users, Wrench, FileText, Send, UserCircle, Shield, Truck, ClipboardCheck, ShoppingCart, Box, Utensils, BarChart2 } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import { isSystemOwner, isEmployee, isAdmin } from '../utils/roleUtils';
 
@@ -14,6 +14,7 @@ const navItems = [
   { path: '/maintenance', label: 'sidebar.maintenance', icon: Wrench },
   { path: '/hr', label: 'sidebar.hr', icon: Users },
   { path: '/canteen', label: 'sidebar.canteen', icon: Utensils },
+  { path: '/reports', label: 'sidebar.reports', icon: BarChart2 },
   { path: '/suppliers', label: 'sidebar.suppliers', icon: Truck },
 ];
 

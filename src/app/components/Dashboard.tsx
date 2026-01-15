@@ -1,23 +1,22 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useFactory } from '../context/FactoryContext';
 import { useLanguage } from '../context/LanguageContext';
-import { Package, Factory, TrendingUp, FileText, AlertTriangle, Wrench, Award, AlertCircle } from 'lucide-react';
-import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import {
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  LineChart,
+  Line,
+  CartesianGrid,
+  XAxis,
+  YAxis,
+  Tooltip,
+  PieChart,
+  Pie,
+  Cell,
+} from 'recharts';
 
 type DateRange = 'today' | 'week' | 'month';
-
-const defectDataMock = [
-  { name: 'Line A', defects: 12 },
-  { name: 'Line B', defects: 5 },
-  { name: 'Line D', defects: 3 },
-];
-
-const maintenanceDataMock = [
-  { name: 'Jan', events: 4 },
-  { name: 'Feb', events: 6 },
-  { name: 'Mar', events: 3 },
-  { name: 'Apr', events: 5 },
-];
 
 export function Dashboard() {
   const { materials, productionLines, hrDocuments } = useFactory();
@@ -29,51 +28,126 @@ export function Dashboard() {
   const pendingDocs = hrDocuments.filter(d => d.status === 'pending').length;
   const totalOutput = productionLines.reduce((sum, line) => sum + line.output, 0);
 
-  const productionData = productionLines.map(line => ({
-    name: line.name.replace('Assembly Line ', 'Line ').replace('Quality Control Station', 'QC'),
-    output: line.output,
-    efficiency: line.efficiency,
+  const mostEfficientLine = productionLines.reduce((prev, current) =>
+    prev.efficiency > current.efficiency ? prev : current,
+  );
+  const leastEfficientLine = productionLines.reduce((prev, current) =>
+    prev.efficiency < current.efficiency ? prev : current,
+  );
+  const avgEfficiency =
+    productionLines.length > 0
+      ? productionLines.reduce((sum, l) => sum + l.efficiency, 0) / productionLines.length
+      : 0;
+
+  const theoreticalPerLine = 1000;
+  const plannedToday = productionLines.length * theoreticalPerLine;
+  const productionPercent = plannedToday > 0 ? (totalOutput / plannedToday) * 100 : 0;
+  const productionDeltaPercent = productionPercent - 100;
+
+  const efficiencyDeltaPercent = avgEfficiency - 90;
+
+  const stoppedLines = productionLines.length - activeLines;
+
+  const lostUnitsToday = useMemo(
+    () => Math.max(plannedToday - totalOutput, 0),
+    [plannedToday, totalOutput],
+  );
+
+  const warehouseTotalStock = useMemo(
+    () => materials.reduce((sum, m) => sum + m.quantity, 0),
+    [materials],
+  );
+  const warehouseMinStock = useMemo(
+    () => materials.reduce((sum, m) => sum + m.minStock, 0),
+    [materials],
+  );
+  const warehouseLowStock = lowStockCount;
+  const warehouseMovement = useMemo(
+    () =>
+      materials.map(m => ({
+        name: m.name,
+        qoldiq: m.quantity,
+        kirim: Math.round(m.quantity * 0.3),
+        chiqim: Math.round(m.quantity * 0.2),
+      })),
+    [materials],
+  );
+
+  const productionChartData = productionLines.map(line => ({
+    name: line.name.replace('Assembly Line ', 'Line '),
+    reja: line.output,
+    fakt: Math.round(line.output * (line.efficiency / 100)),
+    samaradorlik: line.efficiency,
   }));
 
-  const statusData = [
-    { name: t('dashboard.active'), value: productionLines.filter(l => l.status === 'active').length, color: '#22c55e' },
-    { name: t('dashboard.idle'), value: productionLines.filter(l => l.status === 'idle').length, color: '#eab308' },
-    { name: t('dashboard.maintenance'), value: productionLines.filter(l => l.status === 'maintenance').length, color: '#ef4444' },
+  const qcKpiTodayDefects = 24;
+  const qcKpiRejected = 3;
+  const qcDefectsByLine = [
+    { name: 'Line A', nuqsonlar: 8 },
+    { name: 'Line B', nuqsonlar: 6 },
+    { name: 'Line D', nuqsonlar: 10 },
+  ];
+  const qcDefectsByType = [
+    { name: 'Ko‘rinish', value: 10 },
+    { name: 'Funktsional', value: 8 },
+    { name: 'Struktura', value: 6 },
   ];
 
-  // Production & Analytics data
-  const productionSummary = productionLines.map(line => ({
-    name: line.name.replace('Assembly Line ', 'Line '),
-    daily: line.output,
-    monthly: line.output * 22,
-  }));
+  const ordersKpiNew = 4;
+  const ordersKpiInProgress = 3;
+  const ordersKpiCompleted = 5;
+  const ordersStatusPie = [
+    { name: 'Yangi', value: ordersKpiNew },
+    { name: 'Jarayonda', value: ordersKpiInProgress },
+    { name: 'Yakunlangan', value: ordersKpiCompleted },
+  ];
+  const ordersVolume = [
+    { orderNumber: 'ORD-001', quantity: 500 },
+    { orderNumber: 'ORD-002', quantity: 1000 },
+    { orderNumber: 'ORD-003', quantity: 250 },
+    { orderNumber: 'ORD-004', quantity: 750 },
+  ];
 
-  const efficiencyComparison = productionLines.map(line => ({
-    name: line.name.replace('Assembly Line ', 'Line '),
-    efficiency: line.efficiency,
-  }));
+  const finishedKpiTotal = 4;
+  const finishedKpiFree = 3;
+  const finishedByType = [
+    { name: 'Vagon detallari', miqdor: 450 },
+    { name: 'Avto komponentlar', miqdor: 850 },
+    { name: 'Metall konstruksiya', miqdor: 75 },
+    { name: 'Elektron komponentlar', miqdor: 1200 },
+  ];
 
-  const totalDaily = productionSummary.reduce((sum, item) => sum + item.daily, 0);
-  const totalMonthly = productionSummary.reduce((sum, item) => sum + item.monthly, 0);
-  const totalDefects = defectDataMock.reduce((s, d) => s + d.defects, 0);
-  const totalMaintenance = maintenanceDataMock.reduce((s, m) => s + m.events, 0);
+  const maintenanceKpiTotalStops = 7;
+  const maintenanceKpiIssue = 2;
+  const maintenanceKpiInRepair = 1;
+  const maintenanceDowntimeTrend = [
+    { name: 'Du', minutes: 40 },
+    { name: 'Se', minutes: 55 },
+    { name: 'Cho', minutes: 35 },
+    { name: 'Pa', minutes: 65 },
+    { name: 'Ju', minutes: 45 },
+  ];
+  const maintenanceReasons = [
+    { name: 'Mexanik', value: 60 },
+    { name: 'Elektr', value: 25 },
+    { name: 'Reja to‘xtash', value: 15 },
+  ];
 
-  // Insights & Alerts
-  const mostEfficientLine = productionLines.reduce((prev, current) => 
-    (prev.efficiency > current.efficiency) ? prev : current
-  );
-  const leastEfficientLine = productionLines.reduce((prev, current) => 
-    (prev.efficiency < current.efficiency) ? prev : current
-  );
-  const mostDefectsLine = defectDataMock.reduce((prev, current) => 
-    (prev.defects > current.defects) ? prev : current
-  );
+  const deviationPercent = productionDeltaPercent;
+  const riskLevel: 'Past' | 'O‘rtacha' | 'Yuqori' =
+    Math.abs(deviationPercent) >= 10 || avgEfficiency < 80
+      ? 'Yuqori'
+      : Math.abs(deviationPercent) >= 5 || avgEfficiency < 85
+      ? 'O‘rtacha'
+      : 'Past';
 
   return (
-    <div className="p-8 bg-gray-50 dark:bg-gray-900">
+    <div className="p-8 min-h-screen bg-gray-50 dark:bg-gray-900">
       <div className="mb-8 flex items-center justify-between">
         <div>
-          <h2 className="text-3xl font-semibold text-gray-900 dark:text-white">{t('dashboard.title')}</h2>
+          <h2 className="text-3xl font-semibold text-gray-900 dark:text-white">
+            {t('dashboard.title')}
+          </h2>
           <p className="text-gray-500 dark:text-gray-400 mt-1">{t('dashboard.welcome')}</p>
         </div>
         <div className="inline-flex items-center gap-1 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-1 text-xs">
@@ -110,183 +184,377 @@ export function Dashboard() {
         </div>
       </div>
 
-      {/* SECTION 1: Quick Overview */}
-      <div className="mb-8">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">{t('dashboard.quickOverview')}</h3>
+      <TopSummary
+        worstLine={leastEfficientLine.name.replace('Assembly Line ', 'Line ')}
+        bestLine={mostEfficientLine.name.replace('Assembly Line ', 'Line ')}
+        avgEfficiency={avgEfficiency}
+        deviationPercent={deviationPercent}
+        lostUnits={lostUnitsToday}
+        riskLevel={riskLevel}
+      />
 
-        {/* Metrics Cards */}
+      <div className="mb-8">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+          Asosiy ko&apos;rsatkichlar
+        </h3>
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
           <MetricCard
-            icon={<TrendingUp className="w-6 h-6" />}
-            title={t('dashboard.totalOutput')}
-            value={totalOutput}
-            unit={t('dashboard.unitsPerDay')}
+            title="Ishlab chiqarish (Reja vs Fakt)"
+            value={Number.isFinite(productionPercent) ? productionPercent : 0}
+            unit="%"
             color="blue"
+            delta={productionDeltaPercent}
+            explanation={
+              productionDeltaPercent < 0
+                ? `Rejadan ${Math.abs(productionDeltaPercent).toFixed(1)}% past. Asosiy sabab: past samaradorlik.`
+                : `Rejadan ${productionDeltaPercent.toFixed(1)}% yuqori.`
+            }
           />
           <MetricCard
-            icon={<Package className="w-6 h-6" />}
-            title={t('dashboard.lowStock')}
-            value={lowStockCount}
-            unit={t('dashboard.materials')}
-            color="orange"
-          />
-          <MetricCard
-            icon={<Factory className="w-6 h-6" />}
-            title={t('dashboard.activeLines')}
-            value={activeLines}
-            unit={`${t('dashboard.of')} ${productionLines.length}`}
+            title="Umumiy samaradorlik"
+            value={Number.isFinite(avgEfficiency) ? Number(avgEfficiency.toFixed(1)) : 0}
+            unit="%"
             color="green"
+            delta={efficiencyDeltaPercent}
+            explanation={
+              efficiencyDeltaPercent < 0
+                ? `Maqsaddan ${Math.abs(efficiencyDeltaPercent).toFixed(
+                    1,
+                  )}% past. Xavf: quvvat yetarli ishlamayapti.`
+                : `Maqsaddan ${efficiencyDeltaPercent.toFixed(1)}% yuqori. Holat barqaror.`
+            }
           />
           <MetricCard
-            icon={<FileText className="w-6 h-6" />}
-            title={t('dashboard.pendingDocs')}
-            value={pendingDocs}
-            unit={t('dashboard.awaitingApproval')}
+            title="To‘xtagan liniyalar"
+            value={stoppedLines}
+            unit="liniya"
+            color="orange"
+            delta={0}
+            explanation={
+              stoppedLines === 0
+                ? 'Barcha liniyalar ishlayapti.'
+                : `${stoppedLines} ta liniya to‘xtagan. Eʼtibor talab etiladi.`
+            }
+          />
+          <MetricCard
+            title="Yo‘qotilgan ishlab chiqarish"
+            value={lostUnitsToday}
+            unit="dona"
             color="purple"
+            delta={0}
+            explanation={
+              lostUnitsToday > 0
+                ? `Rejadan tashqari yo‘qotilgan hajm: ${lostUnitsToday.toLocaleString('uz-UZ')} dona.`
+                : 'Bugun reja bo‘yicha yo‘qotilgan ishlab chiqarish qayd etilmadi.'
+            }
           />
         </div>
+      </div>
 
-        {/* Line Status Overview */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">{t('dashboard.lineStatus')}</h3>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <ResponsiveContainer width="100%" height={250}>
-              <PieChart>
-                <Pie
-                  data={statusData}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={50}
-                  outerRadius={80}
-                  paddingAngle={5}
-                  dataKey="value"
-                >
-                  {statusData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
+      <LineStatus productionLines={productionLines} />
+
+      <div className="mt-10 space-y-10">
+        <section>
+          <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+            Ombor tahlili
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+            <MetricCard
+              title="Umumiy qoldiq"
+              value={warehouseTotalStock}
+              unit="birlik"
+              color="blue"
+            />
+            <MetricCard
+              title="Minimal zaxira"
+              value={warehouseMinStock}
+              unit="birlik"
+              color="green"
+            />
+            <MetricCard
+              title="Kam zaxira"
+              value={warehouseLowStock}
+              unit="nom"
+              color="orange"
+            />
+          </div>
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+            <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+              Ombor harakati
+            </h4>
+            <ResponsiveContainer width="100%" height={260}>
+              <BarChart data={warehouseMovement}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" />
+                <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#9ca3af' }} />
+                <YAxis tick={{ fontSize: 11, fill: '#9ca3af' }} />
                 <Tooltip />
-              </PieChart>
+                <Bar dataKey="qoldiq" fill="#3b82f6" name="Qoldiq" />
+                <Bar dataKey="kirim" fill="#22c55e" name="Kirim" />
+                <Bar dataKey="chiqim" fill="#f97316" name="Chiqim" />
+              </BarChart>
             </ResponsiveContainer>
-            <div className="space-y-3">
-              {statusData.map(item => (
-                <div key={item.name} className="flex items-center justify-between p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50">
-                  <div className="flex items-center gap-3">
-                    <div className="w-4 h-4 rounded-full" style={{ backgroundColor: item.color }} />
-                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{item.name}</span>
-                  </div>
-                  <span className="text-lg font-semibold text-gray-900 dark:text-white">{item.value}</span>
-                </div>
-              ))}
+          </div>
+        </section>
+
+        <section>
+          <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+            Ishlab chiqarish tahlili
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+            <MetricCard
+              title="Reja (kunlik)"
+              value={plannedToday}
+              unit="birlik"
+              color="blue"
+            />
+            <MetricCard
+              title="Fakt (taxminiy)"
+              value={totalOutput}
+              unit="birlik"
+              color="green"
+            />
+            <MetricCard
+              title="Umumiy samaradorlik"
+              value={Number(avgEfficiency.toFixed(1))}
+              unit="%"
+              color="orange"
+            />
+          </div>
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+              <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                Reja vs fakt
+              </h4>
+              <ResponsiveContainer width="100%" height={260}>
+                <BarChart data={productionChartData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" />
+                  <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#9ca3af' }} />
+                  <YAxis tick={{ fontSize: 11, fill: '#9ca3af' }} />
+                  <Tooltip />
+                  <Bar dataKey="reja" fill="#3b82f6" name="Reja" />
+                  <Bar dataKey="fakt" fill="#22c55e" name="Fakt" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+              <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                Samaradorlik trendi
+              </h4>
+              <ResponsiveContainer width="100%" height={260}>
+                <LineChart data={productionChartData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" />
+                  <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#9ca3af' }} />
+                  <YAxis domain={[0, 100]} tick={{ fontSize: 11, fill: '#9ca3af' }} />
+                  <Tooltip />
+                  <Line type="monotone" dataKey="samaradorlik" stroke="#f97316" strokeWidth={2} dot={{ r: 3 }} />
+                </LineChart>
+              </ResponsiveContainer>
             </div>
           </div>
-        </div>
-      </div>
+        </section>
 
-      {/* SECTION 2: Production & Analytics */}
-      <div className="mb-8">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">{t('dashboard.productionAnalytics')}</h3>
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-6">
-          {/* Daily / Monthly Production */}
-          <div className="xl:col-span-2 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-            <h4 className="text-base font-semibold text-gray-900 dark:text-white mb-4">{t('dashboard.dailyMonthlyProduction')}</h4>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={productionSummary}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#374151" className="dark:stroke-gray-600" />
-                <XAxis dataKey="name" tick={{ fontSize: 12, fill: '#9ca3af' }} />
-                <YAxis tick={{ fontSize: 12, fill: '#9ca3af' }} />
+        <section>
+          <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+            Sifat nazorati tahlili
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+            <MetricCard
+              title="Nuqsonlar soni (bugun)"
+              value={qcKpiTodayDefects}
+              unit="dona"
+              color="blue"
+            />
+            <MetricCard
+              title="Rad etilgan partiyalar"
+              value={qcKpiRejected}
+              unit="partiya"
+              color="purple"
+            />
+            <MetricCard
+              title="Eng ko‘p nuqsonli liniya"
+              value={qcDefectsByLine.reduce((max, cur) => (cur.nuqsonlar > max.nuqsonlar ? cur : max), qcDefectsByLine[0]).nuqsonlar}
+              unit="nuqson"
+              color="orange"
+            />
+          </div>
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+              <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                Nuqsonlar liniyalar bo‘yicha
+              </h4>
+              <ResponsiveContainer width="100%" height={260}>
+                <BarChart data={qcDefectsByLine}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" />
+                  <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#9ca3af' }} />
+                  <YAxis tick={{ fontSize: 11, fill: '#9ca3af' }} />
+                  <Tooltip />
+                  <Bar dataKey="nuqsonlar" fill="#ef4444" name="Nuqsonlar" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+              <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                Nuqson turlari
+              </h4>
+              <ResponsiveContainer width="100%" height={260}>
+                <PieChart>
+                  <Pie
+                    data={qcDefectsByType}
+                    dataKey="value"
+                    nameKey="name"
+                    cx="50%"
+                    cy="50%"
+                    outerRadius={90}
+                    labelLine={false}
+                  >
+                    {qcDefectsByType.map((entry, index) => (
+                      <Cell
+                        key={`cell-qc-${index}`}
+                        fill={['#22c55e', '#f97316', '#ef4444'][index % 3]}
+                      />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        </section>
+
+        <section>
+          <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+            Buyurtmalar tahlili
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+            <MetricCard title="Yangi buyurtmalar" value={ordersKpiNew} unit="ta" color="blue" />
+            <MetricCard title="Jarayonda" value={ordersKpiInProgress} unit="ta" color="orange" />
+            <MetricCard title="Yakunlangan" value={ordersKpiCompleted} unit="ta" color="green" />
+          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+              <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                Buyurtmalar holati
+              </h4>
+              <ResponsiveContainer width="100%" height={260}>
+                <PieChart>
+                  <Pie
+                    data={ordersStatusPie}
+                    dataKey="value"
+                    nameKey="name"
+                    cx="50%"
+                    cy="50%"
+                    outerRadius={90}
+                    labelLine={false}
+                  >
+                    {ordersStatusPie.map((entry, index) => (
+                      <Cell
+                        key={`cell-orders-${index}`}
+                        fill={['#3b82f6', '#f97316', '#22c55e'][index % 3]}
+                      />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+              <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                So‘nggi buyurtmalar hajmi
+              </h4>
+              <ResponsiveContainer width="100%" height={260}>
+                <BarChart data={ordersVolume}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" />
+                  <XAxis dataKey="orderNumber" tick={{ fontSize: 11, fill: '#9ca3af' }} />
+                  <YAxis tick={{ fontSize: 11, fill: '#9ca3af' }} />
+                  <Tooltip />
+                  <Bar dataKey="quantity" fill="#3b82f6" name="Miqdor" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        </section>
+
+        <section>
+          <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+            Tayyor mahsulotlar tahlili
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+            <MetricCard title="Umumiy mahsulot turlari" value={finishedKpiTotal} unit="tur" color="blue" />
+            <MetricCard title="Erkin qoldiq" value={finishedKpiFree} unit="tur" color="green" />
+            <MetricCard title="Kam qoldiq xavfi" value={1} unit="tur" color="orange" />
+          </div>
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+            <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+              Mahsulotlar turlari bo‘yicha
+            </h4>
+            <ResponsiveContainer width="100%" height={260}>
+              <BarChart data={finishedByType}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" />
+                <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#9ca3af' }} />
+                <YAxis tick={{ fontSize: 11, fill: '#9ca3af' }} />
                 <Tooltip />
-                <Bar dataKey="daily" fill="#3b82f6" radius={[6, 6, 0, 0]} name={t('dashboard.daily')} />
-                <Bar dataKey="monthly" fill="#10b981" radius={[6, 6, 0, 0]} name={t('dashboard.monthly')} />
+                <Bar dataKey="miqdor" fill="#22c55e" name="Miqdor" />
               </BarChart>
             </ResponsiveContainer>
           </div>
+        </section>
 
-          {/* Line Efficiency Comparison */}
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-            <h4 className="text-base font-semibold text-gray-900 dark:text-white mb-4">{t('dashboard.lineEfficiency')}</h4>
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={efficiencyComparison}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#374151" className="dark:stroke-gray-600" />
-                <XAxis dataKey="name" tick={{ fontSize: 12, fill: '#9ca3af' }} />
-                <YAxis domain={[0, 100]} tick={{ fontSize: 12, fill: '#9ca3af' }} />
-                <Tooltip />
-                <Line type="monotone" dataKey="efficiency" stroke="#f97316" strokeWidth={2} dot={{ r: 4 }} />
-              </LineChart>
-            </ResponsiveContainer>
+        <section>
+          <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+            Ta&apos;mirlash va texnik xizmat tahlili
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+            <MetricCard title="To‘xtashlar soni" value={maintenanceKpiTotalStops} unit="marta" color="blue" />
+            <MetricCard title="Muammo bor liniyalar" value={maintenanceKpiIssue} unit="liniya" color="red" />
+            <MetricCard title="Ta&apos;mirlashda" value={maintenanceKpiInRepair} unit="liniya" color="orange" />
           </div>
-        </div>
-
-        {/* Defects and Maintenance */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-            <h4 className="text-base font-semibold text-gray-900 dark:text-white mb-4">{t('dashboard.defectsReport')}</h4>
-            <ResponsiveContainer width="100%" height={250}>
-              <BarChart data={defectDataMock}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#374151" className="dark:stroke-gray-600" />
-                <XAxis dataKey="name" tick={{ fontSize: 12, fill: '#9ca3af' }} />
-                <YAxis tick={{ fontSize: 12, fill: '#9ca3af' }} />
-                <Tooltip />
-                <Bar dataKey="defects" fill="#ef4444" radius={[6, 6, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+              <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                To‘xtash vaqti (kunlar bo‘yicha)
+              </h4>
+              <ResponsiveContainer width="100%" height={220}>
+                <LineChart data={maintenanceDowntimeTrend}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" />
+                  <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#9ca3af' }} />
+                  <YAxis tick={{ fontSize: 11, fill: '#9ca3af' }} />
+                  <Tooltip />
+                  <Line type="monotone" dataKey="minutes" stroke="#f97316" strokeWidth={2} dot={{ r: 3 }} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+              <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                To‘xtash sabablariga ko‘ra
+              </h4>
+              <ResponsiveContainer width="100%" height={220}>
+                <BarChart data={maintenanceReasons}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" />
+                  <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#9ca3af' }} />
+                  <YAxis tick={{ fontSize: 11, fill: '#9ca3af' }} />
+                  <Tooltip />
+                  <Bar dataKey="value" fill="#ef4444" name="To‘xtashlar" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
           </div>
-
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-            <h4 className="text-base font-semibold text-gray-900 dark:text-white mb-4">{t('dashboard.maintenanceFrequency')}</h4>
-            <ResponsiveContainer width="100%" height={250}>
-              <LineChart data={maintenanceDataMock}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#374151" className="dark:stroke-gray-600" />
-                <XAxis dataKey="name" tick={{ fontSize: 12, fill: '#9ca3af' }} />
-                <YAxis tick={{ fontSize: 12, fill: '#9ca3af' }} />
-                <Tooltip />
-                <Line type="monotone" dataKey="events" stroke="#22c55e" strokeWidth={2} dot={{ r: 4 }} />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-      </div>
-
-      {/* SECTION 3: Insights & Alerts */}
-      <div>
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">{t('dashboard.insightsAlerts')}</h3>
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <InsightCard
-            icon={<Award className="w-5 h-5" />}
-            title={t('dashboard.mostEfficientLine')}
-            value={mostEfficientLine.name.replace('Assembly Line ', 'Line ')}
-            subtitle={`${mostEfficientLine.efficiency}% ${t('dashboard.efficiency')}`}
-            color="green"
-          />
-          <InsightCard
-            icon={<AlertCircle className="w-5 h-5" />}
-            title={t('dashboard.leastEfficientLine')}
-            value={leastEfficientLine.name.replace('Assembly Line ', 'Line ')}
-            subtitle={`${leastEfficientLine.efficiency}% ${t('dashboard.efficiency')}`}
-            color="red"
-          />
-          <InsightCard
-            icon={<AlertTriangle className="w-5 h-5" />}
-            title={t('dashboard.mostDefectsLine')}
-            value={mostDefectsLine.name}
-            subtitle={`${mostDefectsLine.defects} ${t('dashboard.defects')}`}
-            color="orange"
-          />
-        </div>
+        </section>
       </div>
     </div>
   );
 }
 
 interface MetricCardProps {
-  icon: React.ReactNode;
   title: string;
   value: number;
   unit: string;
   color: 'blue' | 'orange' | 'green' | 'purple';
+  delta?: number;
+  explanation?: string;
 }
 
-function MetricCard({ icon, title, value, unit, color }: MetricCardProps) {
+function MetricCard({ title, value, unit, color, delta, explanation }: MetricCardProps) {
   const colorClasses = {
     blue: 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400',
     orange: 'bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400',
@@ -295,13 +563,89 @@ function MetricCard({ icon, title, value, unit, color }: MetricCardProps) {
   };
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-      <div className={`w-12 h-12 rounded-lg ${colorClasses[color]} flex items-center justify-center mb-4`}>
-        {icon}
+    <div className="bg-slate-900 rounded-xl shadow-sm border border-slate-800 p-6">
+      <h3 className="text-slate-300 text-sm mb-2">{title}</h3>
+      <p className="text-3xl font-semibold text-slate-50">
+        {unit === '%' ? `${value.toFixed(1)}%` : unit === 'so‘m' ? value.toLocaleString('uz-UZ') : value}
+      </p>
+      {typeof delta === 'number' && (
+        <p
+          className={`text-sm font-medium mt-1 ${
+            delta > 0
+              ? 'text-green-400'
+              : delta < 0
+              ? 'text-red-400'
+              : 'text-slate-400'
+          }`}
+        >
+          {delta > 0 ? '+' : ''}
+          {delta.toFixed(1)}%
+        </p>
+      )}
+      <p className={`text-xs uppercase tracking-wide mt-1 ${colorClasses[color]}`}>{unit}</p>
+      {explanation && (
+        <p className="text-xs text-slate-400 mt-1 leading-snug">{explanation}</p>
+      )}
+    </div>
+  );
+}
+interface TopSummaryProps {
+  worstLine: string;
+  bestLine: string;
+  avgEfficiency: number;
+  deviationPercent: number;
+  lostUnits: number;
+  riskLevel: 'Past' | 'O‘rtacha' | 'Yuqori';
+}
+
+function TopSummary({
+  worstLine,
+  bestLine,
+  avgEfficiency,
+  deviationPercent,
+  lostUnits,
+  riskLevel,
+}: TopSummaryProps) {
+  return (
+    <div className="mb-8">
+      <h3 className="text-lg font-semibold text-slate-50 mb-3">Bugungi holat — qisqa xulosa</h3>
+      <div className="bg-slate-900 rounded-xl shadow-sm border border-slate-800 p-5 space-y-1 text-sm text-slate-100">
+        <p>🔴 Muammo: {worstLine} asosiy muammo, samaradorlik past.</p>
+        <p>🟡 Xavf: umumiy samaradorlik {avgEfficiency.toFixed(1)}% (maqsad 90%), risk darajasi: {riskLevel}.</p>
+        <p>🟢 Yaxshi: {bestLine} barqaror ishlayapti.</p>
+        <p>
+          📊 Rejadan og‘ish: {deviationPercent.toFixed(1)}%, yo‘qotilgan ishlab chiqarish:{' '}
+          {lostUnits.toLocaleString('uz-UZ')} dona.
+        </p>
       </div>
-      <h3 className="text-gray-600 dark:text-gray-400 text-sm mb-1">{title}</h3>
-      <p className="text-3xl font-semibold text-gray-900 dark:text-white">{value}</p>
-      <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{unit}</p>
+    </div>
+  );
+}
+
+interface LineStatusProps {
+  productionLines: typeof useFactory extends () => infer T ? T extends { productionLines: infer U } ? U : any : any;
+}
+
+function LineStatus({ productionLines }: LineStatusProps) {
+  return (
+    <div>
+      <h3 className="text-lg font-semibold text-slate-50 mb-3">Liniyalar holati (soddalashtirilgan)</h3>
+      <div className="bg-slate-900 rounded-xl shadow-sm border border-slate-800 p-5 space-y-2 text-sm text-slate-100">
+        {productionLines.map(line => {
+          const simpleName = line.name.replace('Assembly Line ', 'Line ').replace('Quality Control Station', 'QC');
+          const statusText =
+            line.status === 'active'
+              ? '🟢 Ishlayapti'
+              : line.status === 'maintenance'
+              ? '🔴 Muammo (taʼmirlash)'
+              : '🟡 Kutish holatida';
+          return (
+            <p key={line.id}>
+              {simpleName} — {statusText}
+            </p>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -328,13 +672,13 @@ function InsightCard({ icon, title, value, subtitle, color }: InsightCardProps) 
   };
 
   return (
-    <div className={`bg-white dark:bg-gray-800 rounded-xl shadow-sm border ${colorClasses[color]} p-6`}>
+    <div className={`bg-slate-900 rounded-xl shadow-sm border ${colorClasses[color]} p-6`}>
       <div className="flex items-center gap-3 mb-3">
         {icon}
-        <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">{title}</h4>
+        <h4 className="text-sm font-medium text-slate-200">{title}</h4>
       </div>
-      <p className="text-xl font-semibold text-gray-900 dark:text-white mb-1">{value}</p>
-      <p className="text-xs text-gray-600 dark:text-gray-400">{subtitle}</p>
+      <p className="text-xl font-semibold text-slate-50 mb-1">{value}</p>
+      <p className="text-xs text-slate-400">{subtitle}</p>
     </div>
   );
 }

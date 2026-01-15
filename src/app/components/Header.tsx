@@ -35,6 +35,16 @@ export function Header() {
           >
             RU
           </button>
+          <button
+            onClick={() => setLanguage('kr')}
+            className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+              language === 'kr'
+                ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm'
+                : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+            }`}
+          >
+            KR
+          </button>
         </div>
 
         {/* Theme Toggle */}

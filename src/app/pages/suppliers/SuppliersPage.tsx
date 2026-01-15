@@ -56,7 +56,7 @@ import {
 
 
 // Convert legacy suppliers to enhanced format
-const initialSuppliers: EnhancedSupplier[] = [
+export const initialSuppliers: EnhancedSupplier[] = [
   {
     id: '1',
     name: 'Metallurgiya TMC',

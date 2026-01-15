@@ -32,6 +32,20 @@ export function MaintenanceDashboard() {
     '3': 'TECHNICIAN_ASSIGNED', // Assembly Line D
   });
 
+  const downtimeTrendData = [
+    { name: 'Dushanba', minutes: 40 },
+    { name: 'Seshanba', minutes: 55 },
+    { name: 'Chorshanba', minutes: 35 },
+    { name: 'Payshanba', minutes: 65 },
+    { name: 'Juma', minutes: 45 },
+  ];
+
+  const reasonData = [
+    { name: 'Mexanik', value: 60 },
+    { name: 'Elektr', value: 25 },
+    { name: 'Reja to‘xtash', value: 15 },
+  ];
+
   // Get main production lines (A, B, D) with status
   const mainLines: LineWithStatus[] = productionLines
     .filter(l => l.name.includes('Assembly Line'))
@@ -110,29 +124,7 @@ export function MaintenanceDashboard() {
         </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-        <StatCard
-          icon={<CheckCircle className="w-6 h-6" />}
-          title={t('maintenance.lineStatus.normal')}
-          value={mainLines.filter(l => l.status === 'NORMAL').length}
-          color="blue"
-        />
-        <StatCard
-          icon={<AlertCircle className="w-6 h-6" />}
-          title={t('maintenance.lineStatus.issueReported')}
-          value={mainLines.filter(l => l.status === 'ISSUE_REPORTED').length}
-          color="red"
-        />
-        <StatCard
-          icon={<Clock className="w-6 h-6" />}
-          title={t('maintenance.lineStatus.technicianAssigned')}
-          value={mainLines.filter(l => l.status === 'TECHNICIAN_ASSIGNED').length}
-          color="yellow"
-        />
-      </div>
-
-      {/* Line Monitoring Panel */}
+      {/* Liniyalar bo‘yicha texnik xizmat amallari */}
       <Card className="mb-6">
         <CardHeader>
           <CardTitle>{t('maintenance.lineRequests')}</CardTitle>
@@ -171,7 +163,6 @@ export function MaintenanceDashboard() {
         </CardContent>
       </Card>
 
-      {/* Line Detail Modal */}
       {selectedLine && (
         <LineDetailModal
           lineId={selectedLine}
@@ -181,38 +172,6 @@ export function MaintenanceDashboard() {
         />
       )}
     </div>
-  );
-}
-
-interface StatCardProps {
-  icon: React.ReactNode;
-  title: string;
-  value: number;
-  color: 'blue' | 'yellow' | 'green' | 'red';
-}
-
-function StatCard({ icon, title, value, color }: StatCardProps) {
-  const colorClasses = {
-    blue: 'bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400',
-    yellow: 'bg-yellow-50 text-yellow-600 dark:bg-yellow-900/20 dark:text-yellow-400',
-    green: 'bg-green-50 text-green-600 dark:bg-green-900/20 dark:text-green-400',
-    red: 'bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400',
-  };
-
-  return (
-    <Card>
-      <CardContent className="p-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-gray-600 dark:text-gray-400 text-sm mb-1">{title}</p>
-            <p className="text-3xl font-semibold text-gray-900 dark:text-white">{value}</p>
-          </div>
-          <div className={`w-12 h-12 rounded-lg ${colorClasses[color]} flex items-center justify-center`}>
-            {icon}
-          </div>
-        </div>
-      </CardContent>
-    </Card>
   );
 }
 
