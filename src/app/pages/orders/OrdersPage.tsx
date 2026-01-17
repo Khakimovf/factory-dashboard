@@ -138,7 +138,7 @@ export function OrdersPage() {
   };
 
   return (
-    <div className="p-8 bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen p-8 bg-background text-foreground">
       <div className="mb-8 flex items-center justify-between">
         <div>
           <h2 className="text-3xl font-semibold text-gray-900 dark:text-white flex items-center gap-3">

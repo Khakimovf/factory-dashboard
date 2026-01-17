@@ -1,334 +1,476 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useLanguage } from '../../context/LanguageContext';
-import { Package, Plus, AlertTriangle, MapPin, Search } from 'lucide-react';
+import { useWarehouse } from '../../context/WarehouseContext';
+import { 
+  Package, 
+  Search, 
+  MapPin, 
+  Download, 
+  FileSpreadsheet, 
+  Factory, 
+  Calendar, 
+  CheckCircle, 
+  XCircle,
+  ChevronDown,
+  ChevronUp,
+  Filter
+} from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../../components/ui/dialog';
+import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Input } from '../../components/ui/input';
-import { Label } from '../../components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { toast } from 'sonner';
 
-export interface FinishedProduct {
-  id: string;
-  productName: string;
-  productCode: string;
-  quantity: number;
-  minStock: number;
-  location: string;
-  status: 'in_stock' | 'reserved' | 'shipped';
-  orderId?: string;
-  orderNumber?: string;
-  lastUpdated: string;
-}
-
-export const initialFinishedProducts: FinishedProduct[] = [
-  {
-    id: '1',
-    productName: 'Vagon detallari',
-    productCode: 'VD-001',
-    quantity: 450,
-    minStock: 100,
-    location: 'Ombor A-1',
-    status: 'in_stock',
-    lastUpdated: '2025-01-15',
-  },
-  {
-    id: '2',
-    productName: 'Avtomobil komponentlari',
-    productCode: 'AK-002',
-    quantity: 850,
-    minStock: 200,
-    location: 'Ombor A-2',
-    status: 'in_stock',
-    lastUpdated: '2025-01-15',
-  },
-  {
-    id: '3',
-    productName: 'Metall konstruksiyalar',
-    productCode: 'MK-003',
-    quantity: 75,
-    minStock: 100,
-    location: 'Ombor B-1',
-    status: 'in_stock',
-    orderId: '3',
-    orderNumber: 'ORD-2025-003',
-    lastUpdated: '2025-01-14',
-  },
-  {
-    id: '4',
-    productName: 'Elektron komponentlar',
-    productCode: 'EK-004',
-    quantity: 1200,
-    minStock: 500,
-    location: 'Ombor B-2',
-    status: 'reserved',
-    orderId: '1',
-    orderNumber: 'ORD-2025-001',
-    lastUpdated: '2025-01-15',
-  },
-];
-
 export function FinishedGoodsPage() {
   const { t } = useLanguage();
-  const [products, setProducts] = useState<FinishedProduct[]>(initialFinishedProducts);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const { finishedGoods } = useWarehouse();
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedStatus, setSelectedStatus] = useState<string>('all');
-  const [formData, setFormData] = useState<Omit<FinishedProduct, 'id' | 'lastUpdated'>>({
-    productName: '',
-    productCode: '',
-    quantity: 0,
-    minStock: 0,
-    location: '',
-    status: 'in_stock',
-  });
+  const [selectedLocation, setSelectedLocation] = useState<string>('all');
+  const [selectedAvailability, setSelectedAvailability] = useState<string>('all');
+  const [selectedSourceLine, setSelectedSourceLine] = useState<string>('all');
+  const [selectedQCStatus, setSelectedQCStatus] = useState<string>('all');
+  const [expandedProducts, setExpandedProducts] = useState<Set<string>>(new Set());
 
-  const lowStockProducts = products.filter(p => p.quantity <= p.minStock && p.status === 'in_stock');
+  // Calculate summary statistics
+  const summary = useMemo(() => {
+    const totalProducts = finishedGoods.length;
+    const totalQuantity = finishedGoods.reduce((sum, item) => sum + item.totalQuantity, 0);
+    const availableQuantity = finishedGoods.reduce((sum, item) => sum + item.availableQuantity, 0);
+    const reservedQuantity = finishedGoods.reduce((sum, item) => sum + item.reservedQuantity, 0);
+    return { totalProducts, totalQuantity, availableQuantity, reservedQuantity };
+  }, [finishedGoods]);
 
-  const filteredProducts = products.filter(product => {
-    const matchesSearch = product.productName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      product.productCode.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = selectedStatus === 'all' || product.status === selectedStatus;
-    return matchesSearch && matchesStatus;
-  });
-
-  const handleOpenDialog = () => {
-    setFormData({
-      productName: '',
-      productCode: '',
-      quantity: 0,
-      minStock: 0,
-      location: '',
-      status: 'in_stock',
+  // Extract filter options
+  const allLocations = useMemo(() => {
+    const locations = new Set<string>();
+    finishedGoods.forEach(fg => {
+      fg.warehouseLocations.forEach(loc => locations.add(loc));
     });
-    setIsDialogOpen(true);
+    return Array.from(locations).sort();
+  }, [finishedGoods]);
+
+  const allSourceLines = useMemo(() => {
+    const lines = new Set<string>();
+    finishedGoods.forEach(fg => {
+      fg.sourceLines.forEach(line => lines.add(line));
+    });
+    return Array.from(lines).sort();
+  }, [finishedGoods]);
+
+  // Filter products
+  const filteredGoods = useMemo(() => {
+    return finishedGoods.filter(item => {
+      const matchesSearch =
+        item.sku.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.productName.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      const matchesLocation =
+        selectedLocation === 'all' ||
+        item.warehouseLocations.includes(selectedLocation);
+      
+      const matchesAvailability =
+        selectedAvailability === 'all' ||
+        (selectedAvailability === 'available' && item.availableQuantity > 0) ||
+        (selectedAvailability === 'reserved' && item.reservedQuantity > 0);
+
+      const matchesSourceLine =
+        selectedSourceLine === 'all' ||
+        item.sourceLines.includes(selectedSourceLine);
+
+      // QC status filter - check if all batches have PASSED QC
+      const matchesQCStatus =
+        selectedQCStatus === 'all' ||
+        (selectedQCStatus === 'passed' && item.batches.length > 0 && 
+         item.batches.every(batch => batch.qcDate)); // All batches have QC date (passed)
+
+      return matchesSearch && matchesLocation && matchesAvailability && matchesSourceLine && matchesQCStatus;
+    });
+  }, [finishedGoods, searchTerm, selectedLocation, selectedAvailability, selectedSourceLine, selectedQCStatus]);
+
+  // Sort batches by date (FIFO - older first)
+  const sortBatchesByDate = (batches: typeof finishedGoods[0]['batches']) => {
+    return [...batches].sort((a, b) => {
+      const dateA = new Date(a.receivedAt).getTime();
+      const dateB = new Date(b.receivedAt).getTime();
+      return dateA - dateB;
+    });
   };
 
-  const handleSave = () => {
-    if (!formData.productName || !formData.productCode || !formData.location) {
-      toast.error(t('finishedGoods.validation.required'));
-      return;
-    }
+  const toggleProductExpansion = (productId: string) => {
+    setExpandedProducts(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(productId)) {
+        newSet.delete(productId);
+      } else {
+        newSet.add(productId);
+      }
+      return newSet;
+    });
+  };
 
-    const newProduct: FinishedProduct = {
-      ...formData,
-      id: Date.now().toString(),
-      lastUpdated: new Date().toISOString().split('T')[0],
-    };
-    setProducts([newProduct, ...products]);
-    toast.success(t('finishedGoods.createSuccess'));
-    setIsDialogOpen(false);
+  const handleExportPDF = () => {
+    toast.info(t('finishedGoods.exportPDFPlaceholder') || 'PDF export will be implemented');
+  };
+
+  const handleExportExcel = () => {
+    toast.info(t('finishedGoods.exportExcelPlaceholder') || 'Excel export will be implemented');
   };
 
   const getStatusBadge = (status: string) => {
-    const variants = {
-      in_stock: 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400',
-      reserved: 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400',
-      shipped: 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400',
+    const variants: Record<string, string> = {
+      AVAILABLE_FOR_SALE: 'text-[var(--success-foreground)]',
+      RESERVED: 'text-[var(--warning-foreground)]',
+      SHIPPED: 'text-[var(--info-foreground)]',
     };
-    return variants[status as keyof typeof variants] || variants.in_stock;
+    const bgVariants: Record<string, string> = {
+      AVAILABLE_FOR_SALE: 'bg-[var(--success-bg)]',
+      RESERVED: 'bg-[var(--warning-bg)]',
+      SHIPPED: 'bg-[var(--info-bg)]',
+    };
+    const className = variants[status] || variants.AVAILABLE_FOR_SALE;
+    const bgClassName = bgVariants[status] || bgVariants.AVAILABLE_FOR_SALE;
+    return `${bgClassName} ${className}`;
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('uz-UZ', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
   };
 
   return (
-    <div className="p-8 bg-gray-50 dark:bg-gray-900">
-      <div className="mb-8 flex items-center justify-between">
-        <div>
-          <h2 className="text-3xl font-semibold text-gray-900 dark:text-white flex items-center gap-3">
-            <Package className="w-8 h-8 text-blue-600 dark:text-blue-400" />
-            {t('finishedGoods.title')}
-          </h2>
-          <p className="text-gray-500 dark:text-gray-400 mt-1">{t('finishedGoods.subtitle')}</p>
-        </div>
-        <Button onClick={handleOpenDialog}>
-          <Plus className="w-4 h-4 mr-2" />
-          {t('finishedGoods.addProduct')}
-        </Button>
-      </div>
-
-      {/* Low Stock Warning */}
-      {lowStockProducts.length > 0 && (
-        <div className="mb-6 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-xl p-4">
-          <div className="flex items-center gap-2">
-            <AlertTriangle className="w-5 h-5 text-orange-600 dark:text-orange-400" />
-            <p className="text-sm font-medium text-orange-900 dark:text-orange-300">
-              {t('finishedGoods.lowStockWarning').replace('{count}', lowStockProducts.length.toString())}
+    <div className="min-h-screen p-8 bg-background text-foreground">
+      <div className="w-full">
+        {/* Header */}
+        <div className="mb-8 flex items-center justify-between">
+          <div>
+            <h2 className="text-3xl font-semibold text-foreground flex items-center gap-3">
+              <Package className="w-8 h-8 text-primary" />
+              {t('finishedGoods.title') || 'Tayyor mahsulotlar ombori'}
+            </h2>
+            <p className="text-muted-foreground mt-1">
+              {t('finishedGoods.subtitle') || 'Tayyor mahsulotlarning ombordagi holati va zaxirasi'}
             </p>
           </div>
-        </div>
-      )}
-
-      {/* Filters */}
-      <div className="mb-6 flex items-center gap-4">
-        <div className="flex-1 relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 w-4 h-4" />
-          <Input
-            placeholder={t('finishedGoods.search')}
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-9"
-          />
-        </div>
-        <Select value={selectedStatus} onValueChange={setSelectedStatus}>
-          <SelectTrigger className="w-48">
-            <SelectValue placeholder={t('finishedGoods.filterByStatus')} />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">{t('finishedGoods.allStatuses')}</SelectItem>
-            <SelectItem value="in_stock">{t('finishedGoods.inStock')}</SelectItem>
-            <SelectItem value="reserved">{t('finishedGoods.reserved')}</SelectItem>
-            <SelectItem value="shipped">{t('finishedGoods.shipped')}</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
-      {/* Products Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredProducts.length === 0 ? (
-          <div className="col-span-full text-center py-12 text-gray-500 dark:text-gray-400">
-            {t('finishedGoods.noProducts')}
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={handleExportPDF}>
+              <Download className="w-4 h-4 mr-2" />
+              {t('finishedGoods.exportPDF') || 'PDF'}
+            </Button>
+            <Button variant="outline" onClick={handleExportExcel}>
+              <FileSpreadsheet className="w-4 h-4 mr-2" />
+              {t('finishedGoods.exportExcel') || 'Excel'}
+            </Button>
           </div>
-        ) : (
-          filteredProducts.map(product => (
-            <div
-              key={product.id}
-              className={`bg-white dark:bg-gray-800 rounded-xl shadow-sm border ${
-                product.quantity <= product.minStock
-                  ? 'border-orange-300 dark:border-orange-700'
-                  : 'border-gray-200 dark:border-gray-700'
-              } p-6`}
-            >
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex-1">
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">
-                    {product.productName}
-                  </h3>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">{product.productCode}</p>
-                </div>
-                <Badge className={getStatusBadge(product.status)}>
-                  {t(`finishedGoods.${product.status}`)}
-                </Badge>
-              </div>
+        </div>
 
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600 dark:text-gray-400">{t('finishedGoods.quantity')}</span>
-                  <span className={`text-lg font-semibold ${
-                    product.quantity <= product.minStock
-                      ? 'text-orange-600 dark:text-orange-400'
-                      : 'text-gray-900 dark:text-white'
-                  }`}>
-                    {product.quantity}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600 dark:text-gray-400">{t('finishedGoods.minStock')}</span>
-                  <span className="text-sm text-gray-900 dark:text-white">{product.minStock}</span>
-                </div>
-                <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-                  <MapPin className="w-4 h-4" />
-                  <span>{product.location}</span>
-                </div>
-                {product.orderNumber && (
-                  <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                      {t('finishedGoods.linkedOrder')}: {product.orderNumber}
-                    </p>
-                  </div>
-                )}
-                {product.quantity <= product.minStock && (
-                  <div className="pt-2 border-t border-orange-200 dark:border-orange-800">
-                    <p className="text-xs text-orange-600 dark:text-orange-400 flex items-center gap-1">
-                      <AlertTriangle className="w-3 h-3" />
-                      {t('finishedGoods.lowStock')}
-                    </p>
-                  </div>
-                )}
-              </div>
+        {/* Summary Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <Card className="bg-card border-border rounded-xl p-8">
+            <div className="flex items-center gap-3 mb-4">
+              <Package className="w-6 h-6 text-primary" />
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                {t('finishedGoods.summary.totalProducts') || 'Jami mahsulotlar'}
+              </CardTitle>
             </div>
-          ))
-        )}
-      </div>
+            <p className="text-5xl font-bold text-foreground">
+              {summary.totalProducts}
+            </p>
+          </Card>
+          <Card className="bg-card border-border rounded-xl p-8">
+            <div className="flex items-center gap-3 mb-4">
+              <Package className="w-6 h-6 text-primary" />
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                {t('finishedGoods.summary.totalQuantity') || 'Jami miqdor'}
+              </CardTitle>
+            </div>
+            <p className="text-5xl font-bold text-foreground">
+              {summary.totalQuantity}
+            </p>
+          </Card>
+          <Card className="bg-card border-border rounded-xl p-8">
+            <div className="flex items-center gap-3 mb-4">
+              <CheckCircle className="w-6 h-6" style={{ color: 'var(--success)' }} />
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                {t('finishedGoods.summary.availableQuantity') || 'Mavjud miqdor'}
+              </CardTitle>
+            </div>
+            <p className="text-5xl font-bold" style={{ color: 'var(--success)' }}>
+              {summary.availableQuantity}
+            </p>
+          </Card>
+          <Card className="bg-card border-border rounded-xl p-8">
+            <div className="flex items-center gap-3 mb-4">
+              <Package className="w-6 h-6" style={{ color: 'var(--warning)' }} />
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                {t('finishedGoods.summary.reservedQuantity') || 'Zaxiralangan'}
+              </CardTitle>
+            </div>
+            <p className="text-5xl font-bold" style={{ color: 'var(--warning)' }}>
+              {summary.reservedQuantity}
+            </p>
+          </Card>
+        </div>
 
-      {/* Add Product Dialog */}
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{t('finishedGoods.addProduct')}</DialogTitle>
-            <DialogDescription>{t('finishedGoods.dialogDescription')}</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="productName">{t('finishedGoods.productName')} *</Label>
-              <Input
-                id="productName"
-                value={formData.productName}
-                onChange={(e) => setFormData({ ...formData, productName: e.target.value })}
-                placeholder={t('finishedGoods.productNamePlaceholder')}
-              />
-            </div>
-            <div>
-              <Label htmlFor="productCode">{t('finishedGoods.productCode')} *</Label>
-              <Input
-                id="productCode"
-                value={formData.productCode}
-                onChange={(e) => setFormData({ ...formData, productCode: e.target.value })}
-                placeholder="VD-001"
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="quantity">{t('finishedGoods.quantity')} *</Label>
+        {/* Filters */}
+        <Card className="mb-8 bg-card border-border rounded-xl">
+          <CardContent className="p-6">
+            <div className="flex items-center gap-4 flex-nowrap">
+              <div className="flex-1 relative min-w-[250px]">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
                 <Input
-                  id="quantity"
-                  type="number"
-                  value={formData.quantity}
-                  onChange={(e) => setFormData({ ...formData, quantity: parseInt(e.target.value) || 0 })}
-                  min="0"
+                  placeholder={t('finishedGoods.search') || 'SKU yoki nom bo\'yicha qidirish'}
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-9 h-10 bg-background border-border text-foreground"
                 />
               </div>
-              <div>
-                <Label htmlFor="minStock">{t('finishedGoods.minStock')}</Label>
-                <Input
-                  id="minStock"
-                  type="number"
-                  value={formData.minStock}
-                  onChange={(e) => setFormData({ ...formData, minStock: parseInt(e.target.value) || 0 })}
-                  min="0"
-                />
-              </div>
-            </div>
-            <div>
-              <Label htmlFor="location">{t('finishedGoods.location')} *</Label>
-              <Input
-                id="location"
-                value={formData.location}
-                onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                placeholder="Ombor A-1"
-              />
-            </div>
-            <div>
-              <Label htmlFor="status">{t('finishedGoods.status')}</Label>
-              <Select value={formData.status} onValueChange={(value) => setFormData({ ...formData, status: value as any })}>
-                <SelectTrigger>
-                  <SelectValue />
+              <Select value={selectedLocation} onValueChange={setSelectedLocation}>
+                <SelectTrigger className="w-52 h-10 bg-background border-border text-foreground">
+                  <SelectValue placeholder={t('finishedGoods.filterByLocation') || 'Ombor joylashuvi'} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="in_stock">{t('finishedGoods.inStock')}</SelectItem>
-                  <SelectItem value="reserved">{t('finishedGoods.reserved')}</SelectItem>
-                  <SelectItem value="shipped">{t('finishedGoods.shipped')}</SelectItem>
+                  <SelectItem value="all">{t('finishedGoods.allLocations') || 'Barcha joylar'}</SelectItem>
+                  {allLocations.map(loc => (
+                    <SelectItem key={loc} value={loc}>{loc}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
+              <Select value={selectedAvailability} onValueChange={setSelectedAvailability}>
+                <SelectTrigger className="w-52 h-10 bg-background border-border text-foreground">
+                  <SelectValue placeholder={t('finishedGoods.filterByAvailability') || 'Mavjudlik'} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{t('finishedGoods.allAvailability') || 'Hammasi'}</SelectItem>
+                  <SelectItem value="available">{t('finishedGoods.available') || 'Mavjud'}</SelectItem>
+                  <SelectItem value="reserved">{t('finishedGoods.reserved') || 'Zaxiralangan'}</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={selectedSourceLine} onValueChange={setSelectedSourceLine}>
+                <SelectTrigger className="w-52 h-10 bg-background border-border text-foreground">
+                  <SelectValue placeholder="Ishlab chiqarish liniyasi" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Barcha liniyalar</SelectItem>
+                  {allSourceLines.map(line => (
+                    <SelectItem key={line} value={line}>{line}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={selectedQCStatus} onValueChange={setSelectedQCStatus}>
+                <SelectTrigger className="w-52 h-10 bg-background border-border text-foreground">
+                  <SelectValue placeholder="QC holati" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Hammasi</SelectItem>
+                  <SelectItem value="passed">QC O'tgan</SelectItem>
+                </SelectContent>
+              </Select>
+              {(searchTerm || selectedLocation !== 'all' || selectedAvailability !== 'all' || 
+                selectedSourceLine !== 'all' || selectedQCStatus !== 'all') && (
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setSearchTerm('');
+                    setSelectedLocation('all');
+                    setSelectedAvailability('all');
+                    setSelectedSourceLine('all');
+                    setSelectedQCStatus('all');
+                  }}
+                  className="h-10 bg-background border-border text-foreground"
+                >
+                  <Filter className="w-4 h-4 mr-2" />
+                  Tozalash
+                </Button>
+              )}
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Products Grid */}
+        {filteredGoods.length === 0 ? (
+          <Card className="bg-card border-border rounded-xl">
+            <CardContent className="py-12 text-center text-muted-foreground">
+              {t('finishedGoods.noProducts') || 'Mahsulotlar topilmadi'}
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredGoods.map(item => {
+              const sortedBatches = sortBatchesByDate(item.batches);
+              const isExpanded = expandedProducts.has(item.id);
+              const reservedBatches = sortedBatches.filter(b => {
+                // Simple logic: if batch has reserved quantity, it's reserved
+                // In real system, this would come from batch-level reservation data
+                return false; // Placeholder - batches don't have reserved quantity yet
+              });
+
+              return (
+                <Card
+                  key={item.id}
+                  className="bg-card border-border rounded-xl hover:shadow-lg transition-shadow w-full h-auto flex flex-col"
+                >
+                  <CardHeader className="p-6 pb-4">
+                    <div className="flex items-start justify-between gap-3 mb-3">
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-xl font-semibold text-foreground mb-2 leading-tight">
+                          {item.productName}
+                        </h3>
+                        <p className="text-sm text-muted-foreground font-mono">{item.sku}</p>
+                      </div>
+                      <Badge className={`${getStatusBadge(item.status)} shrink-0 px-3 py-1 text-xs font-medium`}>
+                        {t(`finishedGoods.${item.status.toLowerCase()}`) || item.status}
+                      </Badge>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="p-6 pt-0 space-y-5 flex-1 flex flex-col">
+                    {/* Priority Quantities - Most Important First */}
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="p-4 rounded-lg bg-muted/30 border border-border">
+                          <p className="text-xs text-muted-foreground mb-2 font-medium uppercase tracking-wide">
+                            {t('finishedGoods.available') || 'Mavjud'}
+                          </p>
+                          <p className="text-2xl font-bold" style={{ color: 'var(--success)' }}>
+                            {item.availableQuantity}
+                          </p>
+                        </div>
+                        <div className="p-4 rounded-lg bg-muted/30 border border-border">
+                          <p className="text-xs text-muted-foreground mb-2 font-medium uppercase tracking-wide">
+                            {t('finishedGoods.reserved') || 'Zaxira'}
+                          </p>
+                          <p className="text-2xl font-bold" style={{ color: 'var(--warning)' }}>
+                            {item.reservedQuantity}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="pt-2 border-t border-border">
+                        <div className="flex items-center justify-between">
+                          <p className="text-sm text-muted-foreground">
+                            {t('finishedGoods.total') || 'Jami'}
+                          </p>
+                          <p className="text-lg font-semibold text-foreground">
+                            {item.totalQuantity}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Secondary Info - Location, Lines, Batches */}
+                    <div className="space-y-3 pt-2 border-t border-border">
+                      <div className="flex items-start gap-3">
+                        <MapPin className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs text-muted-foreground mb-1">Ombor joylari</p>
+                          <p className="text-sm text-foreground font-medium leading-relaxed">
+                            {item.warehouseLocations.join(', ')}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-3">
+                        <Factory className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs text-muted-foreground mb-1">Ishlab chiqarish liniyalari</p>
+                          <p className="text-sm text-foreground font-medium leading-relaxed">
+                            {item.sourceLines.join(', ')}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-3">
+                        <CheckCircle className="w-4 h-4 mt-0.5 shrink-0" style={{ color: 'var(--success)' }} />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs text-muted-foreground mb-1">Partiyalar soni</p>
+                          <p className="text-sm text-foreground font-medium">
+                            {item.batches.length}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Expandable Batches Section */}
+                    {sortedBatches.length > 0 && (
+                      <div className="border-t border-border pt-3 mt-auto">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => toggleProductExpansion(item.id)}
+                          className="w-full justify-between text-foreground hover:bg-muted"
+                        >
+                          <span className="text-sm font-medium">
+                            Partiya tafsilotlari ({sortedBatches.length})
+                          </span>
+                          {isExpanded ? (
+                            <ChevronUp className="w-4 h-4" />
+                          ) : (
+                            <ChevronDown className="w-4 h-4" />
+                          )}
+                        </Button>
+                        {isExpanded && (
+                          <div className="mt-3 space-y-3 max-h-96 overflow-y-auto">
+                            {sortedBatches.map((batch, idx) => (
+                              <div
+                                key={idx}
+                                className="p-3 rounded-lg bg-muted/50 border border-border"
+                              >
+                                <div className="flex items-start justify-between mb-2">
+                                  <div className="flex-1">
+                                    <p className="text-sm font-medium text-foreground font-mono">
+                                      {batch.batch}
+                                    </p>
+                                    <p className="text-xs text-muted-foreground mt-1">
+                                      Miqdor: <span className="font-medium text-foreground">{batch.quantity}</span>
+                                    </p>
+                                  </div>
+                                  <CheckCircle className="w-4 h-4 flex-shrink-0 mt-1" style={{ color: 'var(--success)' }} />
+                                </div>
+                                <div className="space-y-1 mt-2 pt-2 border-t border-border">
+                                  <div className="flex items-center gap-2 text-xs">
+                                    <Factory className="w-3 h-3 text-muted-foreground" />
+                                    <span className="text-muted-foreground">Liniya:</span>
+                                    <span className="text-foreground">{batch.sourceLine}</span>
+                                  </div>
+                                  <div className="flex items-center gap-2 text-xs">
+                                    <MapPin className="w-3 h-3 text-muted-foreground" />
+                                    <span className="text-muted-foreground">Joylashuv:</span>
+                                    <span className="text-foreground font-medium">{batch.warehouseLocation}</span>
+                                  </div>
+                                  <div className="flex items-center gap-2 text-xs">
+                                    <Calendar className="w-3 h-3 text-muted-foreground" />
+                                    <span className="text-muted-foreground">QC sana:</span>
+                                    <span className="text-foreground">
+                                      {new Date(batch.qcDate).toLocaleDateString('uz-UZ')}
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center gap-2 text-xs">
+                                    <Calendar className="w-3 h-3 text-muted-foreground" />
+                                    <span className="text-muted-foreground">Qabul qilindi:</span>
+                                    <span className="text-foreground">
+                                      {formatDate(batch.receivedAt)}
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center gap-2 text-xs">
+                                    <span className="text-muted-foreground">Operator:</span>
+                                    <span className="text-foreground">{batch.receivedBy}</span>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
-              {t('finishedGoods.cancel')}
-            </Button>
-            <Button onClick={handleSave}>{t('finishedGoods.create')}</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        )}
+      </div>
     </div>
   );
 }

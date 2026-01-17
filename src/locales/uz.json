@@ -130,7 +130,38 @@
     "cancel": "Bekor qilish",
     "kg": "kg",
     "litr": "litr",
-    "dona": "dona"
+    "dona": "dona",
+    "receiving": {
+      "title": "Ombor qabul qilish",
+      "subtitle": "Transfer hujjatlarini QR kod orqali qabul qilish",
+      "scanQR": "QR kod skanerlash",
+      "scanPlaceholder": "QR kod yoki Transfer ID ni kiriting",
+      "load": "Yuklash",
+      "scanRequired": "QR kod yoki Transfer ID kiritilishi shart",
+      "transferNotFound": "Transfer hujjati topilmadi",
+      "invalidStatus": "Bu transfer hujjati qabul qilish uchun tayyor emas",
+      "transferDetails": "Transfer hujjati tafsilotlari",
+      "transferId": "Transfer ID",
+      "sourceLine": "Manba liniya",
+      "createdAt": "Yaratilgan vaqt",
+      "createdBy": "Yaratgan",
+      "products": "Mahsulotlar",
+      "quantity": "Miqdor",
+      "batch": "Partiya",
+      "warehouseLocation": "Ombor joylashuvi",
+      "locationsRequired": "Barcha mahsulotlar uchun ombor joylashuvi belgilanishi shart",
+      "qcPassed": "QC o'tdi",
+      "qcFailed": "QC o'tmadi",
+      "acceptTransfer": "Transferni qabul qilish",
+      "rejectTransfer": "Transferni rad etish",
+      "rejectReason": "Rad etish sababi",
+      "rejectReasonPlaceholder": "Rad etish sababini kiriting...",
+      "rejectReasonRequired": "Rad etish sababi kiritilishi shart",
+      "accepted": "Transfer muvaffaqiyatli qabul qilindi",
+      "rejected": "Transfer rad etildi",
+      "cancel": "Bekor qilish",
+      "confirmReject": "Rad etishni tasdiqlash"
+    }
   },
   "production": {
     "title": "Ishlab chiqarish liniyalari",
@@ -231,7 +262,48 @@
     "optionDetectionPlaceholder": "Bu bo'limda kamera orqali yig'ilayotgan mahsulot opsiyalari (model, konfiguratsiya) avtomatik aniqlanadi. Hozircha mock holatida.",
     "defectDetection": "Nuqsonlarni aniqlash",
     "defectDetectionPlaceholder": "AI asosida mahsulotdagi nuqsonlar, chiziqlar va yetishmayotgan detallar real vaqt rejimida aniqlanadi. Hozircha mock ma'lumotlar.",
-    "eventLog": "Hodisalar jurnali"
+    "eventLog": "Hodisalar jurnali",
+    "lineBuffer": {
+      "button": "Linyadagi zaxira",
+      "title": "Linyadagi zaxira (Line Buffer)",
+      "empty": "Zaxira mavjud emas",
+      "emptyDescription": "Hozircha bu liniyada zaxira mahsulotlari yo'q",
+      "quantity": "Miqdor",
+      "lastUpdated": "Oxirgi yangilanish",
+      "qcPassed": "QC o'tdi",
+      "exportPDF": "PDF yuklab olish",
+      "exportExcel": "Excel yuklab olish",
+      "backToLine": "Orqaga – Linyaga",
+      "exportPDFPlaceholder": "PDF eksport qilish funksiyasi tez orada qo'shiladi",
+      "exportExcelPlaceholder": "Excel eksport qilish funksiyasi tez orada qo'shiladi",
+      "summary": {
+        "totalPositions": "Jami pozitsiyalar soni",
+        "totalQuantity": "Jami zaxira (dona)",
+        "lastUpdate": "Oxirgi yangilanish vaqti",
+        "qcStatus": "QC holati"
+      },
+      "units": "dona",
+      "search": "Mahsulot nomi yoki SKU bo'yicha qidirish...",
+      "sortBy": "Saralash",
+      "sortQuantity": "Miqdor",
+      "sortTime": "Vaqt",
+      "sortName": "Nomi",
+      "tableTitle": "Zaxira mahsulotlari",
+      "table": {
+        "productName": "Mahsulot nomi",
+        "sku": "SKU / Kod",
+        "quantity": "Miqdor",
+        "qcStatus": "QC holati",
+        "lastUpdated": "Oxirgi yangilanish",
+        "responsible": "Mas'ul (QC inspektor / liniya)"
+      },
+      "showing": "Ko'rsatilmoqda",
+      "of": "dan",
+      "page": "Sahifa",
+      "previous": "Oldingi",
+      "next": "Keyingi",
+      "noResults": "Qidiruv natijalari topilmadi"
+    }
   },
   "hr": {
     "title": "Kadrlar bo'limi",
@@ -1100,6 +1172,76 @@
     "viewDetails": "Tafsilotlar",
     "validation": {
       "required": "Majburiy maydonlar to'ldirilishi kerak"
+    },
+    "tabs": {
+      "operational": "Operatsion QC",
+      "analytical": "Analitik QC",
+      "statistics": "Statistika"
+    },
+    "executive": {
+      "title": "Ijro xulosa",
+      "status": "QC holati",
+      "statusOk": "OK",
+      "statusRisk": "Xavf",
+      "statusCritical": "Kritik",
+      "linesOnHold": "HOLD holatidagi liniyalar",
+      "criticalDefectsToday": "Bugungi kritik nuqsonlar",
+      "recommendedAction": "Tavsiya etilgan harakat",
+      "actionOk": "Hozirgi holat qoniqarli",
+      "actionRisk": "Monitoringni kuchaytirish kerak",
+      "actionCritical": "Darhol chora ko'rish kerak"
+    },
+    "kpi": {
+      "defectRate": "Nuqson darajasi (%)",
+      "firstPassYield": "Birinchi marta o'tkazish darajasi (FPY)",
+      "reworkRate": "Qayta ishlash darajasi",
+      "scrapRate": "Brak darajasi",
+      "criticalDefects": "Kritik nuqsonlar"
+    },
+    "analytical": {
+      "defectTrend": "Nuqsonlar tendentsiyasi",
+      "defectsByLine": "Liniya bo'yicha nuqsonlar",
+      "severityDistribution": "Og'irlik bo'yicha taqsimot",
+      "trendSummary": "Tendentsiya xulosa",
+      "last7Days": "Oxirgi 7 kun",
+      "last30Days": "Oxirgi 30 kun",
+      "last90Days": "Oxirgi 90 kun"
+    },
+    "statistics": {
+      "mostProblematicLine": "Eng muammoli liniya",
+      "mostRiskyDefect": "Eng xavfli nuqson turi",
+      "reworkVsScrap": "Qayta ishlash vs Brak"
+    },
+    "rootCauseNote": "Asosiy sabab izohi",
+    "rootCauseNotePlaceholder": "Asosiy sababni batafsil tushuntiring...",
+    "auditLog": {
+      "title": "Qaror audit jurnali",
+      "initialDecision": "Dastlabki qaror",
+      "changedBy": "O'zgartirgan",
+      "reason": "Sabab"
+    },
+    "report": {
+      "download": "Hisobotni yuklab olish",
+      "downloadPlaceholder": "PDF yuklash funksiyasi backend API tayyor bo'lganda ishlaydi"
+    },
+    "checkin": {
+      "scanQR": "QR kodni skanerlash",
+      "lineStatus": "QC liniya holati",
+      "present": "QC mavjud",
+      "warning": "Ogohlantirish",
+      "absent": "QC yo'q",
+      "noInspector": "Inspector tayinlanmagan",
+      "timeSince": "Skanerlashdan keyin",
+      "success": "{line} liniyasiga muvaffaqiyatli kirildi",
+      "invalidQR": "Noto'g'ri QR kod formati",
+      "reassigned": "{from} dan {to} ga qayta tayinlandi",
+      "table": {
+        "line": "Liniya",
+        "inspector": "Inspector",
+        "lastScan": "Oxirgi skanerlash",
+        "timeSince": "Vaqt o'tdi",
+        "status": "Holat"
+      }
     }
   },
   "orders": {
@@ -1165,7 +1307,31 @@
     "dialogDescription": "Yangi tayyor mahsulot qo'shing",
     "validation": {
       "required": "Majburiy maydonlar to'ldirilishi kerak"
-    }
+    },
+    "summary": {
+      "totalProducts": "Jami mahsulotlar",
+      "totalQuantity": "Jami miqdor",
+      "availableQuantity": "Mavjud miqdor",
+      "reservedQuantity": "Band qilingan miqdor"
+    },
+    "filterByLocation": "Ombor joylashuvi bo'yicha",
+    "filterByAvailability": "Mavjudlik bo'yicha",
+    "allLocations": "Barcha joylashuvlar",
+    "allAvailability": "Barcha",
+    "available": "Mavjud",
+    "warehouseLocations": "Ombor joylashuvlari",
+    "sourceLines": "Manba liniyalar",
+    "batches": "Partiyalar",
+    "more": "yana",
+    "qcPassed": "QC o'tdi",
+    "total": "Jami",
+    "exportPDF": "PDF yuklab olish",
+    "exportExcel": "Excel yuklab olish",
+    "exportPDFPlaceholder": "PDF eksport qilish funksiyasi tez orada qo'shiladi",
+    "exportExcelPlaceholder": "Excel eksport qilish funksiyasi tez orada qo'shiladi",
+    "available_for_sale": "Sotish uchun mavjud",
+    "reserved": "Band qilingan",
+    "shipped": "Yuborilgan"
   },
   "planning": {},
   "canteen": {

@@ -4,7 +4,7 @@ import { useFactory } from '../context/FactoryContext';
 import { useLanguage } from '../context/LanguageContext';
 import { useDailyProductionPlan } from '../context/DailyProductionPlanContext';
 import { maintenanceApi } from '../services/maintenanceApi';
-import { ArrowLeft, Package, PlayCircle, PauseCircle, Settings, Plus, Activity } from 'lucide-react';
+import { ArrowLeft, Package, PlayCircle, PauseCircle, Settings, Plus, Activity, Layers } from 'lucide-react';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { LinePlanModal } from './hr/LinePlanModal';
@@ -69,15 +69,27 @@ export function ProductionLineDetail() {
                 {t('productionDetail.lineId')}: {line.id}
               </p>
             </div>
-            <Button
-              onClick={() => navigate(`/production-lines/${line.id}/live`)}
-              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg shadow-sm"
-            >
-              <Activity className="w-4 h-4" />
-              <span className="text-sm font-medium">
-                {t('productionDetail.liveProduction')}
-              </span>
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                onClick={() => navigate(`/production-lines/${line.id}/live`)}
+                className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg shadow-sm"
+              >
+                <Activity className="w-4 h-4" />
+                <span className="text-sm font-medium">
+                  {t('productionDetail.liveProduction')}
+                </span>
+              </Button>
+              <Button
+                onClick={() => navigate(`/production-lines/${line.id}/buffer`)}
+                variant="outline"
+                className="flex items-center gap-2 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 px-4 py-2 rounded-lg shadow-sm"
+              >
+                <Layers className="w-4 h-4" />
+                <span className="text-sm font-medium">
+                  {t('productionDetail.lineBuffer.button')}
+                </span>
+              </Button>
+            </div>
           </div>
           <div className="flex gap-2">
             <button
@@ -373,6 +385,7 @@ export function ProductionLineDetail() {
           lineName={line.name}
         />
       )}
+
     </div>
   );
 }

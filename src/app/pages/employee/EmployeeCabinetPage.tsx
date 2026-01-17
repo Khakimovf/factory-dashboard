@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useLanguage } from '../../context/LanguageContext';
 import {
   mockCurrentEmployee,
@@ -19,7 +20,29 @@ import {
   Eye,
   AlertCircle,
   TrendingUp,
+  Send,
 } from 'lucide-react';
+import { Button } from '../../components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '../../components/ui/dialog';
+import { Input } from '../../components/ui/input';
+import { Label } from '../../components/ui/label';
+import { Textarea } from '../../components/ui/textarea';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../../components/ui/select';
+import { toast } from 'sonner';
+import { submitLateReport } from '../../services/lateReportsService';
 
 // TODO: Replace mock data with API calls when backend is ready
 const mockEmployee = {
@@ -33,6 +56,13 @@ const mockEmployee = {
 
 export function EmployeeCabinetPage() {
   const { t, language } = useLanguage();
+  const [isLateReportModalOpen, setIsLateReportModalOpen] = useState(false);
+  const [lateReportForm, setLateReportForm] = useState({
+    lateHours: '',
+    reason: '',
+    notes: '',
+  });
+
   const workExp = calculateWorkExperience(mockEmployee.hireDate);
   const currentMonth = mockSalaryHistory[0];
   const today = new Date().toISOString().split('T')[0];
@@ -110,12 +140,61 @@ export function EmployeeCabinetPage() {
 
   const daysUntilBirthday = calculateDaysUntilBirthday(mockEmployee.birthdate);
 
+  const handleSubmitLateReport = async () => {
+    const lateHours = parseFloat(lateReportForm.lateHours);
+    
+    if (!lateReportForm.lateHours || lateHours < 0.5) {
+      toast.error('Kechikish vaqti kamida 0.5 soat bo\'lishi kerak');
+      return;
+    }
+    
+    if (!lateReportForm.reason) {
+      toast.error('Kechikish sababi tanlanishi shart');
+      return;
+    }
+
+    // Determine shift start time based on current hour
+    const currentHour = new Date().getHours();
+    const shiftStartTime = currentHour < 14 ? '08:00' : '20:00';
+
+    try {
+      await submitLateReport({
+        employee_id: 'EMP-001', // TODO: Get from auth context
+        employee_name: mockEmployee.fullName,
+        department: mockEmployee.department,
+        shift_start_time: shiftStartTime,
+        late_minutes: Math.round(lateHours * 60),
+        reason: lateReportForm.reason,
+        notes: lateReportForm.notes.trim() || undefined,
+      });
+
+      toast.success('Kechikish sababi HR bo\'limiga muvaffaqiyatli yuborildi');
+      setIsLateReportModalOpen(false);
+      setLateReportForm({ lateHours: '', reason: '', notes: '' });
+    } catch (error) {
+      toast.error('Xatolik: Kechikish sababini yuborishda muammo');
+      console.error('Failed to submit late report:', error);
+    }
+  };
+
+  const isFormValid = () => {
+    const lateHours = parseFloat(lateReportForm.lateHours);
+    return lateReportForm.lateHours && lateHours >= 0.5 && lateReportForm.reason;
+  };
+
   return (
-    <div className="p-8">
-      <div className="mb-6">
+    <div className="p-8 bg-background text-foreground min-h-screen">
+      <div className="mb-6 flex items-center justify-between">
         <h2 className="text-3xl font-semibold text-gray-900 dark:text-white">
           {t('employeeCabinet.title')}
         </h2>
+        <button
+          onClick={() => setIsLateReportModalOpen(true)}
+          className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-sm font-medium"
+        >
+          <Send className="w-4 h-4" />
+          Kechikish sababini yuborish
+        </button>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -385,6 +464,87 @@ export function EmployeeCabinetPage() {
           </div>
         )}
       </div>
+
+      {/* Late Report Modal */}
+      <Dialog open={isLateReportModalOpen} onOpenChange={setIsLateReportModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Kechikish sababini yuborish</DialogTitle>
+            <DialogDescription>
+              Kechikish sababini kiriting va HR bo'limiga yuboring
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="lateHours">
+                Necha soat kech qolding? *
+              </Label>
+              <Input
+                id="lateHours"
+                type="number"
+                min="0.5"
+                step="0.1"
+                value={lateReportForm.lateHours}
+                onChange={(e) => setLateReportForm({ ...lateReportForm, lateHours: e.target.value })}
+                placeholder="0.5"
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="reason">
+                Kechikish sababi *
+              </Label>
+              <Select
+                value={lateReportForm.reason}
+                onValueChange={(value) => setLateReportForm({ ...lateReportForm, reason: value })}
+              >
+                <SelectTrigger id="reason">
+                  <SelectValue placeholder="Sababni tanlang" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="personal">Shaxsiy sabablar</SelectItem>
+                  <SelectItem value="transport">Transport muammosi</SelectItem>
+                  <SelectItem value="health">Sog'liq muammosi</SelectItem>
+                  <SelectItem value="other">Boshqa sabab</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="notes">
+                Izoh (ixtiyoriy, maksimal 300 belgi)
+              </Label>
+              <Textarea
+                id="notes"
+                rows={4}
+                maxLength={300}
+                value={lateReportForm.notes}
+                onChange={(e) => setLateReportForm({ ...lateReportForm, notes: e.target.value })}
+                placeholder="Qo'shimcha ma'lumot..."
+              />
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                {lateReportForm.notes.length}/300
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsLateReportModalOpen(false);
+                setLateReportForm({ lateHours: '', reason: '', notes: '' });
+              }}
+            >
+              Bekor qilish
+            </Button>
+            <Button
+              onClick={handleSubmitLateReport}
+              disabled={!isFormValid()}
+            >
+              HR bo'limiga yuborish
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

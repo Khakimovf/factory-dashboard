@@ -8,6 +8,7 @@ import { MaterialRequests } from './components/MaterialRequests';
 import { ProductionLines } from './components/ProductionLines';
 import { ProductionLineDetail } from './components/ProductionLineDetail';
 import { ProductionLivePage } from './pages/production/ProductionLivePage';
+import { LineBufferPage } from './pages/production/LineBufferPage';
 import { OperatorDailyLinePlan } from './components/production/OperatorDailyLinePlan';
 import { HRDepartment } from './components/HRDepartment';
 import { DailyProductionPlanForm } from './components/DailyProductionPlanForm';
@@ -31,9 +32,11 @@ import { SuppliersLayout } from './pages/suppliers/SuppliersLayout';
 import { QualityControlPage } from './pages/qc/QualityControlPage';
 import { OrdersPage } from './pages/orders/OrdersPage';
 import { FinishedGoodsPage } from './pages/finished-goods/FinishedGoodsPage';
+import { WarehouseReceivingPage } from './pages/warehouse/WarehouseReceivingPage';
 import { CanteenPage } from './pages/canteen/CanteenPage';
 import ReportsPage from './pages/reports/ReportsPage';
 import { FactoryProvider } from './context/FactoryContext';
+import { WarehouseProvider } from './context/WarehouseContext';
 import { AuditLogProvider } from './context/AuditLogContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { LanguageProvider } from './context/LanguageContext';
@@ -45,21 +48,24 @@ export default function App() {
     <ThemeProvider>
       <LanguageProvider>
         <FactoryProvider>
-          <DailyProductionPlanProvider>
-            <AuditLogProvider>
+          <WarehouseProvider>
+            <DailyProductionPlanProvider>
+              <AuditLogProvider>
               <Router>
-              <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
+              <div className="flex min-h-screen h-screen bg-background text-foreground">
                 <Sidebar />
-                <div className="flex-1 flex flex-col overflow-hidden">
+                <div className="flex-1 flex flex-col overflow-hidden bg-background min-h-full">
                   <Header />
-                  <main className="flex-1 overflow-y-auto">
+                  <main className="flex-1 overflow-y-auto bg-background relative z-10 min-h-full">
                     <Routes>
                       <Route path="/" element={<Dashboard />} />
                       <Route path="/warehouse" element={<Warehouse />} />
                       <Route path="/warehouse/requests" element={<MaterialRequests />} />
+                      <Route path="/warehouse/receiving" element={<WarehouseReceivingPage />} />
                       <Route path="/production-lines" element={<ProductionLines />} />
                       <Route path="/production-lines/operator-plans" element={<OperatorDailyLinePlan />} />
                       <Route path="/production-lines/:id/live" element={<ProductionLivePage />} />
+                      <Route path="/production-lines/:lineId/buffer" element={<LineBufferPage />} />
                       <Route path="/production-lines/:id" element={<ProductionLineDetail />} />
                       <Route path="/qc" element={<QualityControlPage />} />
                       <Route path="/orders" element={<OrdersPage />} />
@@ -93,6 +99,7 @@ export default function App() {
               <Toaster />
             </AuditLogProvider>
           </DailyProductionPlanProvider>
+          </WarehouseProvider>
         </FactoryProvider>
       </LanguageProvider>
     </ThemeProvider>

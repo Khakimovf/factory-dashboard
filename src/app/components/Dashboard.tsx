@@ -142,21 +142,21 @@ export function Dashboard() {
       : 'Past';
 
   return (
-    <div className="p-8 min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen p-8 bg-background text-foreground">
       <div className="mb-8 flex items-center justify-between">
         <div>
-          <h2 className="text-3xl font-semibold text-gray-900 dark:text-white">
+          <h2 className="text-3xl font-semibold text-foreground">
             {t('dashboard.title')}
           </h2>
-          <p className="text-gray-500 dark:text-gray-400 mt-1">{t('dashboard.welcome')}</p>
+          <p className="text-muted-foreground mt-1">{t('dashboard.welcome')}</p>
         </div>
-        <div className="inline-flex items-center gap-1 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-1 text-xs">
+        <div className="inline-flex items-center gap-1 rounded-lg border border-border bg-background p-1 text-xs">
           <button
             onClick={() => setRange('today')}
             className={`px-3 py-1 rounded-md transition-colors ${
               range === 'today'
                 ? 'bg-blue-600 text-white'
-                : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                : 'text-muted-foreground hover:bg-muted'
             }`}
           >
             {t('dashboard.today')}
@@ -166,7 +166,7 @@ export function Dashboard() {
             className={`px-3 py-1 rounded-md transition-colors ${
               range === 'week'
                 ? 'bg-blue-600 text-white'
-                : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                : 'text-muted-foreground hover:bg-muted'
             }`}
           >
             {t('dashboard.week')}
@@ -176,7 +176,7 @@ export function Dashboard() {
             className={`px-3 py-1 rounded-md transition-colors ${
               range === 'month'
                 ? 'bg-blue-600 text-white'
-                : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                : 'text-muted-foreground hover:bg-muted'
             }`}
           >
             {t('dashboard.month')}
@@ -194,7 +194,7 @@ export function Dashboard() {
       />
 
       <div className="mb-8">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+          <h3 className="text-lg font-semibold text-foreground mb-4">
           Asosiy ko&apos;rsatkichlar
         </h3>
 
@@ -256,7 +256,7 @@ export function Dashboard() {
 
       <div className="mt-10 space-y-10">
         <section>
-          <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+          <h3 className="text-xl font-semibold text-foreground mb-4">
             Ombor tahlili
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
@@ -298,7 +298,7 @@ export function Dashboard() {
         </section>
 
         <section>
-          <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+          <h3 className="text-xl font-semibold text-foreground mb-4">
             Ishlab chiqarish tahlili
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
@@ -322,8 +322,8 @@ export function Dashboard() {
             />
           </div>
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-              <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+            <div className="bg-card border-border rounded-xl shadow-sm border p-6">
+              <h4 className="text-lg font-semibold text-card-foreground mb-4">
                 Reja vs fakt
               </h4>
               <ResponsiveContainer width="100%" height={260}>
@@ -337,8 +337,8 @@ export function Dashboard() {
                 </BarChart>
               </ResponsiveContainer>
             </div>
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-              <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+            <div className="bg-card border-border rounded-xl shadow-sm border p-6">
+              <h4 className="text-lg font-semibold text-card-foreground mb-4">
                 Samaradorlik trendi
               </h4>
               <ResponsiveContainer width="100%" height={260}>
@@ -355,7 +355,7 @@ export function Dashboard() {
         </section>
 
         <section>
-          <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+          <h3 className="text-xl font-semibold text-foreground mb-4">
             Sifat nazorati tahlili
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
@@ -379,8 +379,8 @@ export function Dashboard() {
             />
           </div>
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-              <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+            <div className="bg-card border-border rounded-xl shadow-sm border p-6">
+              <h4 className="text-lg font-semibold text-card-foreground mb-4">
                 Nuqsonlar liniyalar bo‘yicha
               </h4>
               <ResponsiveContainer width="100%" height={260}>
@@ -393,8 +393,8 @@ export function Dashboard() {
                 </BarChart>
               </ResponsiveContainer>
             </div>
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-              <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+            <div className="bg-card border-border rounded-xl shadow-sm border p-6">
+              <h4 className="text-lg font-semibold text-card-foreground mb-4">
                 Nuqson turlari
               </h4>
               <ResponsiveContainer width="100%" height={260}>
@@ -423,7 +423,7 @@ export function Dashboard() {
         </section>
 
         <section>
-          <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+          <h3 className="text-xl font-semibold text-foreground mb-4">
             Buyurtmalar tahlili
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
@@ -432,8 +432,8 @@ export function Dashboard() {
             <MetricCard title="Yakunlangan" value={ordersKpiCompleted} unit="ta" color="green" />
           </div>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-              <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+            <div className="bg-card border-border rounded-xl shadow-sm border p-6">
+              <h4 className="text-lg font-semibold text-card-foreground mb-4">
                 Buyurtmalar holati
               </h4>
               <ResponsiveContainer width="100%" height={260}>
@@ -458,8 +458,8 @@ export function Dashboard() {
                 </PieChart>
               </ResponsiveContainer>
             </div>
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-              <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+            <div className="bg-card border-border rounded-xl shadow-sm border p-6">
+              <h4 className="text-lg font-semibold text-card-foreground mb-4">
                 So‘nggi buyurtmalar hajmi
               </h4>
               <ResponsiveContainer width="100%" height={260}>
@@ -476,7 +476,7 @@ export function Dashboard() {
         </section>
 
         <section>
-          <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+          <h3 className="text-xl font-semibold text-foreground mb-4">
             Tayyor mahsulotlar tahlili
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
@@ -501,7 +501,7 @@ export function Dashboard() {
         </section>
 
         <section>
-          <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+          <h3 className="text-xl font-semibold text-foreground mb-4">
             Ta&apos;mirlash va texnik xizmat tahlili
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
@@ -510,8 +510,8 @@ export function Dashboard() {
             <MetricCard title="Ta&apos;mirlashda" value={maintenanceKpiInRepair} unit="liniya" color="orange" />
           </div>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-              <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+            <div className="bg-card border-border rounded-xl shadow-sm border p-6">
+              <h4 className="text-lg font-semibold text-card-foreground mb-4">
                 To‘xtash vaqti (kunlar bo‘yicha)
               </h4>
               <ResponsiveContainer width="100%" height={220}>
@@ -524,8 +524,8 @@ export function Dashboard() {
                 </LineChart>
               </ResponsiveContainer>
             </div>
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-              <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+            <div className="bg-card border-border rounded-xl shadow-sm border p-6">
+              <h4 className="text-lg font-semibold text-card-foreground mb-4">
                 To‘xtash sabablariga ko‘ra
               </h4>
               <ResponsiveContainer width="100%" height={220}>

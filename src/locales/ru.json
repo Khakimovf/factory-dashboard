@@ -230,7 +230,48 @@
     "optionDetectionPlaceholder": "В этом блоке будут автоматически определяться опции/модификации продукта с камеры. Пока используется макет.",
     "defectDetection": "Обнаружение дефектов",
     "defectDetectionPlaceholder": "На основе AI будут выявляться дефекты, царапины и недостающие детали в реальном времени. Сейчас отображаются только макетные данные.",
-    "eventLog": "Журнал событий"
+    "eventLog": "Журнал событий",
+    "lineBuffer": {
+      "button": "Буфер линии",
+      "title": "Буфер линии (Line Buffer)",
+      "empty": "Буфер пуст",
+      "emptyDescription": "В настоящее время в этой линии нет буферных продуктов",
+      "quantity": "Количество",
+      "lastUpdated": "Последнее обновление",
+      "qcPassed": "QC пройден",
+      "exportPDF": "Скачать PDF",
+      "exportExcel": "Скачать Excel",
+      "backToLine": "Назад – К линии",
+      "exportPDFPlaceholder": "Функция экспорта PDF будет добавлена в ближайшее время",
+      "exportExcelPlaceholder": "Функция экспорта Excel будет добавлена в ближайшее время",
+      "summary": {
+        "totalPositions": "Всего позиций",
+        "totalQuantity": "Всего буфера (шт)",
+        "lastUpdate": "Время последнего обновления",
+        "qcStatus": "Статус QC"
+      },
+      "units": "шт",
+      "search": "Поиск по названию продукта или SKU...",
+      "sortBy": "Сортировать по",
+      "sortQuantity": "Количество",
+      "sortTime": "Время",
+      "sortName": "Название",
+      "tableTitle": "Буферные продукты",
+      "table": {
+        "productName": "Название продукта",
+        "sku": "SKU / Код",
+        "quantity": "Количество",
+        "qcStatus": "Статус QC",
+        "lastUpdated": "Последнее обновление",
+        "responsible": "Ответственный (QC инспектор / линия)"
+      },
+      "showing": "Показано",
+      "of": "из",
+      "page": "Страница",
+      "previous": "Предыдущая",
+      "next": "Следующая",
+      "noResults": "Результаты поиска не найдены"
+    }
   },
   "hr": {
     "title": "Отдел кадров",
@@ -1097,6 +1138,76 @@
     "viewDetails": "Детали",
     "validation": {
       "required": "Обязательные поля должны быть заполнены"
+    },
+    "tabs": {
+      "operational": "Операционный QC",
+      "analytical": "Аналитический QC",
+      "statistics": "Статистика"
+    },
+    "executive": {
+      "title": "Исполнительная сводка",
+      "status": "Статус QC",
+      "statusOk": "OK",
+      "statusRisk": "Риск",
+      "statusCritical": "Критический",
+      "linesOnHold": "Линии в статусе HOLD",
+      "criticalDefectsToday": "Критические дефекты сегодня",
+      "recommendedAction": "Рекомендуемое действие",
+      "actionOk": "Текущее состояние удовлетворительное",
+      "actionRisk": "Необходимо усилить мониторинг",
+      "actionCritical": "Требуется немедленное вмешательство"
+    },
+    "kpi": {
+      "defectRate": "Процент дефектов (%)",
+      "firstPassYield": "Процент прохождения с первого раза (FPY)",
+      "reworkRate": "Процент доработки",
+      "scrapRate": "Процент брака",
+      "criticalDefects": "Критические дефекты"
+    },
+    "analytical": {
+      "defectTrend": "Тенденция дефектов",
+      "defectsByLine": "Дефекты по линиям",
+      "severityDistribution": "Распределение по критичности",
+      "trendSummary": "Сводка тенденций",
+      "last7Days": "Последние 7 дней",
+      "last30Days": "Последние 30 дней",
+      "last90Days": "Последние 90 дней"
+    },
+    "statistics": {
+      "mostProblematicLine": "Самая проблемная линия",
+      "mostRiskyDefect": "Самый рискованный тип дефекта",
+      "reworkVsScrap": "Доработка vs Брак"
+    },
+    "rootCauseNote": "Примечание к корневой причине",
+    "rootCauseNotePlaceholder": "Подробно опишите корневую причину...",
+    "auditLog": {
+      "title": "Журнал аудита решений",
+      "initialDecision": "Первоначальное решение",
+      "changedBy": "Изменено",
+      "reason": "Причина"
+    },
+    "report": {
+      "download": "Скачать отчет",
+      "downloadPlaceholder": "Функция загрузки PDF будет работать, когда backend API будет готов"
+    },
+    "checkin": {
+      "scanQR": "Сканировать QR код",
+      "lineStatus": "Статус линий QC",
+      "present": "QC присутствует",
+      "warning": "Предупреждение",
+      "absent": "QC отсутствует",
+      "noInspector": "Инспектор не назначен",
+      "timeSince": "Время с момента сканирования",
+      "success": "Успешная регистрация на линии {line}",
+      "invalidQR": "Неверный формат QR кода",
+      "reassigned": "Переназначено с {from} на {to}",
+      "table": {
+        "line": "Линия",
+        "inspector": "Инспектор",
+        "lastScan": "Последнее сканирование",
+        "timeSince": "Время прошло",
+        "status": "Статус"
+      }
     }
   },
   "orders": {
@@ -1162,6 +1273,63 @@
     "dialogDescription": "Добавьте новый готовый продукт",
     "validation": {
       "required": "Обязательные поля должны быть заполнены"
+    },
+    "summary": {
+      "totalProducts": "Всего продуктов",
+      "totalQuantity": "Всего количество",
+      "availableQuantity": "Доступное количество",
+      "reservedQuantity": "Зарезервированное количество"
+    },
+    "filterByLocation": "По местоположению склада",
+    "filterByAvailability": "По доступности",
+    "allLocations": "Все местоположения",
+    "allAvailability": "Все",
+    "available": "Доступно",
+    "warehouseLocations": "Местоположения склада",
+    "sourceLines": "Исходные линии",
+    "batches": "Партии",
+    "more": "еще",
+    "qcPassed": "QC пройден",
+    "total": "Всего",
+    "exportPDF": "Скачать PDF",
+    "exportExcel": "Скачать Excel",
+    "exportPDFPlaceholder": "Функция экспорта PDF будет добавлена в ближайшее время",
+    "exportExcelPlaceholder": "Функция экспорта Excel будет добавлена в ближайшее время",
+    "available_for_sale": "Доступно для продажи",
+    "reserved": "Зарезервировано",
+    "shipped": "Отправлено"
+  },
+  "warehouse": {
+    "receiving": {
+      "title": "Приемка на складе",
+      "subtitle": "Приемка документов на перевод через QR код",
+      "scanQR": "Сканирование QR кода",
+      "scanPlaceholder": "Введите QR код или Transfer ID",
+      "load": "Загрузить",
+      "scanRequired": "Требуется ввести QR код или Transfer ID",
+      "transferNotFound": "Документ на перевод не найден",
+      "invalidStatus": "Этот документ на перевод не готов к приемке",
+      "transferDetails": "Детали документа на перевод",
+      "transferId": "ID перевода",
+      "sourceLine": "Исходная линия",
+      "createdAt": "Дата создания",
+      "createdBy": "Создано",
+      "products": "Продукты",
+      "quantity": "Количество",
+      "batch": "Партия",
+      "warehouseLocation": "Местоположение склада",
+      "locationsRequired": "Требуется указать местоположение склада для всех продуктов",
+      "qcPassed": "QC пройден",
+      "qcFailed": "QC не пройден",
+      "acceptTransfer": "Принять перевод",
+      "rejectTransfer": "Отклонить перевод",
+      "rejectReason": "Причина отклонения",
+      "rejectReasonPlaceholder": "Введите причину отклонения...",
+      "rejectReasonRequired": "Требуется указать причину отклонения",
+      "accepted": "Перевод успешно принят",
+      "rejected": "Перевод отклонен",
+      "cancel": "Отмена",
+      "confirmReject": "Подтвердить отклонение"
     }
   },
   "planning": {},
