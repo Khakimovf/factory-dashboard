@@ -37,6 +37,18 @@ export function Warehouse() {
   // Quantity editing state
   const [editingQuantity, setEditingQuantity] = useState<Record<string, string>>({});
 
+  // Helper function to translate category names
+  // This function is recreated on every render, ensuring it always uses the latest 't' function
+  const translateCategory = (category: string): string => {
+    if (category === 'all') return t('warehouse.all');
+    const categoryMap: Record<string, string> = {
+      'Raw Material': t('warehouse.rawMaterial'),
+      'Components': t('warehouse.components'),
+      'Hardware': t('warehouse.hardware'),
+    };
+    return categoryMap[category] || category;
+  };
+
   const categories = ['all', ...Array.from(new Set(materials.map(m => m.category)))];
 
   // Mock function to assign materials to rows (distribute evenly by index)
@@ -220,7 +232,7 @@ export function Warehouse() {
                     : 'bg-muted text-muted-foreground hover:bg-accent'
                 }`}
               >
-                {category === 'all' ? t('warehouse.all') : category}
+                {translateCategory(category)}
               </button>
             ))}
             <Button
@@ -273,7 +285,7 @@ export function Warehouse() {
                     </td>
                     <td className="px-4 py-2">
                       <span className="px-2 py-1 rounded-full text-xs font-medium bg-primary/10 text-primary">
-                        {material.category}
+                        {translateCategory(material.category)}
                       </span>
                     </td>
                     <td className="px-4 py-2">
@@ -468,11 +480,11 @@ export function Warehouse() {
     try {
       addMaterial({
         materialId: newMaterial.materialId.trim(),
-        name: `Material ${newMaterial.materialId.trim()}`,
+        name: t('warehouse.materialNamePrefix').replace('{id}', newMaterial.materialId.trim()),
         unit: newMaterial.unit,
         quantity,
         minStock,
-        category: 'Raw Material', // Default category, can be enhanced later
+        category: t('warehouse.defaultCategory'), // Default category, can be enhanced later
       });
 
       toast.success(t('warehouse.materialAdded'));
@@ -480,10 +492,11 @@ export function Warehouse() {
       setNewMaterial({ materialId: '', unit: '', quantity: '', minStock: '' });
       setMaterialError('');
     } catch (error: any) {
+      // Backend error message is in Uzbek: 'Bu detal allaqachon mavjud'
       if (error.message === 'Bu detal allaqachon mavjud') {
         setMaterialError(t('warehouse.materialExists'));
       } else {
-        setMaterialError(error.message || 'Xatolik yuz berdi');
+        setMaterialError(error.message || t('warehouse.errorOccurred'));
       }
     }
   }

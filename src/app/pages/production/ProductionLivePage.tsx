@@ -1,25 +1,113 @@
-import { useState } from 'react';
-import { Activity, ArrowLeft, Camera, AlertTriangle, ListTree } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import { Activity, ArrowLeft, Camera, AlertTriangle, ListTree, Clock, User, Users, AlertCircle } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useLanguage } from '../../context/LanguageContext';
 import { useFactory } from '../../context/FactoryContext';
+import { useDailyProductionPlan } from '../../context/DailyProductionPlanContext';
+import { getCurrentShiftInfo, getShiftLabel, hasShiftEnded, getTimeUntilShiftEnd, type ShiftType } from '../../utils/shiftUtils';
+import { hrEmployees, type Employee } from '../../data/hrEmployees';
+
+// Line Master interface
+interface LineMaster {
+  employeeId: string;
+  fullName: string;
+  position: string;
+}
+
+// Shift assignment interface (for backend)
+interface ShiftAssignment {
+  lineId: string;
+  shiftType: ShiftType;
+  lineMaster: LineMaster | null;
+  workersCount: number;
+  maxWorkers: number;
+  shiftStartTime: string;
+  shiftEndTime: string;
+  createdAt: string;
+}
 
 export function ProductionLivePage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { t } = useLanguage();
   const { productionLines } = useFactory();
+  const { getTodayLinePlan } = useDailyProductionPlan();
 
   const line = productionLines.find(l => l.id === id);
 
-  // Mocked daily production data
-  const PLAN = 1000;
-  const FACT = 356;
-  const REMAINING = PLAN - FACT;
+  // Shift management
+  const shiftInfo = getCurrentShiftInfo();
+  const [lineMaster, setLineMaster] = useState<LineMaster | null>(() => {
+    // Mock: Get first available shift master from employees
+    const master = hrEmployees.find(
+      emp => (emp.position.includes('Smena boshlig') || emp.position.includes('Brigadier')) && emp.status === 'active'
+    );
+    return master ? {
+      employeeId: master.employeeId,
+      fullName: master.fullName,
+      position: master.position,
+    } : null;
+  });
+  const [workersCount, setWorkersCount] = useState(14);
+  const maxWorkers = 16;
+
+  // Get today's production plan for this line
+  const todayPlan = line ? getTodayLinePlan(line.id) : null;
+  const plannedQuantity = todayPlan?.totalReja || 0;
+
+  // Production tracking (shift-based)
+  const [producedQuantity, setProducedQuantity] = useState(356); // Mock: will be updated by camera events
+  const [shiftStatus, setShiftStatus] = useState<'active' | 'completed' | 'not_completed'>('active');
+  const [shiftEndWarning, setShiftEndWarning] = useState<string | null>(null);
+
+  // Calculate remaining
+  const remainingQuantity = Math.max(0, plannedQuantity - producedQuantity);
+  const PROGRESS = plannedQuantity > 0 ? Math.max(0, Math.min(100, Math.round((producedQuantity / plannedQuantity) * 100))) : 0;
 
   const [productionStatus, setProductionStatus] = useState<'active' | 'paused' | 'stopped'>('active');
 
-  const PROGRESS = Math.max(0, Math.min(100, Math.round((FACT / PLAN) * 100)));
+  // Check shift end and update status
+  useEffect(() => {
+    const checkShiftEnd = () => {
+      if (hasShiftEnded()) {
+        if (producedQuantity < plannedQuantity) {
+          setShiftStatus('not_completed');
+          const missing = plannedQuantity - producedQuantity;
+          setShiftEndWarning(`Smena yakunlandi. Reja bajarilmadi. Yetishmayotgan: ${missing} dona.`);
+        } else {
+          setShiftStatus('completed');
+          setShiftEndWarning(null);
+        }
+      } else {
+        setShiftStatus('active');
+        setShiftEndWarning(null);
+      }
+    };
+
+    checkShiftEnd();
+    const interval = setInterval(checkShiftEnd, 60000); // Check every minute
+
+    return () => clearInterval(interval);
+  }, [producedQuantity, plannedQuantity]);
+
+  // Simulate production counting (mock camera events)
+  // TODO: Replace with actual camera event handler
+  // When camera detects a part:
+  // 1. Call recordProductionEvent('part_detected', partNumber)
+  // 2. Increment producedQuantity
+  // 3. Decrement remainingQuantity
+  // 4. Update line_buffer if needed
+  useEffect(() => {
+    if (productionStatus === 'active' && !hasShiftEnded()) {
+      const interval = setInterval(() => {
+        setProducedQuantity(prev => prev + 1);
+        // In production: This would be triggered by camera events
+        // recordProductionEvent(lineId, shiftAssignmentId, 'part_detected', partNumber);
+      }, 5000); // Increment every 5 seconds (mock)
+
+      return () => clearInterval(interval);
+    }
+  }, [productionStatus]);
 
   const handlePause = () => {
     setProductionStatus(prev => (prev === 'paused' ? 'active' : 'paused'));
@@ -120,24 +208,41 @@ export function ProductionLivePage() {
               </span>
             </div>
 
+            {/* Shift End Warning */}
+            {shiftEndWarning && (
+              <div className="mb-4 p-4 rounded-lg border border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-900/20">
+                <div className="flex items-start gap-3">
+                  <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+                  <div className="flex-1">
+                    <p className="text-sm font-semibold text-red-900 dark:text-red-200 mb-1">
+                      Smena yakunlandi
+                    </p>
+                    <p className="text-xs text-red-700 dark:text-red-300">
+                      {shiftEndWarning}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div className="grid grid-cols-3 gap-6 mb-6">
               <div>
                 <p className="text-xs text-gray-500 dark:text-gray-400">{t('productionDetail.plan')}</p>
-                <p className="mt-1 text-2xl font-semibold text-gray-900 dark:text-white">{PLAN}</p>
+                <p className="mt-1 text-2xl font-semibold text-gray-900 dark:text-white">{plannedQuantity}</p>
                 <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
                   {t('productionDetail.unitsPerDay') ?? 'unit/day'}
                 </p>
               </div>
               <div>
                 <p className="text-xs text-gray-500 dark:text-gray-400">{t('productionDetail.fact')}</p>
-                <p className="mt-1 text-2xl font-semibold text-blue-600 dark:text-blue-400">{FACT}</p>
+                <p className="mt-1 text-2xl font-semibold text-blue-600 dark:text-blue-400">{producedQuantity}</p>
                 <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
                   {t('productionDetail.cameraLabel') ?? 'Camera count'}
                 </p>
               </div>
               <div>
                 <p className="text-xs text-gray-500 dark:text-gray-400">{t('productionDetail.remaining')}</p>
-                <p className="mt-1 text-2xl font-semibold text-green-600 dark:text-green-400">{REMAINING}</p>
+                <p className="mt-1 text-2xl font-semibold text-green-600 dark:text-green-400">{remainingQuantity}</p>
                 <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
                   {t('productionDetail.remainingLabel') ?? 'To target'}
                 </p>
@@ -321,6 +426,110 @@ export function ProductionLivePage() {
                   </span>
                 </div>
               </div>
+            </div>
+          </div>
+
+          {/* Shift & Line Responsibility Card */}
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                <Clock className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                Smena va liniya mas'uliyati
+              </h2>
+              <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${
+                shiftStatus === 'completed'
+                  ? 'bg-green-50 dark:bg-green-900/40 text-green-700 dark:text-green-300'
+                  : shiftStatus === 'not_completed'
+                  ? 'bg-red-50 dark:bg-red-900/40 text-red-700 dark:text-red-300'
+                  : 'bg-blue-50 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300'
+              }`}>
+                {shiftStatus === 'completed' ? 'Yakunlandi' : shiftStatus === 'not_completed' ? 'Bajarilmadi' : 'Faol'}
+              </span>
+            </div>
+
+            <div className="space-y-4">
+              {/* Current Shift */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Joriy smena</p>
+                  <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                    {getShiftLabel(shiftInfo.type)}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Smena vaqti</p>
+                  <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                    {shiftInfo.startTime} – {shiftInfo.endTime}
+                  </p>
+                </div>
+              </div>
+
+              {/* Line Master */}
+              <div className="pt-3 border-t border-gray-200 dark:border-gray-700">
+                <p className="text-xs text-gray-500 dark:text-gray-400 mb-2 flex items-center gap-1">
+                  <User className="w-3 h-3" />
+                  Liniya ustasi (Brigadir)
+                </p>
+                {lineMaster ? (
+                  <div>
+                    <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                      {lineMaster.fullName}
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                      ID: {lineMaster.employeeId} • {lineMaster.position}
+                    </p>
+                  </div>
+                ) : (
+                  <p className="text-xs text-gray-400 dark:text-gray-500 italic">
+                    Liniya ustasi tayinlanmagan
+                  </p>
+                )}
+              </div>
+
+              {/* Workers Count */}
+              <div className="pt-3 border-t border-gray-200 dark:border-gray-700">
+                <p className="text-xs text-gray-500 dark:text-gray-400 mb-2 flex items-center gap-1">
+                  <Users className="w-3 h-3" />
+                  Xodimlar soni
+                </p>
+                <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                  {workersCount} / {maxWorkers}
+                </p>
+                <div className="mt-2 w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-blue-600 dark:bg-blue-500 transition-all"
+                    style={{ width: `${(workersCount / maxWorkers) * 100}%` }}
+                  />
+                </div>
+              </div>
+
+              {/* Shift Times */}
+              <div className="pt-3 border-t border-gray-200 dark:border-gray-700 grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Smena boshlanishi</p>
+                  <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                    {shiftInfo.startTime}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Smena tugashi</p>
+                  <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                    {shiftInfo.endTime}
+                  </p>
+                </div>
+              </div>
+
+              {/* Time Until Shift End (if active) */}
+              {shiftStatus === 'active' && !hasShiftEnded() && (
+                <div className="pt-3 border-t border-gray-200 dark:border-gray-700">
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">
+                    Smena tugashiga qolgan vaqt
+                  </p>
+                  <p className="text-sm font-semibold text-blue-600 dark:text-blue-400">
+                    {Math.floor(getTimeUntilShiftEnd() / 60)} soat {getTimeUntilShiftEnd() % 60} daqiqa
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         </div>

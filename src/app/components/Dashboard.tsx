@@ -134,12 +134,13 @@ export function Dashboard() {
   ];
 
   const deviationPercent = productionDeltaPercent;
-  const riskLevel: 'Past' | 'O‘rtacha' | 'Yuqori' =
+  const riskLevelRaw: 'low' | 'medium' | 'high' =
     Math.abs(deviationPercent) >= 10 || avgEfficiency < 80
-      ? 'Yuqori'
+      ? 'high'
       : Math.abs(deviationPercent) >= 5 || avgEfficiency < 85
-      ? 'O‘rtacha'
-      : 'Past';
+      ? 'medium'
+      : 'low';
+  const riskLevel = riskLevelRaw === 'high' ? t('dashboard.riskLevelHigh') : riskLevelRaw === 'medium' ? t('dashboard.riskLevelMedium') : t('dashboard.riskLevelLow');
 
   return (
     <div className="min-h-screen p-8 bg-background text-foreground">
@@ -195,58 +196,56 @@ export function Dashboard() {
 
       <div className="mb-8">
           <h3 className="text-lg font-semibold text-foreground mb-4">
-          Asosiy ko&apos;rsatkichlar
+          {t('dashboard.keyIndicators')}
         </h3>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
           <MetricCard
-            title="Ishlab chiqarish (Reja vs Fakt)"
+            title={t('dashboard.productionPlanVsFact')}
             value={Number.isFinite(productionPercent) ? productionPercent : 0}
             unit="%"
             color="blue"
             delta={productionDeltaPercent}
             explanation={
               productionDeltaPercent < 0
-                ? `Rejadan ${Math.abs(productionDeltaPercent).toFixed(1)}% past. Asosiy sabab: past samaradorlik.`
-                : `Rejadan ${productionDeltaPercent.toFixed(1)}% yuqori.`
+                ? t('dashboard.productionBelowPlan').replace('{percent}', Math.abs(productionDeltaPercent).toFixed(1))
+                : t('dashboard.productionAbovePlan').replace('{percent}', productionDeltaPercent.toFixed(1))
             }
           />
           <MetricCard
-            title="Umumiy samaradorlik"
+            title={t('dashboard.overallEfficiency')}
             value={Number.isFinite(avgEfficiency) ? Number(avgEfficiency.toFixed(1)) : 0}
             unit="%"
             color="green"
             delta={efficiencyDeltaPercent}
             explanation={
               efficiencyDeltaPercent < 0
-                ? `Maqsaddan ${Math.abs(efficiencyDeltaPercent).toFixed(
-                    1,
-                  )}% past. Xavf: quvvat yetarli ishlamayapti.`
-                : `Maqsaddan ${efficiencyDeltaPercent.toFixed(1)}% yuqori. Holat barqaror.`
+                ? t('dashboard.efficiencyBelowTarget').replace('{percent}', Math.abs(efficiencyDeltaPercent).toFixed(1))
+                : t('dashboard.efficiencyAboveTarget').replace('{percent}', efficiencyDeltaPercent.toFixed(1))
             }
           />
           <MetricCard
-            title="To‘xtagan liniyalar"
+            title={t('dashboard.stoppedLines')}
             value={stoppedLines}
-            unit="liniya"
+            unit={t('dashboard.line')}
             color="orange"
             delta={0}
             explanation={
               stoppedLines === 0
-                ? 'Barcha liniyalar ishlayapti.'
-                : `${stoppedLines} ta liniya to‘xtagan. Eʼtibor talab etiladi.`
+                ? t('dashboard.allLinesWorking')
+                : t('dashboard.linesStopped').replace('{count}', stoppedLines.toString())
             }
           />
           <MetricCard
-            title="Yo‘qotilgan ishlab chiqarish"
+            title={t('dashboard.lostProduction')}
             value={lostUnitsToday}
-            unit="dona"
+            unit={t('dashboard.units')}
             color="purple"
             delta={0}
             explanation={
               lostUnitsToday > 0
-                ? `Rejadan tashqari yo‘qotilgan hajm: ${lostUnitsToday.toLocaleString('uz-UZ')} dona.`
-                : 'Bugun reja bo‘yicha yo‘qotilgan ishlab chiqarish qayd etilmadi.'
+                ? t('dashboard.lostVolumeExtra').replace('{units}', lostUnitsToday.toLocaleString('uz-UZ'))
+                : t('dashboard.noLostProduction')
             }
           />
         </div>
@@ -257,31 +256,31 @@ export function Dashboard() {
       <div className="mt-10 space-y-10">
         <section>
           <h3 className="text-xl font-semibold text-foreground mb-4">
-            Ombor tahlili
+            {t('dashboard.warehouseAnalysis')}
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
             <MetricCard
-              title="Umumiy qoldiq"
+              title={t('dashboard.totalBalance')}
               value={warehouseTotalStock}
-              unit="birlik"
+              unit={t('dashboard.unit')}
               color="blue"
             />
             <MetricCard
-              title="Minimal zaxira"
+              title={t('dashboard.minimalReserve')}
               value={warehouseMinStock}
-              unit="birlik"
+              unit={t('dashboard.unit')}
               color="green"
             />
             <MetricCard
-              title="Kam zaxira"
+              title={t('dashboard.lowReserve')}
               value={warehouseLowStock}
-              unit="nom"
+              unit={t('dashboard.item')}
               color="orange"
             />
           </div>
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
             <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-              Ombor harakati
+              {t('dashboard.warehouseMovement')}
             </h4>
             <ResponsiveContainer width="100%" height={260}>
               <BarChart data={warehouseMovement}>
@@ -289,9 +288,9 @@ export function Dashboard() {
                 <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#9ca3af' }} />
                 <YAxis tick={{ fontSize: 11, fill: '#9ca3af' }} />
                 <Tooltip />
-                <Bar dataKey="qoldiq" fill="#3b82f6" name="Qoldiq" />
-                <Bar dataKey="kirim" fill="#22c55e" name="Kirim" />
-                <Bar dataKey="chiqim" fill="#f97316" name="Chiqim" />
+                <Bar dataKey="qoldiq" fill="#3b82f6" name={t('dashboard.balance')} />
+                <Bar dataKey="kirim" fill="#22c55e" name={t('dashboard.input')} />
+                <Bar dataKey="chiqim" fill="#f97316" name={t('dashboard.output')} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -299,23 +298,23 @@ export function Dashboard() {
 
         <section>
           <h3 className="text-xl font-semibold text-foreground mb-4">
-            Ishlab chiqarish tahlili
+            {t('dashboard.productionAnalysis')}
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
             <MetricCard
-              title="Reja (kunlik)"
+              title={t('dashboard.planDaily')}
               value={plannedToday}
-              unit="birlik"
+              unit={t('dashboard.unit')}
               color="blue"
             />
             <MetricCard
-              title="Fakt (taxminiy)"
+              title={t('dashboard.factEstimated')}
               value={totalOutput}
-              unit="birlik"
+              unit={t('dashboard.unit')}
               color="green"
             />
             <MetricCard
-              title="Umumiy samaradorlik"
+              title={t('dashboard.overallEfficiency')}
               value={Number(avgEfficiency.toFixed(1))}
               unit="%"
               color="orange"
@@ -324,7 +323,7 @@ export function Dashboard() {
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
             <div className="bg-card border-border rounded-xl shadow-sm border p-6">
               <h4 className="text-lg font-semibold text-card-foreground mb-4">
-                Reja vs fakt
+                {t('dashboard.planVsFact')}
               </h4>
               <ResponsiveContainer width="100%" height={260}>
                 <BarChart data={productionChartData}>
@@ -332,14 +331,14 @@ export function Dashboard() {
                   <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#9ca3af' }} />
                   <YAxis tick={{ fontSize: 11, fill: '#9ca3af' }} />
                   <Tooltip />
-                  <Bar dataKey="reja" fill="#3b82f6" name="Reja" />
-                  <Bar dataKey="fakt" fill="#22c55e" name="Fakt" />
+                  <Bar dataKey="reja" fill="#3b82f6" name={t('dashboard.plan')} />
+                  <Bar dataKey="fakt" fill="#22c55e" name={t('dashboard.fact')} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
             <div className="bg-card border-border rounded-xl shadow-sm border p-6">
               <h4 className="text-lg font-semibold text-card-foreground mb-4">
-                Samaradorlik trendi
+                {t('dashboard.efficiencyTrend')}
               </h4>
               <ResponsiveContainer width="100%" height={260}>
                 <LineChart data={productionChartData}>
@@ -356,32 +355,32 @@ export function Dashboard() {
 
         <section>
           <h3 className="text-xl font-semibold text-foreground mb-4">
-            Sifat nazorati tahlili
+            {t('dashboard.qualityControlAnalysis')}
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
             <MetricCard
-              title="Nuqsonlar soni (bugun)"
+              title={t('dashboard.defectsToday')}
               value={qcKpiTodayDefects}
-              unit="dona"
+              unit={t('dashboard.units')}
               color="blue"
             />
             <MetricCard
-              title="Rad etilgan partiyalar"
+              title={t('dashboard.rejectedBatches')}
               value={qcKpiRejected}
-              unit="partiya"
+              unit={t('dashboard.batch')}
               color="purple"
             />
             <MetricCard
-              title="Eng ko‘p nuqsonli liniya"
+              title={t('dashboard.mostDefectiveLine')}
               value={qcDefectsByLine.reduce((max, cur) => (cur.nuqsonlar > max.nuqsonlar ? cur : max), qcDefectsByLine[0]).nuqsonlar}
-              unit="nuqson"
+              unit={t('dashboard.defect')}
               color="orange"
             />
           </div>
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
             <div className="bg-card border-border rounded-xl shadow-sm border p-6">
               <h4 className="text-lg font-semibold text-card-foreground mb-4">
-                Nuqsonlar liniyalar bo‘yicha
+                {t('dashboard.defectsByLine')}
               </h4>
               <ResponsiveContainer width="100%" height={260}>
                 <BarChart data={qcDefectsByLine}>
@@ -389,13 +388,13 @@ export function Dashboard() {
                   <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#9ca3af' }} />
                   <YAxis tick={{ fontSize: 11, fill: '#9ca3af' }} />
                   <Tooltip />
-                  <Bar dataKey="nuqsonlar" fill="#ef4444" name="Nuqsonlar" />
+                  <Bar dataKey="nuqsonlar" fill="#ef4444" name={t('dashboard.defects')} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
             <div className="bg-card border-border rounded-xl shadow-sm border p-6">
               <h4 className="text-lg font-semibold text-card-foreground mb-4">
-                Nuqson turlari
+                {t('dashboard.defectTypes')}
               </h4>
               <ResponsiveContainer width="100%" height={260}>
                 <PieChart>
@@ -424,17 +423,17 @@ export function Dashboard() {
 
         <section>
           <h3 className="text-xl font-semibold text-foreground mb-4">
-            Buyurtmalar tahlili
+            {t('dashboard.ordersAnalysis')}
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-            <MetricCard title="Yangi buyurtmalar" value={ordersKpiNew} unit="ta" color="blue" />
-            <MetricCard title="Jarayonda" value={ordersKpiInProgress} unit="ta" color="orange" />
-            <MetricCard title="Yakunlangan" value={ordersKpiCompleted} unit="ta" color="green" />
+            <MetricCard title={t('dashboard.newOrders')} value={ordersKpiNew} unit={t('dashboard.times')} color="blue" />
+            <MetricCard title={t('dashboard.inProgress')} value={ordersKpiInProgress} unit={t('dashboard.times')} color="orange" />
+            <MetricCard title={t('dashboard.completed')} value={ordersKpiCompleted} unit={t('dashboard.times')} color="green" />
           </div>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div className="bg-card border-border rounded-xl shadow-sm border p-6">
               <h4 className="text-lg font-semibold text-card-foreground mb-4">
-                Buyurtmalar holati
+                {t('dashboard.orderStatus')}
               </h4>
               <ResponsiveContainer width="100%" height={260}>
                 <PieChart>
@@ -460,7 +459,7 @@ export function Dashboard() {
             </div>
             <div className="bg-card border-border rounded-xl shadow-sm border p-6">
               <h4 className="text-lg font-semibold text-card-foreground mb-4">
-                So‘nggi buyurtmalar hajmi
+                {t('dashboard.recentOrdersVolume')}
               </h4>
               <ResponsiveContainer width="100%" height={260}>
                 <BarChart data={ordersVolume}>
@@ -468,7 +467,7 @@ export function Dashboard() {
                   <XAxis dataKey="orderNumber" tick={{ fontSize: 11, fill: '#9ca3af' }} />
                   <YAxis tick={{ fontSize: 11, fill: '#9ca3af' }} />
                   <Tooltip />
-                  <Bar dataKey="quantity" fill="#3b82f6" name="Miqdor" />
+                  <Bar dataKey="quantity" fill="#3b82f6" name={t('dashboard.quantity')} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -477,16 +476,16 @@ export function Dashboard() {
 
         <section>
           <h3 className="text-xl font-semibold text-foreground mb-4">
-            Tayyor mahsulotlar tahlili
+            {t('dashboard.finishedGoodsAnalysis')}
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-            <MetricCard title="Umumiy mahsulot turlari" value={finishedKpiTotal} unit="tur" color="blue" />
-            <MetricCard title="Erkin qoldiq" value={finishedKpiFree} unit="tur" color="green" />
-            <MetricCard title="Kam qoldiq xavfi" value={1} unit="tur" color="orange" />
+            <MetricCard title={t('dashboard.totalProductTypes')} value={finishedKpiTotal} unit={t('dashboard.item')} color="blue" />
+            <MetricCard title={t('dashboard.freeBalance')} value={finishedKpiFree} unit={t('dashboard.item')} color="green" />
+            <MetricCard title={t('dashboard.lowBalanceRisk')} value={1} unit={t('dashboard.item')} color="orange" />
           </div>
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
             <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-              Mahsulotlar turlari bo‘yicha
+              {t('dashboard.byProductType')}
             </h4>
             <ResponsiveContainer width="100%" height={260}>
               <BarChart data={finishedByType}>
@@ -494,7 +493,7 @@ export function Dashboard() {
                 <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#9ca3af' }} />
                 <YAxis tick={{ fontSize: 11, fill: '#9ca3af' }} />
                 <Tooltip />
-                <Bar dataKey="miqdor" fill="#22c55e" name="Miqdor" />
+                <Bar dataKey="miqdor" fill="#22c55e" name={t('dashboard.quantity')} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -502,17 +501,17 @@ export function Dashboard() {
 
         <section>
           <h3 className="text-xl font-semibold text-foreground mb-4">
-            Ta&apos;mirlash va texnik xizmat tahlili
+            {t('dashboard.maintenanceAnalysis')}
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-            <MetricCard title="To‘xtashlar soni" value={maintenanceKpiTotalStops} unit="marta" color="blue" />
-            <MetricCard title="Muammo bor liniyalar" value={maintenanceKpiIssue} unit="liniya" color="red" />
-            <MetricCard title="Ta&apos;mirlashda" value={maintenanceKpiInRepair} unit="liniya" color="orange" />
+            <MetricCard title={t('dashboard.totalStops')} value={maintenanceKpiTotalStops} unit={t('dashboard.times')} color="blue" />
+            <MetricCard title={t('dashboard.linesWithProblems')} value={maintenanceKpiIssue} unit={t('dashboard.line')} color="red" />
+            <MetricCard title={t('dashboard.inRepair')} value={maintenanceKpiInRepair} unit={t('dashboard.line')} color="orange" />
           </div>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div className="bg-card border-border rounded-xl shadow-sm border p-6">
               <h4 className="text-lg font-semibold text-card-foreground mb-4">
-                To‘xtash vaqti (kunlar bo‘yicha)
+                {t('dashboard.downtimeByDays')}
               </h4>
               <ResponsiveContainer width="100%" height={220}>
                 <LineChart data={maintenanceDowntimeTrend}>
@@ -526,7 +525,7 @@ export function Dashboard() {
             </div>
             <div className="bg-card border-border rounded-xl shadow-sm border p-6">
               <h4 className="text-lg font-semibold text-card-foreground mb-4">
-                To‘xtash sabablariga ko‘ra
+                {t('dashboard.stopsByReason')}
               </h4>
               <ResponsiveContainer width="100%" height={220}>
                 <BarChart data={maintenanceReasons}>
@@ -534,7 +533,7 @@ export function Dashboard() {
                   <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#9ca3af' }} />
                   <YAxis tick={{ fontSize: 11, fill: '#9ca3af' }} />
                   <Tooltip />
-                  <Bar dataKey="value" fill="#ef4444" name="To‘xtashlar" />
+                  <Bar dataKey="value" fill="#ef4444" name={t('dashboard.totalStops')} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -595,7 +594,7 @@ interface TopSummaryProps {
   avgEfficiency: number;
   deviationPercent: number;
   lostUnits: number;
-  riskLevel: 'Past' | 'O‘rtacha' | 'Yuqori';
+  riskLevel: string;
 }
 
 function TopSummary({
@@ -606,16 +605,16 @@ function TopSummary({
   lostUnits,
   riskLevel,
 }: TopSummaryProps) {
+  const { t } = useLanguage();
   return (
     <div className="mb-8">
-      <h3 className="text-lg font-semibold text-slate-50 mb-3">Bugungi holat — qisqa xulosa</h3>
+      <h3 className="text-lg font-semibold text-slate-50 mb-3">{t('dashboard.todaySummary')}</h3>
       <div className="bg-slate-900 rounded-xl shadow-sm border border-slate-800 p-5 space-y-1 text-sm text-slate-100">
-        <p>🔴 Muammo: {worstLine} asosiy muammo, samaradorlik past.</p>
-        <p>🟡 Xavf: umumiy samaradorlik {avgEfficiency.toFixed(1)}% (maqsad 90%), risk darajasi: {riskLevel}.</p>
-        <p>🟢 Yaxshi: {bestLine} barqaror ishlayapti.</p>
+        <p>🔴 {t('dashboard.problemLine').replace('{line}', worstLine)}</p>
+        <p>🟡 {t('dashboard.riskWarning').replace('{efficiency}', avgEfficiency.toFixed(1)).replace('{level}', riskLevel)}</p>
+        <p>🟢 {t('dashboard.goodLine').replace('{line}', bestLine)}</p>
         <p>
-          📊 Rejadan og‘ish: {deviationPercent.toFixed(1)}%, yo‘qotilgan ishlab chiqarish:{' '}
-          {lostUnits.toLocaleString('uz-UZ')} dona.
+          📊 {t('dashboard.deviationLost').replace('{percent}', deviationPercent.toFixed(1)).replace('{units}', lostUnits.toLocaleString('uz-UZ'))}
         </p>
       </div>
     </div>
@@ -627,18 +626,19 @@ interface LineStatusProps {
 }
 
 function LineStatus({ productionLines }: LineStatusProps) {
+  const { t } = useLanguage();
   return (
     <div>
-      <h3 className="text-lg font-semibold text-slate-50 mb-3">Liniyalar holati (soddalashtirilgan)</h3>
+      <h3 className="text-lg font-semibold text-slate-50 mb-3">{t('dashboard.lineStatusSimplified')}</h3>
       <div className="bg-slate-900 rounded-xl shadow-sm border border-slate-800 p-5 space-y-2 text-sm text-slate-100">
         {productionLines.map(line => {
           const simpleName = line.name.replace('Assembly Line ', 'Line ').replace('Quality Control Station', 'QC');
           const statusText =
             line.status === 'active'
-              ? '🟢 Ishlayapti'
+              ? `🟢 ${t('dashboard.working')}`
               : line.status === 'maintenance'
-              ? '🔴 Muammo (taʼmirlash)'
-              : '🟡 Kutish holatida';
+              ? `🔴 ${t('dashboard.problemRepair')}`
+              : `🟡 ${t('dashboard.waitingStatus')}`;
           return (
             <p key={line.id}>
               {simpleName} — {statusText}
