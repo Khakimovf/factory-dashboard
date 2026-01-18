@@ -63,6 +63,7 @@
     "efficiency": "эффективность",
     "defects": "дефектов",
     "mainIndicators": "Основные показатели",
+    "keyIndicators": "Основные показатели",
     "topSummary": {
       "title": "Сегодняшнее состояние — краткое резюме",
       "problemPrefix": "Проблема:",
@@ -75,12 +76,21 @@
       "deviationMiddle": "потерянное производство:",
       "deviationSuffix": "шт."
     },
+    "todaySummary": "Сегодняшний статус — краткая сводка",
+    "problemLine": "Проблема: {line} — основная проблема, эффективность низкая.",
+    "riskWarning": "Риск: общая эффективность {efficiency}% (цель 90%), уровень риска: {level}.",
+    "goodLine": "Хорошо: {line} работает стабильно.",
+    "deviationLost": "Отклонение от плана: {percent}%, потерянное производство: {units} шт.",
     "lineStatus": {
       "title": "Статус линий (упрощенный)",
       "active": "Работает",
       "maintenance": "Проблема (ремонт)",
       "idle": "В режиме ожидания"
     },
+    "lineStatusSimplified": "Статус линий (упрощенный)",
+    "working": "Работает",
+    "problemRepair": "Проблема (ремонт)",
+    "waitingStatus": "В ожидании",
     "metricCards": {
       "production": {
         "title": "Производство (План vs Факт)",
@@ -105,6 +115,18 @@
         "explanationNoLoss": "Сегодня потери производства по плану не зафиксированы."
       }
     },
+    "productionPlanVsFact": "Производство (План vs Факт)",
+    "productionBelowPlan": "На {percent}% ниже плана. Основная причина: низкая эффективность.",
+    "productionAbovePlan": "На {percent}% выше плана.",
+    "overallEfficiency": "Общая эффективность",
+    "efficiencyBelowTarget": "На {percent}% ниже цели. Риск: недостаточная мощность.",
+    "efficiencyAboveTarget": "На {percent}% выше цели. Состояние стабильное.",
+    "stoppedLines": "Остановленные линии",
+    "allLinesWorking": "Все линии работают.",
+    "linesStopped": "Остановлено линий: {count}. Требуется внимание.",
+    "lostProduction": "Потерянное производство",
+    "lostVolumeExtra": "Потерянный объем сверх плана: {units} шт.",
+    "noLostProduction": "Сегодня потерь производства по плану не зафиксировано.",
     "warehouseAnalysis": {
       "title": "Анализ склада",
       "totalStock": "Общий остаток",
@@ -117,6 +139,13 @@
       "chartIncoming": "Поступление",
       "chartOutgoing": "Отгрузка"
     },
+    "totalBalance": "Общий остаток",
+    "minimalReserve": "Минимальный запас",
+    "lowReserve": "Низкий запас",
+    "warehouseMovement": "Движение склада",
+    "balance": "Остаток",
+    "input": "Поступление",
+    "output": "Отгрузка",
     "productionAnalysis": {
       "title": "Анализ производства",
       "planTitle": "План (дневной)",
@@ -128,6 +157,11 @@
       "chartPlan": "План",
       "chartFact": "Факт"
     },
+    "planDaily": "План (дневной)",
+    "factEstimated": "Факт (оценочный)",
+    "plan": "План",
+    "fact": "Факт",
+    "efficiencyTrend": "Тренд эффективности",
     "qcAnalysis": {
       "title": "Анализ контроля качества",
       "defectsToday": "Количество дефектов (сегодня)",
@@ -140,6 +174,8 @@
       "defectTypes": "Типы дефектов",
       "chartDefects": "Дефекты"
     },
+    "qualityControlAnalysis": "Анализ контроля качества",
+    "mostDefectiveLine": "Линия с наибольшим количеством дефектов",
     "ordersAnalysis": {
       "title": "Анализ заказов",
       "newOrders": "Новые заказы",
@@ -150,6 +186,9 @@
       "recentVolume": "Объем последних заказов",
       "chartQuantity": "Количество"
     },
+    "orderStatus": "Статус заказов",
+    "recentOrdersVolume": "Объем последних заказов",
+    "quantity": "Количество",
     "finishedGoodsAnalysis": {
       "title": "Анализ готовой продукции",
       "totalTypes": "Общее количество типов продукции",
@@ -159,6 +198,10 @@
       "byType": "По типам продукции",
       "chartQuantity": "Количество"
     },
+    "totalProductTypes": "Всего типов продукции",
+    "freeBalance": "Свободный остаток",
+    "lowBalanceRisk": "Риск низкого остатка",
+    "byProductType": "По типам продукции",
     "maintenanceAnalysis": {
       "title": "Анализ ремонта и технического обслуживания",
       "totalStops": "Количество остановок",
@@ -169,7 +212,20 @@
       "downtimeByDay": "Время простоя (по дням)",
       "byReason": "По причинам остановки",
       "chartStops": "Остановки"
-    }
+    },
+    "linesWithProblems": "Линии с проблемами",
+    "downtimeByDays": "Время простоя (по дням)",
+    "stopsByReason": "Остановки по причинам",
+    "riskLevelLow": "Низкий",
+    "riskLevelMedium": "Средний",
+    "riskLevelHigh": "Высокий",
+    "unit": "единица",
+    "units": "шт.",
+    "item": "тип",
+    "times": "раз",
+    "line": "линия",
+    "batch": "партия",
+    "defect": "дефект"
   },
   "warehouse": {
     "title": "Склад",
@@ -229,6 +285,10 @@
     "minStock": "Минимальный запас",
     "minStockPlaceholder": "Минимальный запас (необязательно)",
     "materialExists": "Эта деталь уже существует",
+    "materialExistsError": "Эта деталь уже существует",
+    "materialNamePrefix": "Материал {id}",
+    "defaultCategory": "Сырье",
+    "errorOccurred": "Произошла ошибка",
     "materialAdded": "Деталь успешно добавлена",
     "quantityUpdated": "Количество успешно обновлено",
     "updateQuantity": "Обновить количество",
@@ -1490,5 +1550,74 @@
     "afterCutoffTooltip": "Количество сотрудников, вошедших после 09:00",
     "finalCountTooltip": "Итоговое количество обедов с дополнительным запасом",
     "bufferTooltip": "Процент дополнительного запаса для неожиданных сотрудников"
+  },
+  "reports": {
+    "title": "Отчеты",
+    "subtitle": "операционный отчет",
+    "subtitleDetail": "Предназначен для директора и руководства для принятия решений.",
+    "date": "Дата",
+    "period": "Период отчета",
+    "autoGenerated": "Отчет автоматически сгенерирован системой",
+    "daily": "Ежедневный",
+    "weekly": "Еженедельный",
+    "monthly": "Ежемесячный",
+    "print": "Печать",
+    "pdf": "PDF",
+    "production": {
+      "title": "Производство",
+      "pdfTitle": "Отчет по производству",
+      "indicator": "Показатель",
+      "plan": "План",
+      "actual": "Факт",
+      "deviation": "Отклонение",
+      "activeLinesShare": "Доля активных линий (%)",
+      "avgEfficiency": "Средняя эффективность (%)",
+      "summary": "Всего линий: {total} • Активные линии: {active} • Средняя эффективность: {efficiency}%"
+    },
+    "finishedGoods": {
+      "title": "Склад готовой продукции",
+      "pdfTitle": "Отчет по готовой продукции",
+      "indicator": "Показатель",
+      "value": "Значение",
+      "totalTypes": "Всего типов продукции",
+      "totalQuantity": "Общее количество",
+      "availableForSale": "Доступно для продажи",
+      "lowStock": "Низкий запас (< 10)"
+    },
+    "maintenance": {
+      "title": "Ремонт и техническое обслуживание",
+      "line": "Линия",
+      "status": "Статус",
+      "stops": "Остановки",
+      "time": "Время (мин)",
+      "normal": "Норма",
+      "issueReported": "Обнаружена неисправность",
+      "inRepair": "В ремонте",
+      "summary": "Всего остановок: {total} • Линии с проблемами: {problem} • В ремонте: {repair}"
+    },
+    "suppliers": {
+      "title": "Сводка по поставщикам",
+      "supplier": "Поставщик",
+      "deliveries": "Поставки",
+      "delayed": "Задержки",
+      "lastDelivery": "Последняя поставка",
+      "summary": "Всего поставщиков: {total} • Активные: {active} • С задержками: {delayed}"
+    },
+    "qc": {
+      "title": "Сводка по контролю качества (QC)",
+      "line": "Линия",
+      "defects": "Дефекты",
+      "rejected": "Отклонено",
+      "note": "Примечание",
+      "mainProblemLine": "Основная проблемная линия",
+      "summary": "Всего дефектов: {total} • Отклонено: {rejected}"
+    },
+    "hr": {
+      "title": "Отдел кадров - статистика",
+      "department": "Отдел",
+      "employees": "Количество сотрудников",
+      "openPositions": "Вакансии",
+      "summary": "Всего сотрудников: {total} • Работающие сотрудники: {active}."
+    }
   }
 }

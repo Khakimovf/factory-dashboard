@@ -31,11 +31,11 @@ function flattenTranslations(obj: any, prefix = ''): Record<string, string> {
 }
 
 // Pre-compute translations at module level for performance
-const translations = {
+const translations: Record<Language, Record<string, string>> = {
   uz: flattenTranslations(uzTranslations),
   ru: flattenTranslations(ruTranslations),
   kr: flattenTranslations(krTranslations),
-} as const;
+};
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 

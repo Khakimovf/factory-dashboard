@@ -134,12 +134,13 @@ export function Dashboard() {
   ];
 
   const deviationPercent = productionDeltaPercent;
-  const riskLevel: 'Past' | 'O‘rtacha' | 'Yuqori' =
+  const riskLevelRaw: 'low' | 'medium' | 'high' =
     Math.abs(deviationPercent) >= 10 || avgEfficiency < 80
-      ? 'Yuqori'
+      ? 'high'
       : Math.abs(deviationPercent) >= 5 || avgEfficiency < 85
-      ? 'O‘rtacha'
-      : 'Past';
+      ? 'medium'
+      : 'low';
+  const riskLevel = riskLevelRaw === 'high' ? t('dashboard.riskLevelHigh') : riskLevelRaw === 'medium' ? t('dashboard.riskLevelMedium') : t('dashboard.riskLevelLow');
 
   return (
     <div className="min-h-screen p-8 bg-background text-foreground">
@@ -255,6 +256,7 @@ export function Dashboard() {
       <div className="mt-10 space-y-10">
         <section>
           <h3 className="text-xl font-semibold text-foreground mb-4">
+<<<<<<< HEAD
             {t('dashboard.warehouseAnalysis.title')}
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
@@ -373,6 +375,10 @@ export function Dashboard() {
               title={t('dashboard.qcAnalysis.worstLine')}
               value={qcDefectsByLine.reduce((max, cur) => (cur.nuqsonlar > max.nuqsonlar ? cur : max), qcDefectsByLine[0]).nuqsonlar}
               unit={t('dashboard.qcAnalysis.defectUnit')}
+              title={t('dashboard.mostDefectiveLine')}
+              value={qcDefectsByLine.reduce((max, cur) => (cur.nuqsonlar > max.nuqsonlar ? cur : max), qcDefectsByLine[0]).nuqsonlar}
+              unit={t('dashboard.defect')}
+>>>>>>> 4f780a1 (master uchun oyna qoshildi)
               color="orange"
             />
           </div>
@@ -458,7 +464,11 @@ export function Dashboard() {
             </div>
             <div className="bg-card border-border rounded-xl shadow-sm border p-6">
               <h4 className="text-lg font-semibold text-card-foreground mb-4">
+<<<<<<< HEAD
                 {t('dashboard.ordersAnalysis.recentVolume')}
+=======
+                {t('dashboard.recentOrdersVolume')}
+>>>>>>> 4f780a1 (master uchun oyna qoshildi)
               </h4>
               <ResponsiveContainer width="100%" height={260}>
                 <BarChart data={ordersVolume}>
@@ -466,7 +476,11 @@ export function Dashboard() {
                   <XAxis dataKey="orderNumber" tick={{ fontSize: 11, fill: '#9ca3af' }} />
                   <YAxis tick={{ fontSize: 11, fill: '#9ca3af' }} />
                   <Tooltip />
+<<<<<<< HEAD
                   <Bar dataKey="quantity" fill="#3b82f6" name={t('dashboard.ordersAnalysis.chartQuantity')} />
+=======
+                  <Bar dataKey="quantity" fill="#3b82f6" name={t('dashboard.quantity')} />
+>>>>>>> 4f780a1 (master uchun oyna qoshildi)
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -593,7 +607,7 @@ interface TopSummaryProps {
   avgEfficiency: number;
   deviationPercent: number;
   lostUnits: number;
-  riskLevel: 'Past' | 'O‘rtacha' | 'Yuqori';
+  riskLevel: string;
 }
 
 function TopSummary({
@@ -607,6 +621,7 @@ function TopSummary({
   const { t } = useLanguage();
   return (
     <div className="mb-8">
+<<<<<<< HEAD
       <h3 className="text-lg font-semibold text-slate-50 mb-3">{t('dashboard.topSummary.title')}</h3>
       <div className="bg-slate-900 rounded-xl shadow-sm border border-slate-800 p-5 space-y-1 text-sm text-slate-100">
         <p>🔴 {t('dashboard.topSummary.problemPrefix')} {worstLine} {t('dashboard.topSummary.problemSuffix')}</p>
@@ -614,6 +629,15 @@ function TopSummary({
         <p>🟢 {t('dashboard.topSummary.goodPrefix')} {bestLine} {t('dashboard.topSummary.goodSuffix')}</p>
         <p>
           📊 {t('dashboard.topSummary.deviationPrefix')} {deviationPercent.toFixed(1)}%, {t('dashboard.topSummary.deviationMiddle')} {lostUnits.toLocaleString()} {t('dashboard.topSummary.deviationSuffix')}
+=======
+      <h3 className="text-lg font-semibold text-slate-50 mb-3">{t('dashboard.todaySummary')}</h3>
+      <div className="bg-slate-900 rounded-xl shadow-sm border border-slate-800 p-5 space-y-1 text-sm text-slate-100">
+        <p>🔴 {t('dashboard.problemLine').replace('{line}', worstLine)}</p>
+        <p>🟡 {t('dashboard.riskWarning').replace('{efficiency}', avgEfficiency.toFixed(1)).replace('{level}', riskLevel)}</p>
+        <p>🟢 {t('dashboard.goodLine').replace('{line}', bestLine)}</p>
+        <p>
+          📊 {t('dashboard.deviationLost').replace('{percent}', deviationPercent.toFixed(1)).replace('{units}', lostUnits.toLocaleString('uz-UZ'))}
+>>>>>>> 4f780a1 (master uchun oyna qoshildi)
         </p>
       </div>
     </div>
@@ -628,16 +652,27 @@ function LineStatus({ productionLines }: LineStatusProps) {
   const { t } = useLanguage();
   return (
     <div>
+<<<<<<< HEAD
       <h3 className="text-lg font-semibold text-slate-50 mb-3">{t('dashboard.lineStatus.title')}</h3>
+=======
+      <h3 className="text-lg font-semibold text-slate-50 mb-3">{t('dashboard.lineStatusSimplified')}</h3>
+>>>>>>> 4f780a1 (master uchun oyna qoshildi)
       <div className="bg-slate-900 rounded-xl shadow-sm border border-slate-800 p-5 space-y-2 text-sm text-slate-100">
         {productionLines.map(line => {
           const simpleName = line.name.replace('Assembly Line ', 'Line ').replace('Quality Control Station', 'QC');
           const statusText =
             line.status === 'active'
+<<<<<<< HEAD
               ? `🟢 ${t('dashboard.lineStatus.active')}`
               : line.status === 'maintenance'
               ? `🔴 ${t('dashboard.lineStatus.maintenance')}`
               : `🟡 ${t('dashboard.lineStatus.idle')}`;
+=======
+              ? `🟢 ${t('dashboard.working')}`
+              : line.status === 'maintenance'
+              ? `🔴 ${t('dashboard.problemRepair')}`
+              : `🟡 ${t('dashboard.waitingStatus')}`;
+>>>>>>> 4f780a1 (master uchun oyna qoshildi)
           return (
             <p key={line.id}>
               {simpleName} — {statusText}

@@ -64,6 +64,7 @@
     "efficiency": "samaradorlik",
     "defects": "nuqsonlar",
     "mainIndicators": "Asosiy ko'rsatkichlar",
+    "keyIndicators": "Asosiy ko'rsatkichlar",
     "topSummary": {
       "title": "Bugungi holat — qisqa xulosa",
       "problemPrefix": "Muammo:",
@@ -76,12 +77,21 @@
       "deviationMiddle": "yo'qotilgan ishlab chiqarish:",
       "deviationSuffix": "dona."
     },
+    "todaySummary": "Bugungi holat — qisqa xulosa",
+    "problemLine": "Muammo: {line} asosiy muammo, samaradorlik past.",
+    "riskWarning": "Xavf: umumiy samaradorlik {efficiency}% (maqsad 90%), risk darajasi: {level}.",
+    "goodLine": "Yaxshi: {line} barqaror ishlayapti.",
+    "deviationLost": "Rejadan og'ish: {percent}%, yo'qotilgan ishlab chiqarish: {units} dona.",
     "lineStatus": {
       "title": "Liniyalar holati (soddalashtirilgan)",
       "active": "Ishlayapti",
       "maintenance": "Muammo (taʼmirlash)",
       "idle": "Kutish holatida"
     },
+    "lineStatusSimplified": "Liniyalar holati (soddalashtirilgan)",
+    "working": "Ishlayapti",
+    "problemRepair": "Muammo (ta'mirlash)",
+    "waitingStatus": "Kutish holatida",
     "metricCards": {
       "production": {
         "title": "Ishlab chiqarish (Reja vs Fakt)",
@@ -106,6 +116,18 @@
         "explanationNoLoss": "Bugun reja bo'yicha yo'qotilgan ishlab chiqarish qayd etilmadi."
       }
     },
+    "productionPlanVsFact": "Ishlab chiqarish (Reja vs Fakt)",
+    "productionBelowPlan": "Rejadan {percent}% past. Asosiy sabab: past samaradorlik.",
+    "productionAbovePlan": "Rejadan {percent}% yuqori.",
+    "overallEfficiency": "Umumiy samaradorlik",
+    "efficiencyBelowTarget": "Maqsaddan {percent}% past. Xavf: quvvat yetarli ishlamayapti.",
+    "efficiencyAboveTarget": "Maqsaddan {percent}% yuqori. Holat barqaror.",
+    "stoppedLines": "To'xtagan liniyalar",
+    "allLinesWorking": "Barcha liniyalar ishlayapti.",
+    "linesStopped": "{count} ta liniya to'xtagan. E'tibor talab etiladi.",
+    "lostProduction": "Yo'qotilgan ishlab chiqarish",
+    "lostVolumeExtra": "Rejadan tashqari yo'qotilgan hajm: {units} dona.",
+    "noLostProduction": "Bugun reja bo'yicha yo'qotilgan ishlab chiqarish qayd etilmadi.",
     "warehouseAnalysis": {
       "title": "Ombor tahlili",
       "totalStock": "Umumiy qoldiq",
@@ -118,6 +140,13 @@
       "chartIncoming": "Kirim",
       "chartOutgoing": "Chiqim"
     },
+    "totalBalance": "Umumiy qoldiq",
+    "minimalReserve": "Minimal zaxira",
+    "lowReserve": "Kam zaxira",
+    "warehouseMovement": "Ombor harakati",
+    "balance": "Qoldiq",
+    "input": "Kirim",
+    "output": "Chiqim",
     "productionAnalysis": {
       "title": "Ishlab chiqarish tahlili",
       "planTitle": "Reja (kunlik)",
@@ -129,6 +158,11 @@
       "chartPlan": "Reja",
       "chartFact": "Fakt"
     },
+    "planDaily": "Reja (kunlik)",
+    "factEstimated": "Fakt (taxminiy)",
+    "plan": "Reja",
+    "fact": "Fakt",
+    "efficiencyTrend": "Samaradorlik trendi",
     "qcAnalysis": {
       "title": "Sifat nazorati tahlili",
       "defectsToday": "Nuqsonlar soni (bugun)",
@@ -141,6 +175,8 @@
       "defectTypes": "Nuqson turlari",
       "chartDefects": "Nuqsonlar"
     },
+    "qualityControlAnalysis": "Sifat nazorati tahlili",
+    "mostDefectiveLine": "Eng ko'p nuqsonli liniya",
     "ordersAnalysis": {
       "title": "Buyurtmalar tahlili",
       "newOrders": "Yangi buyurtmalar",
@@ -151,6 +187,9 @@
       "recentVolume": "So'nggi buyurtmalar hajmi",
       "chartQuantity": "Miqdor"
     },
+    "orderStatus": "Buyurtmalar holati",
+    "recentOrdersVolume": "So'nggi buyurtmalar hajmi",
+    "quantity": "Miqdor",
     "finishedGoodsAnalysis": {
       "title": "Tayyor mahsulotlar tahlili",
       "totalTypes": "Umumiy mahsulot turlari",
@@ -160,6 +199,10 @@
       "byType": "Mahsulotlar turlari bo'yicha",
       "chartQuantity": "Miqdor"
     },
+    "totalProductTypes": "Umumiy mahsulot turlari",
+    "freeBalance": "Erkin qoldiq",
+    "lowBalanceRisk": "Kam qoldiq xavfi",
+    "byProductType": "Mahsulotlar turlari bo'yicha",
     "maintenanceAnalysis": {
       "title": "Ta'mirlash va texnik xizmat tahlili",
       "totalStops": "To'xtashlar soni",
@@ -170,7 +213,20 @@
       "downtimeByDay": "To'xtash vaqti (kunlar bo'yicha)",
       "byReason": "To'xtash sabablariga ko'ra",
       "chartStops": "To'xtashlar"
-    }
+    },
+    "linesWithProblems": "Muammo bor liniyalar",
+    "downtimeByDays": "To'xtash vaqti (kunlar bo'yicha)",
+    "stopsByReason": "To'xtash sabablariga ko'ra",
+    "riskLevelLow": "Past",
+    "riskLevelMedium": "O'rtacha",
+    "riskLevelHigh": "Yuqori",
+    "unit": "birlik",
+    "units": "dona",
+    "item": "tur",
+    "times": "marta",
+    "line": "liniya",
+    "batch": "partiya",
+    "defect": "nuqson"
   },
   "warehouse": {
     "title": "Ombor",
@@ -230,6 +286,10 @@
     "minStock": "Minimal zaxira",
     "minStockPlaceholder": "Minimal zaxira (ixtiyoriy)",
     "materialExists": "Bu detal allaqachon mavjud",
+    "materialExistsError": "Bu detal allaqachon mavjud",
+    "materialNamePrefix": "Material {id}",
+    "defaultCategory": "Xom ashyo",
+    "errorOccurred": "Xatolik yuz berdi",
     "materialAdded": "Detal muvaffaqiyatli qo'shildi",
     "quantityUpdated": "Miqdor muvaffaqiyatli yangilandi",
     "updateQuantity": "Miqdorni yangilash",
@@ -1491,5 +1551,74 @@
     "afterCutoffTooltip": "09:00 dan keyin kirgan xodimlar soni",
     "finalCountTooltip": "Qo'shimcha zaxira bilan yakuniy ovqatlanish soni",
     "bufferTooltip": "Kutilmagan xodimlar uchun qo'shimcha zaxira foizi"
+  },
+  "reports": {
+    "title": "Hisobotlar",
+    "subtitle": "operatsion hisobot",
+    "subtitleDetail": "Direktor va rahbariyat uchun qaror qabul qilishga mo'ljallangan.",
+    "date": "Sana",
+    "period": "Hisobot davri",
+    "autoGenerated": "Hisobot tizim tomonidan avtomatik generatsiya qilingan",
+    "daily": "Kunlik",
+    "weekly": "Haftalik",
+    "monthly": "Oylik",
+    "print": "Chop etish",
+    "pdf": "PDF",
+    "production": {
+      "title": "Ishlab chiqarish",
+      "pdfTitle": "Ishlab chiqarish hisoboti",
+      "indicator": "Ko'rsatkich",
+      "plan": "Reja",
+      "actual": "Haqiqiy",
+      "deviation": "Og'ish",
+      "activeLinesShare": "Faol liniyalar ulushi (%)",
+      "avgEfficiency": "O'rtacha samaradorlik (%)",
+      "summary": "Jami liniyalar: {total} • Faol liniyalar: {active} • O'rtacha samaradorlik: {efficiency}%"
+    },
+    "finishedGoods": {
+      "title": "Tayyor mahsulotlar ombori",
+      "pdfTitle": "Tayyor mahsulotlar hisoboti",
+      "indicator": "Ko'rsatkich",
+      "value": "Qiymat",
+      "totalTypes": "Jami mahsulot turlari",
+      "totalQuantity": "Jami miqdori",
+      "availableForSale": "Sotish uchun mavjud",
+      "lowStock": "Past zaxira (< 10)"
+    },
+    "maintenance": {
+      "title": "Ta'mirlash va texnik xizmat",
+      "line": "Liniya",
+      "status": "Holat",
+      "stops": "To'xtashlar",
+      "time": "Vaqt (min)",
+      "normal": "Normal",
+      "issueReported": "Nosozlik qayd etilgan",
+      "inRepair": "Ta'mirlash jarayonida",
+      "summary": "Jami to'xtashlar: {total} • Muammo bo'lgan liniyalar: {problem} • Ta'mirlashda: {repair}"
+    },
+    "suppliers": {
+      "title": "Ta'minotchilar bo'yicha xulosa",
+      "supplier": "Ta'minotchi",
+      "deliveries": "Yetkazmalar",
+      "delayed": "Kechikishlar",
+      "lastDelivery": "Oxirgi yetkazma",
+      "summary": "Jami ta'minotchilar: {total} • Faol: {active} • Kechikish bo'lgan: {delayed}"
+    },
+    "qc": {
+      "title": "Sifat nazorati (QC) bo'yicha xulosa",
+      "line": "Liniya",
+      "defects": "Nuqsonlar",
+      "rejected": "Rad etilgan",
+      "note": "Eslatma",
+      "mainProblemLine": "Asosiy muammo liniyasi",
+      "summary": "Jami nuqsonlar: {total} • Rad etilgan: {rejected}"
+    },
+    "hr": {
+      "title": "Kadrlar bo'limi - statistika",
+      "department": "Bo'lim",
+      "employees": "Xodimlar soni",
+      "openPositions": "Bo'sh o'rinlar",
+      "summary": "Jami xodimlar: {total} • Ishlayotgan xodimlar: {active}."
+    }
   }
 }
