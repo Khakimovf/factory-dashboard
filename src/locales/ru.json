@@ -61,7 +61,115 @@
     "leastEfficientLine": "Наименее эффективная линия",
     "mostDefectsLine": "Линия с наибольшим количеством дефектов",
     "efficiency": "эффективность",
-    "defects": "дефектов"
+    "defects": "дефектов",
+    "mainIndicators": "Основные показатели",
+    "topSummary": {
+      "title": "Сегодняшнее состояние — краткое резюме",
+      "problemPrefix": "Проблема:",
+      "problemSuffix": "основная проблема, низкая эффективность.",
+      "riskPrefix": "Риск: общая эффективность",
+      "riskMiddle": "(цель 90%), уровень риска:",
+      "goodPrefix": "Хорошо:",
+      "goodSuffix": "работает стабильно.",
+      "deviationPrefix": "Отклонение от плана:",
+      "deviationMiddle": "потерянное производство:",
+      "deviationSuffix": "шт."
+    },
+    "lineStatus": {
+      "title": "Статус линий (упрощенный)",
+      "active": "Работает",
+      "maintenance": "Проблема (ремонт)",
+      "idle": "В режиме ожидания"
+    },
+    "metricCards": {
+      "production": {
+        "title": "Производство (План vs Факт)",
+        "explanationNegative": "На {percent}% ниже плана. Основная причина: низкая эффективность.",
+        "explanationPositive": "На {percent}% выше плана."
+      },
+      "efficiency": {
+        "title": "Общая эффективность",
+        "explanationNegative": "На {percent}% ниже цели. Риск: мощность работает недостаточно.",
+        "explanationPositive": "На {percent}% выше цели. Состояние стабильное."
+      },
+      "stoppedLines": {
+        "title": "Остановленные линии",
+        "unit": "линия",
+        "explanationAllActive": "Все линии работают.",
+        "explanationStopped": "{count} линий остановлено. Требуется внимание."
+      },
+      "lostProduction": {
+        "title": "Потерянное производство",
+        "unit": "шт",
+        "explanationWithLoss": "Потерянный объем сверх плана: {units} шт.",
+        "explanationNoLoss": "Сегодня потери производства по плану не зафиксированы."
+      }
+    },
+    "warehouseAnalysis": {
+      "title": "Анализ склада",
+      "totalStock": "Общий остаток",
+      "minStock": "Минимальный запас",
+      "lowStock": "Низкий запас",
+      "unit": "единица",
+      "lowStockUnit": "наименование",
+      "movement": "Движение склада",
+      "chartBalance": "Остаток",
+      "chartIncoming": "Поступление",
+      "chartOutgoing": "Отгрузка"
+    },
+    "productionAnalysis": {
+      "title": "Анализ производства",
+      "planTitle": "План (дневной)",
+      "factTitle": "Факт (предварительный)",
+      "avgEfficiency": "Общая эффективность",
+      "unit": "единица",
+      "planVsFact": "План vs Факт",
+      "efficiencyTrend": "Тренд эффективности",
+      "chartPlan": "План",
+      "chartFact": "Факт"
+    },
+    "qcAnalysis": {
+      "title": "Анализ контроля качества",
+      "defectsToday": "Количество дефектов (сегодня)",
+      "rejectedBatches": "Отклоненные партии",
+      "worstLine": "Линия с наибольшим количеством дефектов",
+      "unit": "шт",
+      "batchUnit": "партия",
+      "defectUnit": "дефект",
+      "defectsByLine": "Дефекты по линиям",
+      "defectTypes": "Типы дефектов",
+      "chartDefects": "Дефекты"
+    },
+    "ordersAnalysis": {
+      "title": "Анализ заказов",
+      "newOrders": "Новые заказы",
+      "inProgress": "В процессе",
+      "completed": "Завершено",
+      "unit": "шт",
+      "status": "Статус заказов",
+      "recentVolume": "Объем последних заказов",
+      "chartQuantity": "Количество"
+    },
+    "finishedGoodsAnalysis": {
+      "title": "Анализ готовой продукции",
+      "totalTypes": "Общее количество типов продукции",
+      "freeStock": "Свободный остаток",
+      "lowStockRisk": "Риск низкого запаса",
+      "unit": "тип",
+      "byType": "По типам продукции",
+      "chartQuantity": "Количество"
+    },
+    "maintenanceAnalysis": {
+      "title": "Анализ ремонта и технического обслуживания",
+      "totalStops": "Количество остановок",
+      "problemLines": "Линии с проблемами",
+      "inRepair": "В ремонте",
+      "timesUnit": "раз",
+      "lineUnit": "линия",
+      "downtimeByDay": "Время простоя (по дням)",
+      "byReason": "По причинам остановки",
+      "chartStops": "Остановки"
+    }
   },
   "warehouse": {
     "title": "Склад",

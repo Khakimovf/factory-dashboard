@@ -38,7 +38,7 @@
     "of": "dan",
     "awaitingApproval": "tasdiqlashni kutmoqda",
     "productionOutput": "Ishlab chiqarish va samaradorlik",
-    "lineStatus": "Liniya holati",
+    "lineStatusLabel": "Liniya holati",
     "quickOverview": "Tezkor ko'rinish",
     "hoursAgo": "soat oldin",
     "active": "Faol",
@@ -62,7 +62,115 @@
     "leastEfficientLine": "Eng kam samarali liniya",
     "mostDefectsLine": "Eng ko'p nuqsonli liniya",
     "efficiency": "samaradorlik",
-    "defects": "nuqsonlar"
+    "defects": "nuqsonlar",
+    "mainIndicators": "Asosiy ko'rsatkichlar",
+    "topSummary": {
+      "title": "Bugungi holat — qisqa xulosa",
+      "problemPrefix": "Muammo:",
+      "problemSuffix": "asosiy muammo, samaradorlik past.",
+      "riskPrefix": "Xavf: umumiy samaradorlik",
+      "riskMiddle": "(maqsad 90%), risk darajasi:",
+      "goodPrefix": "Yaxshi:",
+      "goodSuffix": "barqaror ishlayapti.",
+      "deviationPrefix": "Rejadan og'ish:",
+      "deviationMiddle": "yo'qotilgan ishlab chiqarish:",
+      "deviationSuffix": "dona."
+    },
+    "lineStatus": {
+      "title": "Liniyalar holati (soddalashtirilgan)",
+      "active": "Ishlayapti",
+      "maintenance": "Muammo (taʼmirlash)",
+      "idle": "Kutish holatida"
+    },
+    "metricCards": {
+      "production": {
+        "title": "Ishlab chiqarish (Reja vs Fakt)",
+        "explanationNegative": "Rejadan {percent}% past. Asosiy sabab: past samaradorlik.",
+        "explanationPositive": "Rejadan {percent}% yuqori."
+      },
+      "efficiency": {
+        "title": "Umumiy samaradorlik",
+        "explanationNegative": "Maqsaddan {percent}% past. Xavf: quvvat yetarli ishlamayapti.",
+        "explanationPositive": "Maqsaddan {percent}% yuqori. Holat barqaror."
+      },
+      "stoppedLines": {
+        "title": "To'xtagan liniyalar",
+        "unit": "liniya",
+        "explanationAllActive": "Barcha liniyalar ishlayapti.",
+        "explanationStopped": "{count} ta liniya to'xtagan. E'tibor talab etiladi."
+      },
+      "lostProduction": {
+        "title": "Yo'qotilgan ishlab chiqarish",
+        "unit": "dona",
+        "explanationWithLoss": "Rejadan tashqari yo'qotilgan hajm: {units} dona.",
+        "explanationNoLoss": "Bugun reja bo'yicha yo'qotilgan ishlab chiqarish qayd etilmadi."
+      }
+    },
+    "warehouseAnalysis": {
+      "title": "Ombor tahlili",
+      "totalStock": "Umumiy qoldiq",
+      "minStock": "Minimal zaxira",
+      "lowStock": "Kam zaxira",
+      "unit": "birlik",
+      "lowStockUnit": "nom",
+      "movement": "Ombor harakati",
+      "chartBalance": "Qoldiq",
+      "chartIncoming": "Kirim",
+      "chartOutgoing": "Chiqim"
+    },
+    "productionAnalysis": {
+      "title": "Ishlab chiqarish tahlili",
+      "planTitle": "Reja (kunlik)",
+      "factTitle": "Fakt (taxminiy)",
+      "avgEfficiency": "Umumiy samaradorlik",
+      "unit": "birlik",
+      "planVsFact": "Reja vs fakt",
+      "efficiencyTrend": "Samaradorlik trendi",
+      "chartPlan": "Reja",
+      "chartFact": "Fakt"
+    },
+    "qcAnalysis": {
+      "title": "Sifat nazorati tahlili",
+      "defectsToday": "Nuqsonlar soni (bugun)",
+      "rejectedBatches": "Rad etilgan partiyalar",
+      "worstLine": "Eng ko'p nuqsonli liniya",
+      "unit": "dona",
+      "batchUnit": "partiya",
+      "defectUnit": "nuqson",
+      "defectsByLine": "Nuqsonlar liniyalar bo'yicha",
+      "defectTypes": "Nuqson turlari",
+      "chartDefects": "Nuqsonlar"
+    },
+    "ordersAnalysis": {
+      "title": "Buyurtmalar tahlili",
+      "newOrders": "Yangi buyurtmalar",
+      "inProgress": "Jarayonda",
+      "completed": "Yakunlangan",
+      "unit": "ta",
+      "status": "Buyurtmalar holati",
+      "recentVolume": "So'nggi buyurtmalar hajmi",
+      "chartQuantity": "Miqdor"
+    },
+    "finishedGoodsAnalysis": {
+      "title": "Tayyor mahsulotlar tahlili",
+      "totalTypes": "Umumiy mahsulot turlari",
+      "freeStock": "Erkin qoldiq",
+      "lowStockRisk": "Kam qoldiq xavfi",
+      "unit": "tur",
+      "byType": "Mahsulotlar turlari bo'yicha",
+      "chartQuantity": "Miqdor"
+    },
+    "maintenanceAnalysis": {
+      "title": "Ta'mirlash va texnik xizmat tahlili",
+      "totalStops": "To'xtashlar soni",
+      "problemLines": "Muammo bor liniyalar",
+      "inRepair": "Ta'mirlashda",
+      "timesUnit": "marta",
+      "lineUnit": "liniya",
+      "downtimeByDay": "To'xtash vaqti (kunlar bo'yicha)",
+      "byReason": "To'xtash sabablariga ko'ra",
+      "chartStops": "To'xtashlar"
+    }
   },
   "warehouse": {
     "title": "Ombor",

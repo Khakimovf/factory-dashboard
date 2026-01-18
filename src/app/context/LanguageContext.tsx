@@ -60,7 +60,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
       setLanguage: handleSetLanguage,
       t,
     }),
-    [language, handleSetLanguage, t]
+    [language, handleSetLanguage]
   );
 
   return (

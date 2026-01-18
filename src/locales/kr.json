@@ -62,7 +62,115 @@
     "leastEfficientLine": "최저 효율 라인",
     "mostDefectsLine": "불량 다발 라인",
     "efficiency": "효율",
-    "defects": "불량"
+    "defects": "불량",
+    "mainIndicators": "주요 지표",
+    "topSummary": {
+      "title": "오늘의 상황 — 요약",
+      "problemPrefix": "문제:",
+      "problemSuffix": "주요 문제, 효율 낮음.",
+      "riskPrefix": "위험: 전체 효율",
+      "riskMiddle": "(목표 90%), 위험 수준:",
+      "goodPrefix": "좋음:",
+      "goodSuffix": "안정적으로 작동 중.",
+      "deviationPrefix": "계획 대비 차이:",
+      "deviationMiddle": "손실된 생산량:",
+      "deviationSuffix": "개."
+    },
+    "lineStatus": {
+      "title": "라인 상태 (간략)",
+      "active": "작동 중",
+      "maintenance": "문제 (수리 중)",
+      "idle": "대기 상태"
+    },
+    "metricCards": {
+      "production": {
+        "title": "생산 (계획 vs 실제)",
+        "explanationNegative": "계획 대비 {percent}% 부족. 주요 원인: 낮은 효율.",
+        "explanationPositive": "계획 대비 {percent}% 초과."
+      },
+      "efficiency": {
+        "title": "전체 효율",
+        "explanationNegative": "목표 대비 {percent}% 부족. 위험: 역량이 충분히 작동하지 않음.",
+        "explanationPositive": "목표 대비 {percent}% 초과. 상태 안정."
+      },
+      "stoppedLines": {
+        "title": "정지된 라인",
+        "unit": "라인",
+        "explanationAllActive": "모든 라인이 작동 중입니다.",
+        "explanationStopped": "{count}개 라인이 정지되었습니다. 주의 필요."
+      },
+      "lostProduction": {
+        "title": "손실된 생산량",
+        "unit": "개",
+        "explanationWithLoss": "계획 외 손실된 양: {units}개.",
+        "explanationNoLoss": "오늘 계획 대비 손실된 생산량이 기록되지 않았습니다."
+      }
+    },
+    "warehouseAnalysis": {
+      "title": "창고 분석",
+      "totalStock": "전체 재고",
+      "minStock": "최소 재고",
+      "lowStock": "재고 부족",
+      "unit": "단위",
+      "lowStockUnit": "건",
+      "movement": "창고 이동",
+      "chartBalance": "재고",
+      "chartIncoming": "입고",
+      "chartOutgoing": "출고"
+    },
+    "productionAnalysis": {
+      "title": "생산 분석",
+      "planTitle": "계획 (일일)",
+      "factTitle": "실제 (예상)",
+      "avgEfficiency": "전체 효율",
+      "unit": "단위",
+      "planVsFact": "계획 vs 실제",
+      "efficiencyTrend": "효율 추세",
+      "chartPlan": "계획",
+      "chartFact": "실제"
+    },
+    "qcAnalysis": {
+      "title": "품질 관리 분석",
+      "defectsToday": "결함 수 (오늘)",
+      "rejectedBatches": "거부된 배치",
+      "worstLine": "가장 많은 결함 라인",
+      "unit": "개",
+      "batchUnit": "배치",
+      "defectUnit": "결함",
+      "defectsByLine": "라인별 결함",
+      "defectTypes": "결함 유형",
+      "chartDefects": "결함"
+    },
+    "ordersAnalysis": {
+      "title": "주문 분석",
+      "newOrders": "신규 주문",
+      "inProgress": "진행 중",
+      "completed": "완료됨",
+      "unit": "건",
+      "status": "주문 상태",
+      "recentVolume": "최근 주문량",
+      "chartQuantity": "수량"
+    },
+    "finishedGoodsAnalysis": {
+      "title": "완제품 분석",
+      "totalTypes": "전체 제품 유형",
+      "freeStock": "가용 재고",
+      "lowStockRisk": "재고 부족 위험",
+      "unit": "유형",
+      "byType": "제품 유형별",
+      "chartQuantity": "수량"
+    },
+    "maintenanceAnalysis": {
+      "title": "유지보수 및 기술 서비스 분석",
+      "totalStops": "정지 횟수",
+      "problemLines": "문제가 있는 라인",
+      "inRepair": "수리 중",
+      "timesUnit": "회",
+      "lineUnit": "라인",
+      "downtimeByDay": "정지 시간 (일별)",
+      "byReason": "정지 원인별",
+      "chartStops": "정지"
+    }
   },
   "warehouse": {
     "title": "창고",
