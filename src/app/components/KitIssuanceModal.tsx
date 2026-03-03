@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from './ui/dialog';
 import { Button } from './ui/button';
 import { Package, MapPin, Zap, AlertCircle, QrCode, CheckCircle2, ShieldAlert } from 'lucide-react';
@@ -69,8 +69,9 @@ export function KitIssuanceModal({ isOpen, onClose, planId, items, onIssueToLine
                             <Package className="w-5 h-5 text-primary" />
                             Kit Issuance Review (Pick-List)
                         </DialogTitle>
-                        <DialogDescription className="mt-1 text-xs">
-                            Verify required material manifest for Production Plan: <strong className="text-foreground tracking-widest bg-foreground/5 px-1.5 py-0.5 rounded border border-border/50 ml-1">{planId}</strong>
+                        <DialogDescription className="mt-1 text-xs flex items-center">
+                            Verify required material manifest for Production Plan: <strong className="text-foreground tracking-widest bg-foreground/5 px-1.5 py-0.5 rounded border border-border/50 ml-1 mr-3">{planId}</strong>
+                            <span className="text-[10px] bg-blue-500/10 text-blue-600 dark:text-blue-400 px-2 py-0.5 rounded border border-blue-500/20 flex items-center gap-1 font-bold tracking-wider"><MapPin className="w-3 h-3" /> SORTED OPTIMAL PICK PATH</span>
                         </DialogDescription>
                     </DialogHeader>
 
@@ -95,7 +96,7 @@ export function KitIssuanceModal({ isOpen, onClose, planId, items, onIssueToLine
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-border/50">
-                            {items.map((item) => {
+                            {useMemo(() => [...items].sort((a, b) => a.binLocation.localeCompare(b.binLocation)), [items]).map((item) => {
                                 const hasShortage = item.currentStock < item.requiredQty;
                                 const isScanned = scannedItems.has(item.id);
 

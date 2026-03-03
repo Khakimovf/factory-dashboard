@@ -89,9 +89,8 @@ export function ProductionLines() {
               <div>
                 <div className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
                   <div
-                    className={`h-full transition-all ${
-                      line.efficiency >= 80 ? 'bg-green-500' : line.efficiency >= 60 ? 'bg-yellow-500' : 'bg-red-500'
-                    }`}
+                    className={`h-full transition-all ${line.efficiency >= 80 ? 'bg-green-500' : line.efficiency >= 60 ? 'bg-yellow-500' : 'bg-red-500'
+                      }`}
                     style={{ width: `${line.efficiency}%` }}
                   />
                 </div>
