@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Package, Factory, Users, Wrench, FileText, Send, UserCircle, Shield, Truck, ClipboardCheck, ShoppingCart, Box, Utensils, BarChart2 } from 'lucide-react';
+import { LayoutDashboard, Package, Factory, Users, Wrench, FileText, Send, UserCircle, Shield, Truck, ClipboardCheck, ShoppingCart, Box, Utensils, BarChart2, PackageCheck } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import { isSystemOwner, isEmployee, isAdmin } from '../utils/roleUtils';
 
@@ -81,6 +81,18 @@ export function Sidebar() {
         </div>
 
         {isAdmin() && (
+          <>
+          <Link
+            to="/daval"
+            className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
+              location.pathname.startsWith('/daval')
+                ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400'
+                : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+            }`}
+          >
+            <PackageCheck className="w-5 h-5" />
+            <span className="font-medium">{t('sidebar.daval')}</span>
+          </Link>
           <Link
             to="/roles-permissions"
             className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
@@ -92,6 +104,7 @@ export function Sidebar() {
             <Shield className="w-5 h-5" />
             <span className="font-medium">{t('sidebar.rolesPermissions')}</span>
           </Link>
+          </>
         )}
         
         {isSystemOwner() && (

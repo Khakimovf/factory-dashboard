@@ -7,7 +7,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from app.core.config import settings
 from app.core.logging import setup_logging, get_logger
 from app.core.exceptions import BaseAPIException
-from app.api.routes import documents, maintenance
+from app.api.routes import documents, maintenance, warehouse, production
 from app.api.exceptions import (
     api_exception_handler,
     http_exception_handler,
@@ -46,6 +46,8 @@ app.add_exception_handler(Exception, global_exception_handler)
 # Include routers
 app.include_router(documents.router, prefix=settings.API_PREFIX)
 app.include_router(maintenance.router, prefix=settings.API_PREFIX)
+app.include_router(warehouse.router, prefix=settings.API_PREFIX)
+app.include_router(production.router, prefix=settings.API_PREFIX)
 
 
 @app.middleware("http")

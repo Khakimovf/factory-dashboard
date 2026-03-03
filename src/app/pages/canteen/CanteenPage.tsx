@@ -356,7 +356,9 @@ export function CanteenPage() {
                   <Utensils className="w-6 h-6 text-blue-600 dark:text-blue-400" />
                   <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400">{t('canteen.finalMealCount')}</h3>
                   {isFinalized && (
-                    <Lock className="w-4 h-4 text-blue-600 dark:text-blue-400" title={t('canteen.lockIconTooltip')} />
+                    <span title={t('canteen.lockIconTooltip')}>
+                      <Lock className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                    </span>
                   )}
                 </div>
                 <p className="text-5xl font-bold text-blue-600 dark:text-blue-400">{todayPlan.finalCount}</p>

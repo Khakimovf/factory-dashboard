@@ -24,7 +24,8 @@
     "qc": "품질 관리 (QC)",
     "orders": "주문",
     "finishedGoods": "완제품",
-    "canteen": "구내식당"
+    "canteen": "구내식당",
+    "daval": "다발 (Daval)"
   },
   "dashboard": {
     "title": "대시보드",

@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useWarehouse } from '../../context/WarehouseContext';
 import { useFactory } from '../../context/FactoryContext';
 import { useLanguage } from '../../context/LanguageContext';
-import { QrCode, CheckCircle, X, Search, MapPin, Package, AlertCircle } from 'lucide-react';
+import { QrCode, CheckCircle, X, Search, MapPin, Package, AlertCircle, TrendingUp, AlertTriangle } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Input } from '../../components/ui/input';
@@ -13,6 +13,14 @@ import { Textarea } from '../../components/ui/textarea';
 import { toast } from 'sonner';
 import { TransferDocument } from '../../types/transferDocument';
 
+interface InventoryHealth {
+  material_id: string;
+  name: string;
+  available_stock: number;
+  minimum_stock: number;
+  health_status: 'Ready' | 'Low' | 'Out of Stock';
+}
+
 export function WarehouseReceivingPage() {
   const { t } = useLanguage();
   const { getTransferByQR, acceptTransfer, rejectTransfer } = useWarehouse();
@@ -22,6 +30,36 @@ export function WarehouseReceivingPage() {
   const [warehouseLocations, setWarehouseLocations] = useState<Record<string, string>>({});
   const [rejectReason, setRejectReason] = useState('');
   const [receivedBy] = useState('Warehouse Operator'); // In production, get from auth context
+  const [inventoryHealth, setInventoryHealth] = useState<InventoryHealth[]>([]);
+  const [loadingHealth, setLoadingHealth] = useState(false);
+
+  useEffect(() => {
+    const fetchHealth = async () => {
+      setLoadingHealth(true);
+      try {
+        // Fallback for demo purposes if backend isn't up
+        const response = await fetch('http://localhost:8000/api/v1/warehouse/inventory-health').catch(() => null);
+        if (response && response.ok) {
+          const data = await response.json();
+          setInventoryHealth(data);
+        } else {
+          // Fallback static data if backend is offline
+          setInventoryHealth([
+            { material_id: 'mat_1', name: 'Polypropylene', available_stock: 1000, minimum_stock: 500, health_status: 'Ready' },
+            { material_id: 'mat_2', name: 'Clips', available_stock: 800, minimum_stock: 1000, health_status: 'Low' },
+          ]);
+        }
+      } catch (e) {
+        console.error("Failed to fetch inventory health", e);
+      } finally {
+        setLoadingHealth(false);
+      }
+    };
+    fetchHealth();
+    // Refresh every 30 seconds
+    const interval = setInterval(fetchHealth, 30000);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleScan = () => {
     if (!scanInput.trim()) {
@@ -90,7 +128,7 @@ export function WarehouseReceivingPage() {
     setRejectReason('');
   };
 
-  const canAccept = currentTransfer?.productItems.every(item => item.qcStatus === 'PASSED') && 
+  const canAccept = currentTransfer?.productItems.every(item => item.qcStatus === 'PASSED') &&
     Object.values(warehouseLocations).every(loc => loc.trim() !== '');
 
   return (
@@ -104,6 +142,52 @@ export function WarehouseReceivingPage() {
           </h1>
           <p className="text-gray-400 mt-1">{t('warehouse.receiving.subtitle')}</p>
         </div>
+
+        {/* Inventory Health Dashboard */}
+        <Card className="mb-6 border-l-4 border-l-blue-500">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <TrendingUp className="w-5 h-5 text-blue-500" />
+              Inventory Health
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {loadingHealth && inventoryHealth.length === 0 ? (
+              <p className="text-gray-500">Loading health data...</p>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {inventoryHealth.map((item) => {
+                  let statusColor = 'bg-gray-100 text-gray-800 border-gray-200';
+                  let StatusIcon = CheckCircle;
+                  if (item.health_status === 'Ready') {
+                    statusColor = 'bg-green-500/10 text-green-500 border-green-500/20';
+                  } else if (item.health_status === 'Low') {
+                    statusColor = 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20';
+                    StatusIcon = AlertTriangle;
+                  } else {
+                    statusColor = 'bg-red-500/10 text-red-500 border-red-500/20';
+                    StatusIcon = AlertCircle;
+                  }
+
+                  return (
+                    <div key={item.material_id} className={`p-4 rounded-lg border flex flex-col gap-2 ${statusColor}`}>
+                      <div className="flex justify-between items-center">
+                        <span className="font-semibold">{item.name}</span>
+                        <StatusIcon className="w-5 h-5" />
+                      </div>
+                      <div className="text-sm opacity-90">
+                        Available Stock: <span className="font-bold">{item.available_stock}</span> / Min: {item.minimum_stock}
+                      </div>
+                      <Badge variant="outline" className={`w-fit mt-1 border-current bg-transparent`}>
+                        {item.health_status}
+                      </Badge>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         {/* QR Scan Input */}
         <Card className="mb-6">
@@ -191,11 +275,10 @@ export function WarehouseReceivingPage() {
                   {currentTransfer.productItems.map((item, index) => (
                     <div
                       key={index}
-                      className={`p-4 border rounded-lg ${
-                        item.qcStatus === 'PASSED'
+                      className={`p-4 border rounded-lg ${item.qcStatus === 'PASSED'
                           ? 'border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/10'
                           : 'border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/10'
-                      }`}
+                        }`}
                     >
                       <div className="flex items-start justify-between mb-3">
                         <div className="flex-1">

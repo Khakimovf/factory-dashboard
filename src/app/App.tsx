@@ -35,6 +35,7 @@ import { FinishedGoodsPage } from './pages/finished-goods/FinishedGoodsPage';
 import { WarehouseReceivingPage } from './pages/warehouse/WarehouseReceivingPage';
 import { CanteenPage } from './pages/canteen/CanteenPage';
 import ReportsPage from './pages/reports/ReportsPage';
+import { DavalPage } from './pages/daval/DavalPage';
 import { FactoryProvider } from './context/FactoryContext';
 import { WarehouseProvider } from './context/WarehouseContext';
 import { AuditLogProvider } from './context/AuditLogContext';
@@ -87,6 +88,7 @@ export default function App() {
                       <Route path="/maintenance/failure-reports/:id/upload-photos" element={<UploadPhotoReport />} />
                       <Route path="/audit-log" element={<SystemAuditLog />} />
                       <Route path="/roles-permissions" element={<RolesPermissionsPage />} />
+                      <Route path="/daval" element={<DavalPage />} />
                       <Route path="/suppliers" element={<SuppliersLayout />}>
                         <Route index element={<SuppliersPage />} />
                         <Route path=":id" element={<SupplierDetailPage />} />

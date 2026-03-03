@@ -22,7 +22,7 @@ export function HRStatsPage() {
   const [lateReports, setLateReports] = useState<LateArrivalReport[]>([]);
   const [isLateReportsDrawerOpen, setIsLateReportsDrawerOpen] = useState(false);
   const [isLoadingReports, setIsLoadingReports] = useState(false);
-  
+
   // Filter states
   const [searchQuery, setSearchQuery] = useState('');
   const [dateFilter, setDateFilter] = useState<'today' | 'yesterday' | 'all'>('today');
@@ -100,7 +100,7 @@ export function HRStatsPage() {
     // Search filter
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(r => 
+      filtered = filtered.filter(r =>
         r.employee_name.toLowerCase().includes(query) ||
         r.employee_id.toLowerCase().includes(query) ||
         r.department.toLowerCase().includes(query)
@@ -422,9 +422,8 @@ export function HRStatsPage() {
                     {filteredReports.map((report) => (
                       <tr
                         key={report.id}
-                        className={`border-b border-border hover:bg-muted/50 transition-colors ${
-                          report.status === 'new' ? 'bg-orange-950/20' : ''
-                        }`}
+                        className={`border-b border-border hover:bg-muted/50 transition-colors ${report.status === 'new' ? 'bg-orange-950/20' : ''
+                          }`}
                       >
                         <td className="p-3">
                           <div>
@@ -462,19 +461,18 @@ export function HRStatsPage() {
                         </td>
                         <td className="p-3">
                           <span
-                            className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${
-                              report.status === 'new'
+                            className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${report.status === 'new'
                                 ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400'
                                 : report.status === 'approved'
-                                ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
-                                : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'
-                            }`}
+                                  ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
+                                  : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'
+                              }`}
                           >
                             {report.status === 'new'
                               ? 'Kutilmoqda'
                               : report.status === 'approved'
-                              ? 'Tasdiqlangan'
-                              : 'Rad etilgan'}
+                                ? 'Tasdiqlangan'
+                                : 'Rad etilgan'}
                           </span>
                         </td>
                         <td className="p-3">
@@ -546,7 +544,7 @@ function StatCard({ title, value, icon: Icon, color }: StatCardProps) {
 }
 
 interface ClickableStatCardProps extends StatCardProps {
-  status: EmployeeStatus;
+  status: EmployeeStatus | 'late-reports';
   isSelected: boolean;
   onClick: () => void;
 }
@@ -571,11 +569,10 @@ function ClickableStatCard({
   return (
     <button
       onClick={onClick}
-      className={`bg-white dark:bg-gray-800 rounded-xl shadow-sm border transition-all text-left w-full p-4 ${
-        isSelected
+      className={`bg-white dark:bg-gray-800 rounded-xl shadow-sm border transition-all text-left w-full p-4 ${isSelected
           ? 'border-blue-500 dark:border-blue-400 ring-2 ring-blue-500 dark:ring-blue-400'
           : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
-      }`}
+        }`}
     >
       <div className="flex items-center justify-between mb-2">
         <p className="text-xs text-gray-500 dark:text-gray-400">{title}</p>

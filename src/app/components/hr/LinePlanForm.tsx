@@ -46,8 +46,8 @@ export function LinePlanForm({ line, open, onClose, onSave }: LinePlanFormProps)
   const [shift, setShift] = useState<Shift>(existingPlan?.shift || '1-smena');
   const [productName, setProductName] = useState(existingPlan?.productName || '');
   const [rows, setRows] = useState<PlanRow[]>(
-    existingPlan?.rows.length 
-      ? existingPlan.rows 
+    existingPlan?.rows.length
+      ? existingPlan.rows
       : [{ id: Date.now().toString(), partNo: '', reja: 0 }]
   );
 
@@ -78,7 +78,7 @@ export function LinePlanForm({ line, open, onClose, onSave }: LinePlanFormProps)
   };
 
   const updateRow = (id: string, field: keyof PlanRow, value: string | number) => {
-    setRows(rows.map(row => 
+    setRows(rows.map(row =>
       row.id === id ? { ...row, [field]: value } : row
     ));
   };
@@ -104,6 +104,7 @@ export function LinePlanForm({ line, open, onClose, onSave }: LinePlanFormProps)
     if (existingPlan) {
       updateLinePlan(today, line.id, {
         shift,
+        productOption: 'URBAN',
         productName: productName.trim(),
         rows: rows.map(row => ({
           id: row.id,
@@ -118,6 +119,7 @@ export function LinePlanForm({ line, open, onClose, onSave }: LinePlanFormProps)
         lineId: line.id,
         lineName: line.name,
         shift,
+        productOption: 'URBAN',
         productName: productName.trim(),
         rows: rows.map(row => ({
           id: row.id,

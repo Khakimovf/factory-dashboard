@@ -6,15 +6,29 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   base: "/",
   plugins: [
-    // The React and Tailwind plugins are both required for Make, even if
-    // Tailwind is not being actively used – do not remove them
     react(),
     tailwindcss(),
   ],
   resolve: {
     alias: {
-      // Alias @ to the src directory
       '@': path.resolve(__dirname, './src'),
+    },
+  },
+  server: {
+    watch: {
+      ignored: ['**/node_modules/**', '**/backend/**', '**/.git/**'],
+    },
+    fs: {
+      allow: [path.resolve(__dirname)],
+    },
+  },
+  optimizeDeps: {
+    include: ['react', 'react-dom', 'react-router-dom'],
+    entries: ['src/main.tsx'],
+  },
+  build: {
+    rollupOptions: {
+      maxParallelFileOps: 2,
     },
   },
 })

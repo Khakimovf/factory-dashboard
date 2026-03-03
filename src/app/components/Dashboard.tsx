@@ -138,8 +138,8 @@ export function Dashboard() {
     Math.abs(deviationPercent) >= 10 || avgEfficiency < 80
       ? 'high'
       : Math.abs(deviationPercent) >= 5 || avgEfficiency < 85
-      ? 'medium'
-      : 'low';
+        ? 'medium'
+        : 'low';
   const riskLevel = riskLevelRaw === 'high' ? t('dashboard.riskLevelHigh') : riskLevelRaw === 'medium' ? t('dashboard.riskLevelMedium') : t('dashboard.riskLevelLow');
 
   return (
@@ -154,31 +154,28 @@ export function Dashboard() {
         <div className="inline-flex items-center gap-1 rounded-lg border border-border bg-background p-1 text-xs">
           <button
             onClick={() => setRange('today')}
-            className={`px-3 py-1 rounded-md transition-colors ${
-              range === 'today'
-                ? 'bg-blue-600 text-white'
-                : 'text-muted-foreground hover:bg-muted'
-            }`}
+            className={`px-3 py-1 rounded-md transition-colors ${range === 'today'
+              ? 'bg-blue-600 text-white'
+              : 'text-muted-foreground hover:bg-muted'
+              }`}
           >
             {t('dashboard.today')}
           </button>
           <button
             onClick={() => setRange('week')}
-            className={`px-3 py-1 rounded-md transition-colors ${
-              range === 'week'
-                ? 'bg-blue-600 text-white'
-                : 'text-muted-foreground hover:bg-muted'
-            }`}
+            className={`px-3 py-1 rounded-md transition-colors ${range === 'week'
+              ? 'bg-blue-600 text-white'
+              : 'text-muted-foreground hover:bg-muted'
+              }`}
           >
             {t('dashboard.week')}
           </button>
           <button
             onClick={() => setRange('month')}
-            className={`px-3 py-1 rounded-md transition-colors ${
-              range === 'month'
-                ? 'bg-blue-600 text-white'
-                : 'text-muted-foreground hover:bg-muted'
-            }`}
+            className={`px-3 py-1 rounded-md transition-colors ${range === 'month'
+              ? 'bg-blue-600 text-white'
+              : 'text-muted-foreground hover:bg-muted'
+              }`}
           >
             {t('dashboard.month')}
           </button>
@@ -195,7 +192,7 @@ export function Dashboard() {
       />
 
       <div className="mb-8">
-          <h3 className="text-lg font-semibold text-foreground mb-4">
+        <h3 className="text-lg font-semibold text-foreground mb-4">
           {t('dashboard.keyIndicators')}
         </h3>
 
@@ -505,7 +502,7 @@ export function Dashboard() {
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
             <MetricCard title={t('dashboard.totalStops')} value={maintenanceKpiTotalStops} unit={t('dashboard.times')} color="blue" />
-            <MetricCard title={t('dashboard.linesWithProblems')} value={maintenanceKpiIssue} unit={t('dashboard.line')} color="red" />
+            <MetricCard title={t('dashboard.linesWithProblems')} value={maintenanceKpiIssue} unit={t('dashboard.line')} color="orange" />
             <MetricCard title={t('dashboard.inRepair')} value={maintenanceKpiInRepair} unit={t('dashboard.line')} color="orange" />
           </div>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -562,20 +559,19 @@ function MetricCard({ title, value, unit, color, delta, explanation }: MetricCar
   };
 
   return (
-    <div className="bg-slate-900 rounded-xl shadow-sm border border-slate-800 p-6">
-      <h3 className="text-slate-300 text-sm mb-2">{title}</h3>
-      <p className="text-3xl font-semibold text-slate-50">
+    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+      <h3 className="text-gray-500 dark:text-gray-400 text-sm mb-2">{title}</h3>
+      <p className="text-3xl font-semibold text-gray-900 dark:text-white">
         {unit === '%' ? `${value.toFixed(1)}%` : unit === 'so‘m' ? value.toLocaleString('uz-UZ') : value}
       </p>
       {typeof delta === 'number' && (
         <p
-          className={`text-sm font-medium mt-1 ${
-            delta > 0
-              ? 'text-green-400'
-              : delta < 0
-              ? 'text-red-400'
-              : 'text-slate-400'
-          }`}
+          className={`text-sm font-medium mt-1 ${delta > 0
+            ? 'text-green-600 dark:text-green-400'
+            : delta < 0
+              ? 'text-red-600 dark:text-red-400'
+              : 'text-gray-500 dark:text-gray-400'
+            }`}
         >
           {delta > 0 ? '+' : ''}
           {delta.toFixed(1)}%
@@ -583,7 +579,7 @@ function MetricCard({ title, value, unit, color, delta, explanation }: MetricCar
       )}
       <p className={`text-xs uppercase tracking-wide mt-1 ${colorClasses[color]}`}>{unit}</p>
       {explanation && (
-        <p className="text-xs text-slate-400 mt-1 leading-snug">{explanation}</p>
+        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-snug">{explanation}</p>
       )}
     </div>
   );
@@ -608,8 +604,8 @@ function TopSummary({
   const { t } = useLanguage();
   return (
     <div className="mb-8">
-      <h3 className="text-lg font-semibold text-slate-50 mb-3">{t('dashboard.todaySummary')}</h3>
-      <div className="bg-slate-900 rounded-xl shadow-sm border border-slate-800 p-5 space-y-1 text-sm text-slate-100">
+      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">{t('dashboard.todaySummary')}</h3>
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5 space-y-1 text-sm text-gray-600 dark:text-gray-300">
         <p>🔴 {t('dashboard.problemLine').replace('{line}', worstLine)}</p>
         <p>🟡 {t('dashboard.riskWarning').replace('{efficiency}', avgEfficiency.toFixed(1)).replace('{level}', riskLevel)}</p>
         <p>🟢 {t('dashboard.goodLine').replace('{line}', bestLine)}</p>
@@ -629,16 +625,16 @@ function LineStatus({ productionLines }: LineStatusProps) {
   const { t } = useLanguage();
   return (
     <div>
-      <h3 className="text-lg font-semibold text-slate-50 mb-3">{t('dashboard.lineStatusSimplified')}</h3>
-      <div className="bg-slate-900 rounded-xl shadow-sm border border-slate-800 p-5 space-y-2 text-sm text-slate-100">
+      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">{t('dashboard.lineStatusSimplified')}</h3>
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5 space-y-2 text-sm text-gray-600 dark:text-gray-300">
         {productionLines.map(line => {
           const simpleName = line.name.replace('Assembly Line ', 'Line ').replace('Quality Control Station', 'QC');
           const statusText =
             line.status === 'active'
               ? `🟢 ${t('dashboard.working')}`
               : line.status === 'maintenance'
-              ? `🔴 ${t('dashboard.problemRepair')}`
-              : `🟡 ${t('dashboard.waitingStatus')}`;
+                ? `🔴 ${t('dashboard.problemRepair')}`
+                : `🟡 ${t('dashboard.waitingStatus')}`;
           return (
             <p key={line.id}>
               {simpleName} — {statusText}
@@ -672,13 +668,13 @@ function InsightCard({ icon, title, value, subtitle, color }: InsightCardProps) 
   };
 
   return (
-    <div className={`bg-slate-900 rounded-xl shadow-sm border ${colorClasses[color]} p-6`}>
+    <div className={`bg-white dark:bg-gray-800 rounded-xl shadow-sm border ${colorClasses[color]} p-6`}>
       <div className="flex items-center gap-3 mb-3">
         {icon}
-        <h4 className="text-sm font-medium text-slate-200">{title}</h4>
+        <h4 className="text-sm font-medium text-gray-600 dark:text-gray-400">{title}</h4>
       </div>
-      <p className="text-xl font-semibold text-slate-50 mb-1">{value}</p>
-      <p className="text-xs text-slate-400">{subtitle}</p>
+      <p className="text-xl font-semibold text-gray-900 dark:text-white mb-1">{value}</p>
+      <p className="text-xs text-gray-500 dark:text-gray-400">{subtitle}</p>
     </div>
   );
 }

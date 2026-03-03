@@ -24,7 +24,8 @@
     "qc": "Sifat nazorati (QC)",
     "orders": "Buyurtmalar",
     "finishedGoods": "Tayyor mahsulotlar",
-    "canteen": "Oshxona"
+    "canteen": "Oshxona",
+    "daval": "Daval"
   },
   "dashboard": {
     "title": "Boshqaruv paneli",

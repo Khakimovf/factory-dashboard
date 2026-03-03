@@ -30,12 +30,20 @@ function flattenTranslations(obj: any, prefix = ''): Record<string, string> {
   return result;
 }
 
-// Pre-compute translations at module level for performance
-const translations: Record<Language, Record<string, string>> = {
-  uz: flattenTranslations(uzTranslations),
-  ru: flattenTranslations(ruTranslations),
-  kr: flattenTranslations(krTranslations),
+// Lazy-init per language to avoid flattening all 3 at startup (reduces memory)
+const rawLocales: Record<Language, Record<string, unknown>> = {
+  uz: uzTranslations as Record<string, unknown>,
+  ru: ruTranslations as Record<string, unknown>,
+  kr: krTranslations as Record<string, unknown>,
 };
+const flattenedCache: Partial<Record<Language, Record<string, string>>> = {};
+
+function getTranslations(lang: Language): Record<string, string> {
+  if (!flattenedCache[lang]) {
+    flattenedCache[lang] = flattenTranslations(rawLocales[lang]);
+  }
+  return flattenedCache[lang] as Record<string, string>;
+}
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
@@ -46,7 +54,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   });
 
   const t = useCallback((key: string): string => {
-    return translations[language][key] || key;
+    return getTranslations(language)[key] || key;
   }, [language]);
 
   const handleSetLanguage = useCallback((lang: Language) => {

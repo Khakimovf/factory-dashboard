@@ -155,7 +155,6 @@ class MaintenanceService:
             report: Failure report
             new_status: New status
         """
-        current_status = report.status
         now = datetime.now()
         
         # Set start_time when moving to IN_PROGRESS
