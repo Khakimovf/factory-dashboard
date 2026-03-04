@@ -89,6 +89,14 @@ export const hrEmployees: Employee[] = [
     statusReason: 'Yillik ta\'til',
     statusDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(), // 5 days ago
   },
+  {
+    employeeId: 'EMP-009',
+    fullName: 'Umarov Jasur',
+    department: 'Sifat Nazorati',
+    position: 'Sifat Nazoratchi (QC Inspektor)',
+    employmentDate: '2024-01-15T08:00:00.000Z',
+    status: 'active',
+  },
 ];
 
 

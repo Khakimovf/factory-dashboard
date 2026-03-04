@@ -9,8 +9,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Badge } from './ui/badge';
 import { toast } from 'sonner';
-import { KitIssuanceModal, PickListItem } from './KitIssuanceModal';
+import { KitIssuanceModal } from './KitIssuanceModal';
 import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine, Legend } from 'recharts';
+import { useWarehouse, MockRequest, PickListItem } from '../context/WarehouseContext';
+import { useFactory } from '../context/FactoryContext';
 
 // --- MOCK DATA ---
 type MaterialCategory = 'Raw Materials' | 'Components' | 'Finished Goods' | 'All';
@@ -40,14 +42,7 @@ interface MockMaterial {
   alertMessage?: string;
 }
 
-interface MockRequest {
-  id: string;
-  planId: string;
-  status: 'Pending' | 'Issuing' | 'ON LINE' | 'Completed';
-  time: string;
-  items: PickListItem[];
-  targetTime: number;
-}
+
 
 // Generate an extended 20-item Mock Kit for PLAN-A1 to demonstrate dense layout
 const generateDenseKit = (): PickListItem[] => {
@@ -122,16 +117,12 @@ const initialMaterials: MockMaterial[] = [
   },
 ];
 
-const initialRequests: MockRequest[] = [
-  { id: 'REQ-0192', planId: 'PLAN-A1 (Door Trims)', status: 'Pending', time: '10:45 AM', items: denseMockKitA1, targetTime: Date.now() + 15 * 60000 },
-  { id: 'REQ-0193', planId: 'PLAN-B2 (Dashboards)', status: 'Pending', time: '11:20 AM', items: denseMockKitA1.slice(0, 5), targetTime: Date.now() + 45 * 60000 },
-  { id: 'REQ-0194', planId: 'PLAN-C3 (Seats)', status: 'Issuing', time: '09:30 AM', items: denseMockKitA1.slice(2, 6), targetTime: Date.now() + 4 * 60000 },
-  { id: 'REQ-0188', planId: 'PLAN-A1 (Door Trims)', status: 'ON LINE', time: '08:00 AM', items: denseMockKitA1.slice(5, 12), targetTime: Date.now() - 120 * 60000 },
-];
-
 export function Warehouse() {
+  const { requests, updateRequestStatus } = useWarehouse();
+  const { productionLines } = useFactory();
+
+  const totalDowntime = productionLines.reduce((acc, line) => acc + (line.downtimeRecord?.accumulatedMinutes || 0), 0);
   const [materials, setMaterials] = useState<MockMaterial[]>(initialMaterials);
-  const [requests, setRequests] = useState<MockRequest[]>(initialRequests);
   const [searchTerm, setSearchTerm] = useState('');
   const [activeCategory, setActiveCategory] = useState<MaterialCategory>('All');
 
@@ -601,9 +592,7 @@ export function Warehouse() {
     }));
 
     // 2. Update Zayavka Request Status to 'ON LINE'
-    setRequests(prev => prev.map(r =>
-      r.id === activeRequest.id ? { ...r, status: 'ON LINE' } as MockRequest : r
-    ));
+    updateRequestStatus(activeRequest.id, 'ON LINE');
 
     // 3. Fire External Hook
     onIssueComplete(planId);
@@ -1580,6 +1569,40 @@ export function Warehouse() {
                     </div>
                   </div>
                 ))}
+              </div>
+            </div>
+
+            {/* Monthly Line Loss Analysis Card */}
+            <div className="space-y-4 bg-red-500/5 border border-red-500/20 p-4 rounded-xl flex flex-col mt-6 lg:mt-0">
+              <div>
+                <h4 className="font-bold text-sm tracking-widest text-red-600 dark:text-red-400 uppercase flex items-center gap-1.5"><TrendingDown className="w-4 h-4" /> Monthly Line Loss Analysis</h4>
+                <p className="text-[11px] text-muted-foreground mt-1">Cumulative maintenance downtime across all active production lines.</p>
+              </div>
+
+              <div className="flex-1 flex flex-col justify-center items-center p-4 bg-background rounded-lg border border-red-500/10 shadow-sm relative overflow-hidden">
+                <div className="absolute -right-4 -top-4 w-24 h-24 bg-red-500/10 rounded-full blur-2xl"></div>
+
+                <span className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground mb-2">Total Downtime (Min)</span>
+                <span className="text-4xl font-mono font-black text-red-600 dark:text-red-500">{totalDowntime}</span>
+
+                <div className="mt-4 w-full">
+                  {productionLines.map(line => {
+                    const lineDown = line.downtimeRecord?.accumulatedMinutes || 0;
+                    if (lineDown === 0) return null;
+                    const percent = Math.min(100, (lineDown / Math.max(1, totalDowntime)) * 100);
+                    return (
+                      <div key={line.id} className="mb-2 w-full">
+                        <div className="flex justify-between text-[10px] mb-1">
+                          <span className="font-medium">{line.name}</span>
+                          <span className="font-mono text-muted-foreground">{lineDown}m</span>
+                        </div>
+                        <div className="w-full bg-muted rounded-full h-1.5">
+                          <div className="bg-red-500 h-1.5 rounded-full" style={{ width: `${percent}%` }}></div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
               </div>
             </div>
           </div>

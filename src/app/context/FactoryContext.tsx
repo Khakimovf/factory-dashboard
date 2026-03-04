@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, ReactNode } from 'react';
+import { toast } from 'sonner';
 
 export interface Material {
   id: string;
@@ -14,10 +15,11 @@ export interface Material {
 export interface ProductionLine {
   id: string;
   name: string;
-  status: 'active' | 'idle' | 'maintenance';
+  status: 'active' | 'idle' | 'maintenance' | 'maintenance_requested';
   efficiency: number;
   requiredMaterials: { materialId: string; quantity: number }[];
   output: number;
+  downtimeRecord?: { accumulatedMinutes: number; currentStartTime?: number };
 }
 
 export interface HRDocument {
@@ -35,6 +37,8 @@ interface FactoryContextType {
   addProductionLine: (line: Omit<ProductionLine, 'id'>) => void;
   updateProductionLine: (id: string, updates: Partial<ProductionLine>) => void;
   requestMaterials: (materialId: string, quantity: number) => void;
+  consumeMaterials: (lineId: string, producedCount: number) => void;
+  produceFinishedGood: (lineId: string, option: string) => void;
   updateDocumentStatus: (id: string, status: HRDocument['status']) => void;
   addMaterial: (material: Omit<Material, 'id' | 'createdAt' | 'createdByRole'> & { materialId: string }) => void;
   updateMaterialQuantity: (materialId: string, quantity: number) => void;
@@ -106,17 +110,88 @@ export function FactoryProvider({ children }: { children: ReactNode }) {
   };
 
   const updateProductionLine = (id: string, updates: Partial<ProductionLine>) => {
-    setProductionLines(productionLines.map(line => 
-      line.id === id ? { ...line, ...updates } : line
-    ));
+    setProductionLines(productionLines.map(line => {
+      if (line.id === id) {
+        let newDowntimeRecord = line.downtimeRecord || { accumulatedMinutes: 0 };
+
+        if (updates.status && updates.status !== line.status) {
+          const isGoingToMaintenance = updates.status === 'maintenance' || updates.status === 'maintenance_requested';
+          const isLeavingMaintenance = line.status === 'maintenance' || line.status === 'maintenance_requested';
+
+          if (isGoingToMaintenance && !newDowntimeRecord.currentStartTime) {
+            newDowntimeRecord = { ...newDowntimeRecord, currentStartTime: Date.now() };
+          } else if (isLeavingMaintenance && newDowntimeRecord.currentStartTime) {
+            const minutesDown = Math.floor((Date.now() - newDowntimeRecord.currentStartTime) / 60000);
+            newDowntimeRecord = {
+              accumulatedMinutes: newDowntimeRecord.accumulatedMinutes + minutesDown,
+              currentStartTime: undefined
+            };
+          }
+        }
+
+        return { ...line, ...updates, downtimeRecord: newDowntimeRecord };
+      }
+      return line;
+    }));
   };
 
   const requestMaterials = (materialId: string, quantity: number) => {
     setMaterials(materials.map(material =>
-      material.id === materialId 
+      material.id === materialId
         ? { ...material, quantity: Math.max(0, material.quantity - quantity) }
         : material
     ));
+  };
+
+  const consumeMaterials = (lineId: string, producedCount: number) => {
+    const line = productionLines.find(l => l.id === lineId);
+    if (!line) return;
+
+    setMaterials(currentMaterials => {
+      let stockCriticallyLow = false;
+      const updatedMaterials = currentMaterials.map(material => {
+        const required = line.requiredMaterials.find(rm => rm.materialId === material.id);
+        if (required) {
+          const amountToConsume = required.quantity * producedCount;
+          const newQuantity = Math.max(0, material.quantity - amountToConsume);
+          if (newQuantity <= 0 && material.quantity > 0) {
+            stockCriticallyLow = true;
+          }
+          return { ...material, quantity: newQuantity };
+        }
+        return material;
+      });
+
+      if (stockCriticallyLow) {
+        toast.error(`Diqqat! ${line.name} uchun kerakli materiallar zaxirasi tugadi.`, { duration: 5000 });
+      }
+
+      return updatedMaterials;
+    });
+  };
+
+  const produceFinishedGood = (lineId: string, option: string) => {
+    // Increment line output
+    setProductionLines(lines => lines.map(l => l.id === lineId ? { ...l, output: l.output + 1 } : l));
+
+    // Increment Finished Goods buffer in materials (Linyadagi zaxira)
+    const sku = `FG-${option.replace(/\s+/g, '')}`;
+    setMaterials(prev => {
+      const fgIndex = prev.findIndex(m => m.id === sku);
+      if (fgIndex >= 0) {
+        return prev.map((m, idx) => idx === fgIndex ? { ...m, quantity: m.quantity + 1 } : m);
+      }
+      return [...prev, {
+        id: sku,
+        name: `${option} Assembled Unit`,
+        quantity: 1,
+        unit: 'units',
+        minStock: 0,
+        category: 'Finished Goods',
+        createdAt: new Date().toISOString(),
+        createdByRole: 'SYSTEM'
+      }];
+    });
   };
 
   const updateDocumentStatus = (id: string, status: HRDocument['status']) => {
@@ -141,13 +216,13 @@ export function FactoryProvider({ children }: { children: ReactNode }) {
       createdAt: new Date().toISOString(),
       createdByRole: 'ADMIN', // This should come from auth context in production
     };
-    
+
     setMaterials([...materials, newMaterial]);
   };
 
   const updateMaterialQuantity = (materialId: string, quantity: number) => {
     setMaterials(materials.map(material =>
-      material.id === materialId 
+      material.id === materialId
         ? { ...material, quantity: Math.max(0, quantity) }
         : material
     ));
@@ -162,6 +237,8 @@ export function FactoryProvider({ children }: { children: ReactNode }) {
         addProductionLine,
         updateProductionLine,
         requestMaterials,
+        consumeMaterials,
+        produceFinishedGood,
         updateDocumentStatus,
         addMaterial,
         updateMaterialQuantity,

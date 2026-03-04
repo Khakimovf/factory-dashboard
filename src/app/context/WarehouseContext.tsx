@@ -1,6 +1,25 @@
 import { createContext, useContext, useState, ReactNode } from 'react';
 import { TransferDocument, TransferStatus, FinishedGoodsRecord } from '../types/transferDocument';
 
+export interface PickListItem {
+  id: string;
+  name: string;
+  partNumber: string;
+  requiredQty: number;
+  currentStock: number;
+  binLocation?: string;
+}
+
+export interface MockRequest {
+  id: string;
+  planId: string;
+  status: 'Pending' | 'Issuing' | 'ON LINE' | 'Completed';
+  time: string;
+  items: PickListItem[];
+  targetTime: number;
+  priority?: 'Normal' | 'High';
+}
+
 interface WarehouseContextType {
   transferDocuments: TransferDocument[];
   finishedGoods: FinishedGoodsRecord[];
@@ -11,6 +30,9 @@ interface WarehouseContextType {
   getTransferByQR: (qrCode: string) => TransferDocument | undefined;
   reserveFinishedGoods: (sku: string, quantity: number) => void;
   releaseReservation: (sku: string, quantity: number) => void;
+  requests: MockRequest[];
+  addMaterialRequest: (planId: string, items: PickListItem[], priority?: 'Normal' | 'High') => void;
+  updateRequestStatus: (id: string, status: MockRequest['status']) => void;
 }
 
 const WarehouseContext = createContext<WarehouseContextType | undefined>(undefined);
@@ -69,9 +91,29 @@ const initialFinishedGoods: FinishedGoodsRecord[] = [
   },
 ];
 
+const initialRequests: MockRequest[] = [];
+
 export function WarehouseProvider({ children }: { children: ReactNode }) {
   const [transferDocuments, setTransferDocuments] = useState<TransferDocument[]>(initialTransferDocuments);
   const [finishedGoods, setFinishedGoods] = useState<FinishedGoodsRecord[]>(initialFinishedGoods);
+  const [requests, setRequests] = useState<MockRequest[]>(initialRequests);
+
+  const addMaterialRequest = (planId: string, items: PickListItem[], priority: 'Normal' | 'High' = 'Normal') => {
+    const newRequest: MockRequest = {
+      id: `REQ-${Math.floor(Math.random() * 1000).toString().padStart(4, '0')}`,
+      planId,
+      status: 'Pending',
+      time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+      items,
+      targetTime: Date.now() + (priority === 'High' ? 15 * 60000 : 45 * 60000),
+      priority
+    };
+    setRequests(prev => [newRequest, ...prev]);
+  };
+
+  const updateRequestStatus = (id: string, status: MockRequest['status']) => {
+    setRequests(prev => prev.map(r => r.id === id ? { ...r, status } : r));
+  };
 
   const createTransferDocument = (transfer: Omit<TransferDocument, 'id' | 'qrCode' | 'createdAt'>): TransferDocument => {
     const id = `TRF-${Date.now()}`;
@@ -96,13 +138,13 @@ export function WarehouseProvider({ children }: { children: ReactNode }) {
       prev.map(transfer =>
         transfer.id === id
           ? {
-              ...transfer,
-              status,
-              receivedAt: status === 'RECEIVED' ? new Date().toISOString() : transfer.receivedAt,
-              receivedBy: receivedBy || transfer.receivedBy,
-              warehouseLocations: locations || transfer.warehouseLocations,
-              rejectedReason: rejectedReason || transfer.rejectedReason,
-            }
+            ...transfer,
+            status,
+            receivedAt: status === 'RECEIVED' ? new Date().toISOString() : transfer.receivedAt,
+            receivedBy: receivedBy || transfer.receivedBy,
+            warehouseLocations: locations || transfer.warehouseLocations,
+            rejectedReason: rejectedReason || transfer.rejectedReason,
+          }
           : transfer
       )
     );
@@ -137,18 +179,18 @@ export function WarehouseProvider({ children }: { children: ReactNode }) {
           prev.map(fg =>
             fg.sku === item.sku
               ? {
-                  ...fg,
-                  totalQuantity: fg.totalQuantity + item.quantity,
-                  availableQuantity: fg.availableQuantity + item.quantity,
-                  batches: [...fg.batches, batch],
-                  warehouseLocations: fg.warehouseLocations.includes(location)
-                    ? fg.warehouseLocations
-                    : [...fg.warehouseLocations, location],
-                  sourceLines: fg.sourceLines.includes(transfer.sourceLineName)
-                    ? fg.sourceLines
-                    : [...fg.sourceLines, transfer.sourceLineName],
-                  lastUpdated: new Date().toISOString(),
-                }
+                ...fg,
+                totalQuantity: fg.totalQuantity + item.quantity,
+                availableQuantity: fg.availableQuantity + item.quantity,
+                batches: [...fg.batches, batch],
+                warehouseLocations: fg.warehouseLocations.includes(location)
+                  ? fg.warehouseLocations
+                  : [...fg.warehouseLocations, location],
+                sourceLines: fg.sourceLines.includes(transfer.sourceLineName)
+                  ? fg.sourceLines
+                  : [...fg.sourceLines, transfer.sourceLineName],
+                lastUpdated: new Date().toISOString(),
+              }
               : fg
           )
         );
@@ -185,12 +227,12 @@ export function WarehouseProvider({ children }: { children: ReactNode }) {
       prev.map(fg =>
         fg.sku === sku && fg.availableQuantity >= quantity
           ? {
-              ...fg,
-              reservedQuantity: fg.reservedQuantity + quantity,
-              availableQuantity: fg.availableQuantity - quantity,
-              status: fg.availableQuantity - quantity === 0 ? 'RESERVED' : fg.status,
-              lastUpdated: new Date().toISOString(),
-            }
+            ...fg,
+            reservedQuantity: fg.reservedQuantity + quantity,
+            availableQuantity: fg.availableQuantity - quantity,
+            status: fg.availableQuantity - quantity === 0 ? 'RESERVED' : fg.status,
+            lastUpdated: new Date().toISOString(),
+          }
           : fg
       )
     );
@@ -201,12 +243,12 @@ export function WarehouseProvider({ children }: { children: ReactNode }) {
       prev.map(fg =>
         fg.sku === sku
           ? {
-              ...fg,
-              reservedQuantity: Math.max(0, fg.reservedQuantity - quantity),
-              availableQuantity: fg.availableQuantity + quantity,
-              status: 'AVAILABLE_FOR_SALE',
-              lastUpdated: new Date().toISOString(),
-            }
+            ...fg,
+            reservedQuantity: Math.max(0, fg.reservedQuantity - quantity),
+            availableQuantity: fg.availableQuantity + quantity,
+            status: 'AVAILABLE_FOR_SALE',
+            lastUpdated: new Date().toISOString(),
+          }
           : fg
       )
     );
@@ -224,6 +266,9 @@ export function WarehouseProvider({ children }: { children: ReactNode }) {
         getTransferByQR,
         reserveFinishedGoods,
         releaseReservation,
+        requests,
+        addMaterialRequest,
+        updateRequestStatus,
       }}
     >
       {children}

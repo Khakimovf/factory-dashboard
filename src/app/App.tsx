@@ -9,6 +9,7 @@ import { ProductionLines } from './components/ProductionLines';
 import { ProductionLineDetail } from './components/ProductionLineDetail';
 import { ProductionLivePage } from './pages/production/ProductionLivePage';
 import { LineBufferPage } from './pages/production/LineBufferPage';
+import { LineAnalyticsPage } from './pages/production/LineAnalyticsPage';
 import { OperatorDailyLinePlan } from './components/production/OperatorDailyLinePlan';
 import { HRDepartment } from './components/HRDepartment';
 import { DailyProductionPlanForm } from './components/DailyProductionPlanForm';
@@ -52,55 +53,56 @@ export default function App() {
           <WarehouseProvider>
             <DailyProductionPlanProvider>
               <AuditLogProvider>
-              <Router>
-              <div className="flex min-h-screen h-screen bg-background text-foreground">
-                <Sidebar />
-                <div className="flex-1 flex flex-col overflow-hidden bg-background min-h-full">
-                  <Header />
-                  <main className="flex-1 overflow-y-auto bg-background relative z-10 min-h-full">
-                    <Routes>
-                      <Route path="/" element={<Dashboard />} />
-                      <Route path="/warehouse" element={<Warehouse />} />
-                      <Route path="/warehouse/requests" element={<MaterialRequests />} />
-                      <Route path="/warehouse/receiving" element={<WarehouseReceivingPage />} />
-                      <Route path="/production-lines" element={<ProductionLines />} />
-                      <Route path="/production-lines/operator-plans" element={<OperatorDailyLinePlan />} />
-                      <Route path="/production-lines/:id/live" element={<ProductionLivePage />} />
-                      <Route path="/production-lines/:lineId/buffer" element={<LineBufferPage />} />
-                      <Route path="/production-lines/:id" element={<ProductionLineDetail />} />
-                      <Route path="/qc" element={<QualityControlPage />} />
-                      <Route path="/orders" element={<OrdersPage />} />
-                      <Route path="/finished-goods" element={<FinishedGoodsPage />} />
-                      <Route path="/reports" element={<ReportsPage />} />
-                      <Route path="/hr" element={<HRDepartment />} />
-                      <Route path="/hr/employees" element={<HREmployees />} />
-                      <Route path="/canteen" element={<CanteenPage />} />
-                      <Route path="/hr/stats" element={<HRStatsPage />} />
-                      <Route path="/hr/library" element={<HRDocumentLibrary />} />
-                      <Route path="/hr/production-plan" element={<DailyProductionPlanForm />} />
-                      <Route path="/hr/line-plans" element={<DailyLinePlanEntry />} />
-                      <Route path="/employee/cabinet" element={<EmployeeCabinetPage />} />
-                      <Route path="/ess" element={<EmployeeSelfService />} />
-                      <Route path="/maintenance" element={<MaintenanceDashboard />} />
-                      <Route path="/maintenance/failure-reports" element={<FailureReportList />} />
-                      <Route path="/maintenance/failure-reports/new" element={<CreateFailureReport />} />
-                      <Route path="/maintenance/failure-reports/:id" element={<FailureReportDetail />} />
-                      <Route path="/maintenance/failure-reports/:id/upload-photos" element={<UploadPhotoReport />} />
-                      <Route path="/audit-log" element={<SystemAuditLog />} />
-                      <Route path="/roles-permissions" element={<RolesPermissionsPage />} />
-                      <Route path="/daval" element={<DavalPage />} />
-                      <Route path="/suppliers" element={<SuppliersLayout />}>
-                        <Route index element={<SuppliersPage />} />
-                        <Route path=":id" element={<SupplierDetailPage />} />
-                      </Route>
-                    </Routes>
-                  </main>
-                </div>
-              </div>
-              </Router>
-              <Toaster />
-            </AuditLogProvider>
-          </DailyProductionPlanProvider>
+                <Router>
+                  <div className="flex min-h-screen h-screen bg-background text-foreground">
+                    <Sidebar />
+                    <div className="flex-1 flex flex-col overflow-hidden bg-background min-h-full">
+                      <Header />
+                      <main className="flex-1 overflow-y-auto bg-background relative z-10 min-h-full">
+                        <Routes>
+                          <Route path="/" element={<Dashboard />} />
+                          <Route path="/warehouse" element={<Warehouse />} />
+                          <Route path="/warehouse/requests" element={<MaterialRequests />} />
+                          <Route path="/warehouse/receiving" element={<WarehouseReceivingPage />} />
+                          <Route path="/production-lines" element={<ProductionLines />} />
+                          <Route path="/production-lines/operator-plans" element={<OperatorDailyLinePlan />} />
+                          <Route path="/production-lines/:id/live" element={<ProductionLivePage />} />
+                          <Route path="/production-lines/:lineId/buffer" element={<LineBufferPage />} />
+                          <Route path="/production-lines/:id/analytics" element={<LineAnalyticsPage />} />
+                          <Route path="/production-lines/:id" element={<ProductionLineDetail />} />
+                          <Route path="/qc" element={<QualityControlPage />} />
+                          <Route path="/orders" element={<OrdersPage />} />
+                          <Route path="/finished-goods" element={<FinishedGoodsPage />} />
+                          <Route path="/reports" element={<ReportsPage />} />
+                          <Route path="/hr" element={<HRDepartment />} />
+                          <Route path="/hr/employees" element={<HREmployees />} />
+                          <Route path="/canteen" element={<CanteenPage />} />
+                          <Route path="/hr/stats" element={<HRStatsPage />} />
+                          <Route path="/hr/library" element={<HRDocumentLibrary />} />
+                          <Route path="/hr/production-plan" element={<DailyProductionPlanForm />} />
+                          <Route path="/hr/line-plans" element={<DailyLinePlanEntry />} />
+                          <Route path="/employee/cabinet" element={<EmployeeCabinetPage />} />
+                          <Route path="/ess" element={<EmployeeSelfService />} />
+                          <Route path="/maintenance" element={<MaintenanceDashboard />} />
+                          <Route path="/maintenance/failure-reports" element={<FailureReportList />} />
+                          <Route path="/maintenance/failure-reports/new" element={<CreateFailureReport />} />
+                          <Route path="/maintenance/failure-reports/:id" element={<FailureReportDetail />} />
+                          <Route path="/maintenance/failure-reports/:id/upload-photos" element={<UploadPhotoReport />} />
+                          <Route path="/audit-log" element={<SystemAuditLog />} />
+                          <Route path="/roles-permissions" element={<RolesPermissionsPage />} />
+                          <Route path="/daval" element={<DavalPage />} />
+                          <Route path="/suppliers" element={<SuppliersLayout />}>
+                            <Route index element={<SuppliersPage />} />
+                            <Route path=":id" element={<SupplierDetailPage />} />
+                          </Route>
+                        </Routes>
+                      </main>
+                    </div>
+                  </div>
+                </Router>
+                <Toaster />
+              </AuditLogProvider>
+            </DailyProductionPlanProvider>
           </WarehouseProvider>
         </FactoryProvider>
       </LanguageProvider>

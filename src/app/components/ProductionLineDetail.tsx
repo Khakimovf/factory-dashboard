@@ -4,7 +4,7 @@ import { useFactory } from '../context/FactoryContext';
 import { useLanguage } from '../context/LanguageContext';
 import { useDailyProductionPlan } from '../context/DailyProductionPlanContext';
 import { maintenanceApi } from '../services/maintenanceApi';
-import { ArrowLeft, Package, PlayCircle, PauseCircle, Settings, Plus, Activity, Layers } from 'lucide-react';
+import { ArrowLeft, Package, PlayCircle, PauseCircle, Settings, Plus, Activity, Layers, BarChart3 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { LinePlanModal } from './hr/LinePlanModal';
@@ -21,7 +21,7 @@ export function ProductionLineDetail() {
   const [showProductionPlan, setShowProductionPlan] = useState(false);
 
   const line = productionLines.find(l => l.id === id);
- 
+
   // Get today's plan for this line
   const todayPlan = line ? getTodayLinePlan(line.id) : null;
 
@@ -46,7 +46,7 @@ export function ProductionLineDetail() {
     );
   }
 
-  const handleStatusChange = (newStatus: 'active' | 'idle' | 'maintenance') => {
+  const handleStatusChange = (newStatus: 'active' | 'idle' | 'maintenance' | 'maintenance_requested') => {
     updateProductionLine(id!, { status: newStatus });
   };
 
@@ -89,38 +89,43 @@ export function ProductionLineDetail() {
                   {t('productionDetail.lineBuffer.button')}
                 </span>
               </Button>
+              <Button
+                onClick={() => navigate(`/production-lines/${line.id}/analytics`)}
+                variant="outline"
+                className="flex items-center gap-2 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 px-4 py-2 rounded-lg shadow-sm"
+              >
+                <BarChart3 className="w-4 h-4" />
+                <span className="text-sm font-medium">Liniya tahlili</span>
+              </Button>
             </div>
           </div>
           <div className="flex gap-2">
             <button
               onClick={() => handleStatusChange('active')}
-              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                line.status === 'active'
-                  ? 'bg-green-600 text-white'
-                  : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-              }`}
+              className={`px-4 py-2 rounded-lg font-medium transition-colors ${line.status === 'active'
+                ? 'bg-green-600 text-white'
+                : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                }`}
             >
               <PlayCircle className="w-5 h-5 inline mr-2" />
               {t('productionDetail.active')}
             </button>
             <button
               onClick={() => handleStatusChange('idle')}
-              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                line.status === 'idle'
-                  ? 'bg-yellow-600 text-white'
-                  : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-              }`}
+              className={`px-4 py-2 rounded-lg font-medium transition-colors ${line.status === 'idle'
+                ? 'bg-yellow-600 text-white'
+                : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                }`}
             >
               <PauseCircle className="w-5 h-5 inline mr-2" />
               {t('productionDetail.idle')}
             </button>
             <button
-              onClick={() => handleStatusChange('maintenance')}
-              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                line.status === 'maintenance'
-                  ? 'bg-red-600 text-white'
-                  : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-              }`}
+              onClick={() => handleStatusChange('maintenance_requested')}
+              className={`px-4 py-2 rounded-lg font-medium transition-colors ${line.status === 'maintenance_requested' || line.status === 'maintenance'
+                ? 'bg-red-600 text-white animate-pulse'
+                : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                }`}
             >
               <Settings className="w-5 h-5 inline mr-2" />
               {t('productionDetail.maintenance')}
@@ -142,9 +147,8 @@ export function ProductionLineDetail() {
                 </div>
                 <div className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
                   <div
-                    className={`h-full transition-all ${
-                      line.efficiency >= 80 ? 'bg-green-500' : line.efficiency >= 60 ? 'bg-yellow-500' : 'bg-red-500'
-                    }`}
+                    className={`h-full transition-all ${line.efficiency >= 80 ? 'bg-green-500' : line.efficiency >= 60 ? 'bg-yellow-500' : 'bg-red-500'
+                      }`}
                     style={{ width: `${line.efficiency}%` }}
                   />
                 </div>
@@ -201,12 +205,12 @@ export function ProductionLineDetail() {
 
               <div className="flex items-center justify-between py-3 border-t border-gray-200 dark:border-gray-700">
                 <span className="text-sm text-gray-600 dark:text-gray-400">{t('productionDetail.status')}</span>
-                <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                  line.status === 'active' ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' :
+                <span className={`px-4 py-1.5 rounded-full text-sm font-medium ${line.status === 'active' ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' :
                   line.status === 'idle' ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400' :
-                  'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'
-                }`}>
-                  {t(`productionDetail.${line.status}`)}
+                    line.status === 'maintenance_requested' ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 animate-pulse border border-red-300' :
+                      'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'
+                  }`}>
+                  {line.status === 'maintenance_requested' ? 'So\'rov Yuborilgan' : t(`productionDetail.${line.status}`)}
                 </span>
               </div>
             </div>
@@ -232,7 +236,7 @@ export function ProductionLineDetail() {
                 alert(t('productionDetail.requestError'));
               }
             }}>
-              <div className="space-y-4">
+              <div className="space-y-5">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     {t('productionDetail.failureDescription')}
@@ -241,7 +245,7 @@ export function ProductionLineDetail() {
                     value={maintenanceDescription}
                     onChange={(e) => setMaintenanceDescription(e.target.value)}
                     rows={4}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                    className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none text-base"
                     placeholder={t('productionDetail.failureDescriptionPlaceholder')}
                     required
                   />
@@ -254,13 +258,18 @@ export function ProductionLineDetail() {
                     type="datetime-local"
                     value={maintenanceDateTime}
                     onChange={(e) => setMaintenanceDateTime(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base"
                     required
                   />
                 </div>
                 <button
                   type="submit"
-                  className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                  onClick={() => {
+                    if (maintenanceDescription && maintenanceDateTime) {
+                      handleStatusChange('maintenance_requested');
+                    }
+                  }}
+                  className="w-full px-4 py-4 bg-red-600 text-white rounded-xl hover:bg-red-700 transition-colors font-semibold text-lg shadow-md"
                 >
                   {t('productionDetail.submitRequest')}
                 </button>
@@ -325,17 +334,6 @@ export function ProductionLineDetail() {
                             </div>
                           </div>
                         </div>
-                        <button
-                          onClick={() => requestMaterials(material.id, req.quantity)}
-                          disabled={!available}
-                          className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                            available
-                              ? 'bg-blue-600 text-white hover:bg-blue-700'
-                              : 'bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'
-                          }`}
-                        >
-                          {t('productionDetail.request')}
-                        </button>
                       </div>
                     </div>
                   );

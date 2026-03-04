@@ -197,18 +197,40 @@ export function Dashboard() {
         </h3>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-          <MetricCard
-            title={t('dashboard.productionPlanVsFact')}
-            value={Number.isFinite(productionPercent) ? productionPercent : 0}
-            unit="%"
-            color="blue"
-            delta={productionDeltaPercent}
-            explanation={
-              productionDeltaPercent < 0
-                ? t('dashboard.productionBelowPlan').replace('{percent}', Math.abs(productionDeltaPercent).toFixed(1))
-                : t('dashboard.productionAbovePlan').replace('{percent}', productionDeltaPercent.toFixed(1))
-            }
-          />
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 flex flex-col items-center justify-center relative overflow-hidden">
+            <div className="absolute top-4 left-4">
+              <h3 className="text-gray-500 dark:text-gray-400 text-sm">{t('dashboard.productionPlanVsFact')}</h3>
+              <p className="text-xs text-gray-400 mt-1">Reja vs Fakt OEE</p>
+            </div>
+
+            {/* High Density Gauge */}
+            <div className="relative mt-8 mb-4 w-40 h-40 flex items-center justify-center">
+              <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                <circle cx="50" cy="50" r="40" stroke="currentColor" strokeWidth="8" fill="transparent" className="text-gray-100 dark:text-gray-700" />
+                <circle cx="50" cy="50" r="40" stroke="currentColor" strokeWidth="8" fill="transparent"
+                  strokeDasharray={`${Math.min(100, Math.max(0, productionPercent)) * 2.51} 251.2`}
+                  className={`${productionPercent >= 90 ? 'text-green-500' : productionPercent >= 70 ? 'text-blue-500' : 'text-orange-500'} transition-all duration-1000 ease-in-out`} />
+              </svg>
+              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                <span className="text-3xl font-bold text-gray-900 dark:text-white">{productionPercent.toFixed(1)}%</span>
+              </div>
+            </div>
+
+            <div className="w-full grid grid-cols-3 gap-2 text-center border-t border-gray-100 dark:border-gray-700 pt-4 mt-2">
+              <div>
+                <p className="text-[10px] text-gray-500 uppercase">Reja</p>
+                <p className="font-semibold text-gray-900 dark:text-white">{plannedToday}</p>
+              </div>
+              <div>
+                <p className="text-[10px] text-gray-500 uppercase">Fakt</p>
+                <p className="font-semibold text-blue-600">{totalOutput}</p>
+              </div>
+              <div>
+                <p className="text-[10px] text-gray-500 uppercase">Qoldi</p>
+                <p className="font-semibold text-orange-500">{lostUnitsToday}</p>
+              </div>
+            </div>
+          </div>
           <MetricCard
             title={t('dashboard.overallEfficiency')}
             value={Number.isFinite(avgEfficiency) ? Number(avgEfficiency.toFixed(1)) : 0}
@@ -632,8 +654,8 @@ function LineStatus({ productionLines }: LineStatusProps) {
           const statusText =
             line.status === 'active'
               ? `🟢 ${t('dashboard.working')}`
-              : line.status === 'maintenance'
-                ? `🔴 ${t('dashboard.problemRepair')}`
+              : line.status === 'maintenance' || line.status === 'maintenance_requested'
+                ? `🔴 ${t('dashboard.problemRepair')} ${line.status === 'maintenance_requested' ? '(So\'rov yuborilgan)' : ''}`
                 : `🟡 ${t('dashboard.waitingStatus')}`;
           return (
             <p key={line.id}>

@@ -3,14 +3,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Button } from './ui/button';
 import { Package, MapPin, Zap, AlertCircle, QrCode, CheckCircle2, ShieldAlert } from 'lucide-react';
 
-export interface PickListItem {
-    id: string;
-    name: string;
-    partNumber: string;
-    requiredQty: number;
-    currentStock: number;
-    binLocation: string;
-}
+import { PickListItem } from '../context/WarehouseContext';
 
 export interface KitIssuanceModalProps {
     isOpen: boolean;
@@ -104,10 +97,10 @@ export function KitIssuanceModal({ isOpen, onClose, planId, items, onIssueToLine
                                     <tr
                                         key={item.id}
                                         className={`transition-colors group ${hasShortage
-                                                ? 'bg-red-500/5 hover:bg-red-500/10'
-                                                : isScanned
-                                                    ? 'bg-green-500/5 hover:bg-green-500/10'
-                                                    : 'hover:bg-muted/30'
+                                            ? 'bg-red-500/5 hover:bg-red-500/10'
+                                            : isScanned
+                                                ? 'bg-green-500/5 hover:bg-green-500/10'
+                                                : 'hover:bg-muted/30'
                                             }`}
                                     >
                                         <td className={`px-3 py-2 border-r border-border/30 text-center ${isScanned ? 'border-l-2 border-l-green-500' : hasShortage ? 'border-l-2 border-l-red-500' : 'border-l-2 border-l-transparent'}`}>
