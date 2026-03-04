@@ -1,0 +1,10 @@
+feat: implement smart factory loop - AI authorization, individual QR labeling, and per-line analytics cockpit
+
+- Integrated Staff Auth (QR) for Brigadir & QC Inspector with safety interlock
+- Added automated Individual Unit Passport (QR label) generation per finished unit
+- Implemented QC Verified badge, Chiqish (log out) buttons, production pause on QC logout
+- Created proactive Line Buffer monitor with TTE, stock gauges, supply status, auto Emergency Restock
+- Added Production Analytics Header (OEE, Daily Target, Maintenance Alerts, Material Risk)
+- Moved analytics into per-line Liniya tahlili sub-tab with Demand vs Supply chart and Monthly Line Loss analysis
+- Registered /analytics route for each production line
+- Added QC Inspector (EMP-009) to hrEmployees data
