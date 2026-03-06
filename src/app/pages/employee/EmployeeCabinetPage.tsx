@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useLanguage } from '../../context/LanguageContext';
 import {
   mockCurrentEmployee,
@@ -9,560 +9,348 @@ import {
   mockDocuments,
 } from '../../data/essData';
 import {
-  User,
-  DollarSign,
-  Clock,
-  Calendar,
-  FileText,
-  Briefcase,
-  Building,
-  Download,
-  Eye,
-  AlertCircle,
-  TrendingUp,
-  Send,
+  User, DollarSign, Clock, Calendar, FileText, Briefcase, Building, Download, Eye,
+  AlertCircle, TrendingUp, Send, ShieldCheck, HeartPulse, ShieldAlert, CheckCircle2,
+  Trophy, BookOpen, Star, Camera, Car, Heart, UserMinus, Plus
 } from 'lucide-react';
 import { Button } from '../../components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '../../components/ui/dialog';
+import { Badge } from '../../components/ui/badge';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../../components/ui/dialog';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { Textarea } from '../../components/ui/textarea';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '../../components/ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { toast } from 'sonner';
 import { submitLateReport } from '../../services/lateReportsService';
+import { LineChart, Line, AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
-// TODO: Replace mock data with API calls when backend is ready
+// --- Theme Toggler Component (Zen/Paper) ---
+function ThemeToggle({ theme, onToggle }: { theme: 'zen' | 'paper', onToggle: () => void }) {
+  return (
+    <div className="flex bg-slate-900/50 border border-slate-700/50 p-1 rounded-full backdrop-blur-md">
+      <button
+        onClick={onToggle}
+        className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${theme === 'paper' ? 'bg-white text-slate-900 shadow-md' : 'text-slate-400 hover:text-white'
+          }`}
+      >
+        Paper
+      </button>
+      <button
+        onClick={onToggle}
+        className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${theme === 'zen' ? 'bg-slate-800 text-white shadow-md' : 'text-slate-400 hover:text-white'
+          }`}
+      >
+        Zen
+      </button>
+    </div>
+  );
+}
+
+// TODO: Replace mock data
 const mockEmployee = {
   fullName: 'Aliyev Sardor',
   position: 'Liniya operatori',
   department: 'Ishlab chiqarish',
   hireDate: '2022-01-15T08:00:00.000Z',
-  // TODO: Replace mock birthdate with real employee birthdate from backend
   birthdate: '1995-08-25',
+  level: 4,
+  learningProgress: 75,
+  safeDays: 142,
+  kudos: 18,
+};
+
+const fakeSalaryTrend = [
+  { month: 'Set', val: 3200000 },
+  { month: 'Okt', val: 3350000 },
+  { month: 'Noy', val: 3400000 },
+  { month: 'Dek', val: 3800000 },
+  { month: 'Yan', val: 3450000 },
+  { month: 'Fev', val: 3600000 }
+];
+
+const generateHeatmap = () => {
+  const days = [];
+  for (let i = 0; i < 30; i++) days.push(Math.random() > 0.15 ? 'present' : (Math.random() > 0.5 ? 'late' : 'absent'));
+  return days;
 };
 
 export function EmployeeCabinetPage() {
   const { t, language } = useLanguage();
-  const [isLateReportModalOpen, setIsLateReportModalOpen] = useState(false);
-  const [lateReportForm, setLateReportForm] = useState({
-    lateHours: '',
-    reason: '',
-    notes: '',
-  });
+  const [theme, setTheme] = useState<'zen' | 'paper'>('zen');
+  const [isLateModalOpen, setIsLateModalOpen] = useState(false);
+  const [lateForm, setLateForm] = useState({ category: '', hours: '', text: '', photo: null as string | null });
+  const [overtimeEst, setOvertimeEst] = useState('');
 
-  const workExp = calculateWorkExperience(mockEmployee.hireDate);
-  const currentMonth = mockSalaryHistory[0];
-  const today = new Date().toISOString().split('T')[0];
-  const todayRecord = mockAttendanceRecords.find((r) => r.date === today);
-  const currentMonthRecords = mockAttendanceRecords.filter((record) => {
-    const recordDate = new Date(record.date);
-    const now = new Date();
-    return recordDate.getMonth() === now.getMonth() && recordDate.getFullYear() === now.getFullYear();
-  });
-  const lateDays = currentMonthRecords.filter((r) => r.isLate).length;
-  const totalHours = currentMonthRecords.reduce((sum, r) => sum + (r.workHours || 0), 0);
-  const usedPercentage = (mockLeaveBalance.usedDays / mockLeaveBalance.totalDays) * 100;
-  const remainingPercentage = (mockLeaveBalance.remainingDays / mockLeaveBalance.totalDays) * 100;
+  const heatmap = generateHeatmap();
+
+  const isDark = theme === 'zen';
+  const bgClass = isDark ? 'bg-slate-950 text-slate-300' : 'bg-slate-50 text-slate-900';
+  const cardClass = isDark ? 'bg-slate-900/60 border-slate-800 backdrop-blur-xl shadow-xl' : 'bg-white border-slate-200 shadow-sm';
+  const textPrimary = isDark ? 'text-white' : 'text-slate-900';
+  const textMuted = isDark ? 'text-slate-400' : 'text-slate-500';
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat(language === 'ru' ? 'ru-RU' : 'uz-UZ', {
-      style: 'currency',
-      currency: 'UZS',
-      minimumFractionDigits: 0,
-    }).format(amount);
+    return new Intl.NumberFormat('uz-UZ', { style: 'currency', currency: 'UZS', minimumFractionDigits: 0 }).format(amount);
   };
 
-  const formatMonth = (month: string) => {
-    const [year, monthNum] = month.split('-');
-    const date = new Date(parseInt(year), parseInt(monthNum) - 1);
-    if (language === 'ru') {
-      const monthName = date.toLocaleDateString('ru-RU', { month: 'long' });
-      const yearStr = date.toLocaleDateString('ru-RU', { year: 'numeric' });
-      return `${monthName} ${yearStr} г.`;
-    }
-    return date.toLocaleDateString('uz-UZ', { year: 'numeric', month: 'long' });
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString(language === 'ru' ? 'ru-RU' : 'uz-UZ', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    });
-  };
-
-  const getDocumentTypeLabel = (type: string) => {
-    switch (type) {
-      case 'contract':
-        return t('employeeCabinet.documents.typeContract');
-      case 'order':
-        return t('employeeCabinet.documents.typeOrder');
-      case 'certificate':
-        return t('employeeCabinet.documents.typeCertificate');
-      default:
-        return t('employeeCabinet.documents.typeOther');
+  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const reader = new FileReader();
+      reader.onload = (event) => setLateForm({ ...lateForm, photo: event.target?.result as string });
+      reader.readAsDataURL(e.target.files[0]);
     }
   };
 
-  const calculateDaysUntilBirthday = (birthdate: string): number | null => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    
-    const [year, month, day] = birthdate.split('-').map(Number);
-    const thisYearBirthday = new Date(today.getFullYear(), month - 1, day);
-    thisYearBirthday.setHours(0, 0, 0, 0);
-    
-    let nextBirthday = thisYearBirthday;
-    
-    if (thisYearBirthday < today) {
-      nextBirthday = new Date(today.getFullYear() + 1, month - 1, day);
-      nextBirthday.setHours(0, 0, 0, 0);
-    }
-    
-    const diffTime = nextBirthday.getTime() - today.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    
-    return diffDays;
+  const submitRequest = () => {
+    if (!lateForm.category || !lateForm.hours) { toast.error("To'liq to'ldiring"); return; }
+    toast.success("So'rov muvaffaqiyatli yuborildi", { description: "HR bo'limi ko'rib chiqmoqda." });
+    setIsLateModalOpen(false);
+    setLateForm({ category: '', hours: '', text: '', photo: null });
   };
 
-  const daysUntilBirthday = calculateDaysUntilBirthday(mockEmployee.birthdate);
-
-  const handleSubmitLateReport = async () => {
-    const lateHours = parseFloat(lateReportForm.lateHours);
-    
-    if (!lateReportForm.lateHours || lateHours < 0.5) {
-      toast.error('Kechikish vaqti kamida 0.5 soat bo\'lishi kerak');
-      return;
-    }
-    
-    if (!lateReportForm.reason) {
-      toast.error('Kechikish sababi tanlanishi shart');
-      return;
-    }
-
-    // Determine shift start time based on current hour
-    const currentHour = new Date().getHours();
-    const shiftStartTime = currentHour < 14 ? '08:00' : '20:00';
-
-    try {
-      await submitLateReport({
-        employee_id: 'EMP-001', // TODO: Get from auth context
-        employee_name: mockEmployee.fullName,
-        department: mockEmployee.department,
-        shift_start_time: shiftStartTime,
-        late_minutes: Math.round(lateHours * 60),
-        reason: lateReportForm.reason,
-        notes: lateReportForm.notes.trim() || undefined,
-      });
-
-      toast.success('Kechikish sababi HR bo\'limiga muvaffaqiyatli yuborildi');
-      setIsLateReportModalOpen(false);
-      setLateReportForm({ lateHours: '', reason: '', notes: '' });
-    } catch (error) {
-      toast.error('Xatolik: Kechikish sababini yuborishda muammo');
-      console.error('Failed to submit late report:', error);
-    }
-  };
-
-  const isFormValid = () => {
-    const lateHours = parseFloat(lateReportForm.lateHours);
-    return lateReportForm.lateHours && lateHours >= 0.5 && lateReportForm.reason;
-  };
-
+  // ─── 1. Smart Header & Identity ───
   return (
-    <div className="p-8 bg-background text-foreground min-h-screen">
-      <div className="mb-6 flex items-center justify-between">
-        <h2 className="text-3xl font-semibold text-gray-900 dark:text-white">
-          {t('employeeCabinet.title')}
-        </h2>
-        <button
-          onClick={() => setIsLateReportModalOpen(true)}
-          className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-sm font-medium"
-        >
-          <Send className="w-4 h-4" />
-          Kechikish sababini yuborish
-        </button>
-      </div>
+    <div className={`min-h-screen p-4 sm:p-8 font-sans transition-colors duration-500 ${bgClass} pb-24`}>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* SECTION 1 - MENING PROFILIM */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-            <User className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-            {t('employeeCabinet.profile.title')}
-          </h3>
-          <div className="space-y-4">
-            <div className="flex items-start gap-4">
-              <div className="w-16 h-16 rounded-full bg-blue-100 dark:bg-blue-900/20 flex items-center justify-center flex-shrink-0">
-                <User className="w-8 h-8 text-blue-600 dark:text-blue-400" />
-              </div>
-              <div className="flex-1">
-                <h4 className="text-xl font-semibold text-gray-900 dark:text-white mb-1">
-                  {mockEmployee.fullName}
-                </h4>
-                <div className="space-y-2 mt-3">
-                  <DetailRow icon={Briefcase} label={t('employeeCabinet.profile.position')} value={mockEmployee.position} />
-                  <DetailRow icon={Building} label={t('employeeCabinet.profile.department')} value={mockEmployee.department} />
-                  <DetailRow
-                    icon={Calendar}
-                    label={t('employeeCabinet.profile.hireDate')}
-                    value={formatDate(mockEmployee.hireDate)}
-                  />
-                  <DetailRow
-                    icon={TrendingUp}
-                    label={t('employeeCabinet.profile.workExperience')}
-                    value={`${workExp.years} ${t('employeeCabinet.profile.years')} ${workExp.months} ${t('employeeCabinet.profile.months')}`}
-                  />
-                  {daysUntilBirthday !== null && (
-                    <div className="flex items-center gap-2">
-                      <div>
-                        <span className="text-sm font-medium text-gray-900 dark:text-white">
-                          {daysUntilBirthday === 0
-                            ? t('employeeCabinet.profile.birthdayToday')
-                            : t('employeeCabinet.profile.birthdayUpcoming').replace('{days}', daysUntilBirthday.toString())}
-                        </span>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
+      {/* Top Navigation */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-8 max-w-7xl mx-auto">
+        <div>
+          <h2 className={`text-3xl font-black ${textPrimary} tracking-tight`}>Employee Experience</h2>
+          <p className={`text-xs font-bold uppercase tracking-widest ${textMuted} mt-1`}>Personal Workspace & Analytics</p>
         </div>
-
-        {/* SECTION 2 - MENING OYLIKIM */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-            <DollarSign className="w-5 h-5 text-green-600 dark:text-green-400" />
-            {t('employeeCabinet.salary.title')}
-          </h3>
-          <div className="space-y-4">
-            <div className="bg-gradient-to-br from-green-500 to-green-600 dark:from-green-600 dark:to-green-700 rounded-lg p-4 text-white">
-              <p className="text-green-100 text-sm mb-1">{t('employeeCabinet.salary.lastSalary')}</p>
-              <p className="text-2xl font-bold">{formatCurrency(currentMonth.netSalary)}</p>
-              <p className="text-green-100 text-xs mt-1">{formatMonth(currentMonth.month)}</p>
-            </div>
-            <div className="space-y-2">
-              <div className="flex justify-between items-center text-sm">
-                <span className="text-gray-600 dark:text-gray-400">{t('employeeCabinet.salary.baseSalary')}</span>
-                <span className="font-medium text-gray-900 dark:text-white">{formatCurrency(currentMonth.baseSalary)}</span>
-              </div>
-              {currentMonth.bonuses > 0 && (
-                <div className="flex justify-between items-center text-sm">
-                  <span className="text-gray-600 dark:text-gray-400">{t('employeeCabinet.salary.bonuses')}</span>
-                  <span className="font-medium text-green-600 dark:text-green-400">+{formatCurrency(currentMonth.bonuses)}</span>
-                </div>
-              )}
-              {currentMonth.deductions > 0 && (
-                <div className="flex justify-between items-center text-sm">
-                  <span className="text-gray-600 dark:text-gray-400">{t('employeeCabinet.salary.deductions')}</span>
-                  <span className="font-medium text-red-600 dark:text-red-400">-{formatCurrency(currentMonth.deductions)}</span>
-                </div>
-              )}
-            </div>
-            <button
-              onClick={() => {
-                // TODO: Implement PDF download when backend API is ready
-                alert(t('employeeCabinet.salary.downloadPlaceholder'));
-              }}
-              className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-sm font-medium"
-            >
-              <Download className="w-4 h-4" />
-              {t('employeeCabinet.salary.downloadPDF')}
-            </button>
-            <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
-              <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">{t('employeeCabinet.salary.history')}</p>
-              <div className="space-y-1 max-h-32 overflow-y-auto">
-                {mockSalaryHistory.slice(0, 3).map((record, index) => (
-                  <div key={index} className="flex justify-between items-center text-xs">
-                    <span className="text-gray-600 dark:text-gray-400">{formatMonth(record.month)}</span>
-                    <span className="font-medium text-gray-900 dark:text-white">{formatCurrency(record.netSalary)}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* SECTION 3 - DAVOMATIM */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-            <Clock className="w-5 h-5 text-purple-600 dark:text-purple-400" />
-            {t('employeeCabinet.attendance.title')}
-          </h3>
-          <div className="space-y-4">
-            {todayRecord ? (
-              <div className="space-y-3">
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-900/20">
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">{t('employeeCabinet.attendance.checkInToday')}</p>
-                    <p className="text-lg font-semibold text-gray-900 dark:text-white">{todayRecord.checkIn || '-'}</p>
-                  </div>
-                  <div className="p-3 rounded-lg bg-green-50 dark:bg-green-900/20">
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">{t('employeeCabinet.attendance.checkOutToday')}</p>
-                    <p className="text-lg font-semibold text-gray-900 dark:text-white">{todayRecord.checkOut || '-'}</p>
-                  </div>
-                </div>
-                {todayRecord.isLate && (
-                  <div className="flex items-center gap-2 p-2 rounded-lg bg-orange-50 dark:bg-orange-900/20">
-                    <AlertCircle className="w-4 h-4 text-orange-600 dark:text-orange-400" />
-                    <span className="text-xs text-orange-700 dark:text-orange-400">{t('employeeCabinet.attendance.lateToday')}</span>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="p-4 rounded-lg bg-gray-50 dark:bg-gray-900/40 text-center">
-                <p className="text-sm text-gray-500 dark:text-gray-400">{t('employeeCabinet.attendance.noRecordToday')}</p>
-              </div>
-            )}
-            <div className="grid grid-cols-2 gap-3 pt-3 border-t border-gray-200 dark:border-gray-700">
-              <div>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">{t('employeeCabinet.attendance.lateDays')}</p>
-                <p className="text-xl font-semibold text-gray-900 dark:text-white">{lateDays}</p>
-              </div>
-              <div>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">{t('employeeCabinet.attendance.totalHours')}</p>
-                <p className="text-xl font-semibold text-gray-900 dark:text-white">{totalHours.toFixed(1)} {t('employeeCabinet.attendance.hours')}</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* SECTION 4 - MEHNAT STAJI & TA'TIL */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-            <Calendar className="w-5 h-5 text-orange-600 dark:text-orange-400" />
-            {t('employeeCabinet.leave.title')}
-          </h3>
-          <div className="space-y-4">
-            <div>
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-sm text-gray-600 dark:text-gray-400">{t('employeeCabinet.leave.annualLeaveLimit')}</span>
-                <span className="text-sm font-medium text-gray-900 dark:text-white">{mockLeaveBalance.totalDays} {t('employeeCabinet.leave.days')}</span>
-              </div>
-            </div>
-            <div>
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-sm text-gray-600 dark:text-gray-400">{t('employeeCabinet.leave.usedLeave')}</span>
-                <span className="text-sm font-medium text-gray-900 dark:text-white">
-                  {mockLeaveBalance.usedDays} / {mockLeaveBalance.totalDays} {t('employeeCabinet.leave.days')}
-                </span>
-              </div>
-              <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                <div className="bg-orange-500 h-2 rounded-full transition-all" style={{ width: `${usedPercentage}%` }} />
-              </div>
-            </div>
-            <div>
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-sm text-gray-600 dark:text-gray-400">{t('employeeCabinet.leave.remainingLeave')}</span>
-                <span className="text-sm font-medium text-gray-900 dark:text-white">
-                  {mockLeaveBalance.remainingDays} / {mockLeaveBalance.totalDays} {t('employeeCabinet.leave.days')}
-                </span>
-              </div>
-              <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                <div className="bg-green-500 h-2 rounded-full transition-all" style={{ width: `${remainingPercentage}%` }} />
-              </div>
-            </div>
-          </div>
+        <div className="flex items-center gap-4">
+          <ThemeToggle theme={theme} onToggle={() => setTheme(theme === 'zen' ? 'paper' : 'zen')} />
+          <Button onClick={() => setIsLateModalOpen(true)} className={`h-11 px-6 font-black uppercase tracking-widest text-[10px] rounded-full shadow-lg hover:-translate-y-0.5 transition-all ${isDark ? 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-indigo-900/50' : 'bg-slate-900 text-white hover:bg-slate-800'}`}>
+            <Send className="w-4 h-4 mr-2" /> Yuborish / Request
+          </Button>
         </div>
       </div>
 
-      {/* SECTION 5 - HUJJATLARIM */}
-      <div className="mt-6 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-          <FileText className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
-          {t('employeeCabinet.documents.title')}
-        </h3>
-        {mockDocuments.length === 0 ? (
-          <div className="p-8 text-center">
-            <FileText className="w-12 h-12 text-gray-400 dark:text-gray-600 mx-auto mb-4" />
-            <p className="text-gray-500 dark:text-gray-400">{t('employeeCabinet.documents.noDocuments')}</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {mockDocuments.map((doc) => (
-              <div
-                key={doc.id}
-                className="p-4 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/70 transition-colors"
-              >
-                <div className="flex items-start justify-between mb-3">
-                  <div className="p-2 rounded-lg bg-indigo-50 dark:bg-indigo-900/20 flex-shrink-0">
-                    <FileText className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => {
-                        // TODO: Implement view document when backend API is ready
-                        alert(t('employeeCabinet.documents.viewPlaceholder'));
-                      }}
-                      className="p-1.5 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
-                      title={t('employeeCabinet.documents.view')}
-                    >
-                      <Eye className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => {
-                        // TODO: Implement download document when backend API is ready
-                        alert(t('employeeCabinet.documents.downloadPlaceholder'));
-                      }}
-                      className="p-1.5 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition-colors"
-                      title={t('employeeCabinet.documents.download')}
-                    >
-                      <Download className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-                <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-1">{getDocumentTypeLabel(doc.type)}</h4>
-                {doc.size && <p className="text-xs text-gray-400 dark:text-gray-500">{doc.size}</p>}
-              </div>
-            ))}
-            {/* Ish grafigi card */}
-            <div className="p-4 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/70 transition-colors">
-              <div className="flex items-start justify-between mb-3">
-                <div className="p-2 rounded-lg bg-indigo-50 dark:bg-indigo-900/20 flex-shrink-0">
-                  <Calendar className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
-                </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => {
-                      // TODO: Implement view work schedule when backend API is ready
-                      alert(t('employeeCabinet.documents.viewSchedulePlaceholder'));
-                    }}
-                    className="p-1.5 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
-                    title={t('employeeCabinet.documents.view')}
-                  >
-                    <Eye className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => {
-                      // TODO: Implement download work schedule when backend API is ready
-                      alert(t('employeeCabinet.documents.downloadSchedulePlaceholder'));
-                    }}
-                    className="p-1.5 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition-colors"
-                    title={t('employeeCabinet.documents.download')}
-                  >
-                    <Download className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-              <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-1">{t('employeeCabinet.documents.workSchedule')}</h4>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">{t('employeeCabinet.documents.workScheduleSubtitle')}</p>
-            </div>
-          </div>
-        )}
-      </div>
+      <div className="max-w-7xl mx-auto space-y-8">
 
-      {/* Late Report Modal */}
-      <Dialog open={isLateReportModalOpen} onOpenChange={setIsLateReportModalOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Kechikish sababini yuborish</DialogTitle>
-            <DialogDescription>
-              Kechikish sababini kiriting va HR bo'limiga yuboring
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="lateHours">
-                Necha soat kech qolding? *
-              </Label>
-              <Input
-                id="lateHours"
-                type="number"
-                min="0.5"
-                step="0.1"
-                value={lateReportForm.lateHours}
-                onChange={(e) => setLateReportForm({ ...lateReportForm, lateHours: e.target.value })}
-                placeholder="0.5"
-                required
-              />
+        {/* Hero Identity Banner (Glassmorphism) */}
+        <div className={`relative overflow-hidden rounded-3xl border ${isDark ? 'border-slate-800 bg-slate-900/40' : 'border-slate-200 bg-white'}`}>
+          <div className={`absolute top-0 right-0 w-[500px] h-[500px] rounded-full blur-[100px] pointer-events-none opacity-50 ${isDark ? 'bg-indigo-900/30' : 'bg-indigo-100'}`} />
+
+          <div className="p-8 sm:p-10 relative z-10 flex flex-col md:flex-row items-start md:items-center gap-8">
+
+            {/* Avatar & Badges */}
+            <div className="relative">
+              <div className={`w-32 h-32 rounded-3xl flex items-center justify-center shadow-2xl border-4 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-slate-100 border-white'}`}>
+                <User className={`w-14 h-14 ${isDark ? 'text-indigo-400' : 'text-indigo-600'}`} />
+              </div>
+              <div className="absolute -bottom-3 -right-3 flex flex-col gap-2">
+                <span className="flex items-center justify-center w-8 h-8 rounded-full bg-amber-500 text-white shadow-lg border-2 border-slate-900" title="Safety Expert"><ShieldCheck className="w-4 h-4" /></span>
+                <span className="flex items-center justify-center w-8 h-8 rounded-full bg-emerald-500 text-white shadow-lg border-2 border-slate-900" title="Master Operator"><Trophy className="w-4 h-4" /></span>
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="reason">
-                Kechikish sababi *
-              </Label>
-              <Select
-                value={lateReportForm.reason}
-                onValueChange={(value) => setLateReportForm({ ...lateReportForm, reason: value })}
-              >
-                <SelectTrigger id="reason">
-                  <SelectValue placeholder="Sababni tanlang" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="personal">Shaxsiy sabablar</SelectItem>
-                  <SelectItem value="transport">Transport muammosi</SelectItem>
-                  <SelectItem value="health">Sog'liq muammosi</SelectItem>
-                  <SelectItem value="other">Boshqa sabab</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="notes">
-                Izoh (ixtiyoriy, maksimal 300 belgi)
-              </Label>
-              <Textarea
-                id="notes"
-                rows={4}
-                maxLength={300}
-                value={lateReportForm.notes}
-                onChange={(e) => setLateReportForm({ ...lateReportForm, notes: e.target.value })}
-                placeholder="Qo'shimcha ma'lumot..."
-              />
-              <p className="text-xs text-gray-500 dark:text-gray-400">
-                {lateReportForm.notes.length}/300
+
+            {/* Details */}
+            <div className="flex-1">
+              <Badge className={`font-mono text-[10px] px-3 py-1 mb-3 ${isDark ? 'bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20' : 'bg-indigo-100 text-indigo-700'}`}>EMP-4092</Badge>
+              <h1 className={`text-4xl sm:text-5xl font-black ${textPrimary} tracking-tight mb-2`}>{mockEmployee.fullName}</h1>
+              <p className={`text-sm sm:text-base font-bold uppercase tracking-widest ${textMuted} flex flex-wrap items-center gap-4`}>
+                <span><Briefcase className="w-4 h-4 inline mr-1" /> {mockEmployee.position}</span>
+                <span>•</span>
+                <span><Building className="w-4 h-4 inline mr-1" /> {mockEmployee.department}</span>
               </p>
             </div>
+
+            {/* Shift Countdown */}
+            <div className={`mt-6 md:mt-0 p-6 rounded-2xl border min-w-[280px] text-center ${isDark ? 'bg-slate-950/50 border-slate-800 shadow-inner' : 'bg-slate-50 border-slate-200'}`}>
+              <p className={`text-[10px] font-black uppercase tracking-widest ${isDark ? 'text-indigo-400' : 'text-indigo-600'} mb-2`}>Keyingi Smena (Next Shift)</p>
+              <p className={`text-4xl font-mono font-black ${textPrimary} tracking-tighter`}>12<span className="text-xl text-slate-500 font-sans mx-1">soat</span>45<span className="text-xl text-slate-500 font-sans ml-1">min</span></p>
+              <p className={`text-xs font-bold ${textMuted} mt-2`}><Clock className="w-3.5 h-3.5 inline mr-1" /> Ertaga, 08:00 (1-smena)</p>
+            </div>
           </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setIsLateReportModalOpen(false);
-                setLateReportForm({ lateHours: '', reason: '', notes: '' });
-              }}
-            >
-              Bekor qilish
-            </Button>
-            <Button
-              onClick={handleSubmitLateReport}
-              disabled={!isFormValid()}
-            >
-              HR bo'limiga yuborish
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+
+          {/* ─── 2. Interactive Financial Hub ─── */}
+          <div className={`col-span-1 lg:col-span-2 rounded-3xl border p-6 sm:p-8 flex flex-col ${cardClass}`}>
+            <div className="flex justify-between items-center mb-6">
+              <h3 className={`text-lg font-black uppercase tracking-widest flex items-center gap-2 ${textPrimary}`}><DollarSign className={`w-5 h-5 ${isDark ? 'text-emerald-400' : 'text-emerald-600'}`} /> Financial Hub</h3>
+              <Button variant="ghost" size="sm" className={`text-xs font-bold ${textMuted}`}><Download className="w-4 h-4 mr-2" /> Payslip</Button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 flex-1">
+
+              {/* Salary Growth Trend */}
+              <div className="flex flex-col">
+                <div className="mb-4">
+                  <p className={`text-[10px] font-black uppercase tracking-widest ${textMuted}`}>Joriy Oylik (Net)</p>
+                  <p className={`text-4xl font-black ${isDark ? 'text-emerald-400' : 'text-emerald-600'} tracking-tight`}>{formatCurrency(3600000)}</p>
+                </div>
+                <div className={`flex-1 min-h-[150px] rounded-xl border p-4 ${isDark ? 'bg-slate-950 border-slate-800' : 'bg-slate-50 border-slate-200'}`}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={fakeSalaryTrend} margin={{ top: 5, right: 0, left: 0, bottom: 0 }}>
+                      <defs>
+                        <linearGradient id="colorSal" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor={isDark ? "#34d399" : "#059669"} stopOpacity={0.3} />
+                          <stop offset="95%" stopColor={isDark ? "#34d399" : "#059669"} stopOpacity={0} />
+                        </linearGradient>
+                      </defs>
+                      <Tooltip contentStyle={{ backgroundColor: isDark ? '#020617' : '#fff', borderRadius: '12px', border: 'none', fontWeight: 'bold' }} formatter={(val: number) => formatCurrency(val)} />
+                      <Area type="monotone" dataKey="val" stroke={isDark ? "#34d399" : "#059669"} strokeWidth={3} fill="url(#colorSal)" />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+
+              {/* Salary Estimator (Overtime) */}
+              <div className={`p-6 rounded-2xl border flex flex-col justify-center ${isDark ? 'bg-slate-950/50 border-slate-800' : 'bg-slate-50 border-slate-200'}`}>
+                <h4 className={`text-sm font-black flex items-center gap-2 mb-2 ${textPrimary}`}><Clock className="w-4 h-4 text-amber-500" /> Overtime Estimator</h4>
+                <p className={`text-xs font-medium mb-6 ${textMuted}`}>Qo'shimcha soat ishlasangiz qancha daromad topasiz?</p>
+
+                <div className="space-y-4">
+                  <div>
+                    <div className="flex justify-between text-[10px] font-black uppercase tracking-widest mb-2">
+                      <span className={textMuted}>Qo'shimcha Soat</span>
+                      <span className={isDark ? 'text-amber-400' : 'text-amber-600'}>{overtimeEst || '0'} soat</span>
+                    </div>
+                    <Input
+                      type="range" min="0" max="20" value={overtimeEst} onChange={e => setOvertimeEst(e.target.value)}
+                      className="w-full accent-amber-500 h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer"
+                    />
+                  </div>
+                  <div className={`p-4 rounded-xl border pt-3 text-center ${isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
+                    <p className={`text-[10px] font-black uppercase tracking-widest ${textMuted} mb-1`}>Taxminiy Bonus (+)</p>
+                    <p className={`text-2xl font-black ${isDark ? 'text-emerald-400' : 'text-emerald-600'}`}>
+                      {overtimeEst ? formatCurrency(parseInt(overtimeEst) * 45000) : formatCurrency(0)}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+          {/* ─── 3. Wellness & Heatmap ─── */}
+          <div className={`col-span-1 border rounded-3xl p-6 sm:p-8 flex flex-col gap-6 ${cardClass}`}>
+            <div>
+              <h3 className={`text-lg font-black uppercase tracking-widest flex items-center gap-2 mb-4 ${textPrimary}`}><HeartPulse className={`w-5 h-5 ${isDark ? 'text-rose-400' : 'text-rose-500'}`} /> Wellness & HSE</h3>
+              <div className={`p-5 rounded-2xl border flex items-center justify-between ${isDark ? 'bg-rose-950/20 border-rose-900/50' : 'bg-rose-50 border-rose-200'}`}>
+                <div>
+                  <p className={`text-[10px] font-black uppercase tracking-widest ${isDark ? 'text-rose-400' : 'text-rose-600'}`}>Safe Days</p>
+                  <p className={`text-3xl font-black ${textPrimary} tracking-tighter mt-1`}>{mockEmployee.safeDays}</p>
+                </div>
+                <ShieldCheck className={`w-10 h-10 ${isDark ? 'text-rose-500/50' : 'text-rose-400'}`} />
+              </div>
+            </div>
+
+            <div>
+              <h3 className={`text-sm font-black uppercase tracking-widest mb-4 ${textPrimary}`}>Attendance Heatmap</h3>
+              <div className={`p-4 rounded-2xl border ${isDark ? 'bg-slate-950/50 border-slate-800' : 'bg-slate-50 border-slate-200'}`}>
+                <div className="grid grid-cols-7 gap-1.5">
+                  {heatmap.map((status, i) => (
+                    <div key={i} className={`aspect-square rounded-sm border ${status === 'present' ? (isDark ? 'bg-emerald-500/80 border-emerald-600' : 'bg-emerald-500 border-emerald-600') :
+                      status === 'late' ? (isDark ? 'bg-amber-500/80 border-amber-600' : 'bg-amber-400 border-amber-500') :
+                        (isDark ? 'bg-slate-800 border-slate-700' : 'bg-slate-200 border-slate-300')
+                      }`} title={status} />
+                  ))}
+                </div>
+                <div className={`flex items-center justify-between mt-3 text-[9px] font-bold uppercase tracking-widest ${textMuted}`}>
+                  <span className="flex items-center gap-1"><div className="w-2 h-2 rounded-sm bg-emerald-500" /> Present</span>
+                  <span className="flex items-center gap-1"><div className="w-2 h-2 rounded-sm bg-amber-500" /> Late</span>
+                  <span className="flex items-center gap-1"><div className="w-2 h-2 bg-slate-700 rounded-sm" /> Absent</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* ─── 4. Gamification & Career ─── */}
+          <div className={`col-span-1 lg:col-span-3 border rounded-3xl p-6 sm:p-8 flex flex-col md:flex-row gap-8 ${cardClass}`}>
+
+            {/* Level & Learning */}
+            <div className="flex-1">
+              <h3 className={`text-lg font-black uppercase tracking-widest flex items-center gap-2 mb-6 ${textPrimary}`}><Trophy className={`w-5 h-5 ${isDark ? 'text-amber-400' : 'text-amber-500'}`} /> Career Path</h3>
+              <div className={`p-6 rounded-2xl border ${isDark ? 'bg-slate-950/50 border-slate-800' : 'bg-slate-50 border-slate-200'}`}>
+                <div className="flex justify-between items-end mb-4">
+                  <div>
+                    <p className={`text-[10px] uppercase font-black tracking-widest ${textMuted}`}>Current Rank</p>
+                    <p className={`text-2xl font-black ${textPrimary}`}>Level {mockEmployee.level}</p>
+                  </div>
+                  <p className={`text-xs font-bold ${isDark ? 'text-emerald-400' : 'text-emerald-600'}`}>{mockEmployee.learningProgress}% Completions</p>
+                </div>
+                <div className={`w-full h-3 rounded-full mb-3 overflow-hidden ${isDark ? 'bg-slate-800' : 'bg-slate-200'}`}>
+                  <div className="h-full bg-gradient-to-r from-amber-500 to-emerald-500 rounded-full" style={{ width: `${mockEmployee.learningProgress}%` }} />
+                </div>
+                <p className={`text-xs font-bold ${textMuted}`}><BookOpen className="w-3.5 h-3.5 inline mr-1" /> Keyingi daraja (Lvl 5) uchun 2 ta trening qoldi.</p>
+              </div>
+            </div>
+
+            {/* Kudos Wall */}
+            <div className="flex-1">
+              <h3 className={`text-lg font-black uppercase tracking-widest flex items-center gap-2 mb-6 ${textPrimary}`}><Star className={`w-5 h-5 ${isDark ? 'text-amber-400' : 'text-amber-500'}`} /> Kudos Wall</h3>
+              <div className={`h-[150px] rounded-2xl border p-6 flex flex-col items-center justify-center text-center relative overflow-hidden ${isDark ? 'bg-amber-950/10 border-amber-900/30' : 'bg-amber-50 border-amber-200'}`}>
+                <Star className={`absolute -right-4 -top-4 w-24 h-24 opacity-10 ${isDark ? 'text-amber-500' : 'text-amber-600'}`} />
+                <p className={`text-4xl font-black mb-1 ${isDark ? 'text-amber-400' : 'text-amber-600'}`}>{mockEmployee.kudos}</p>
+                <p className={`text-xs font-bold uppercase tracking-widest ${textMuted}`}>Total Rahmat received</p>
+                <p className={`text-xs font-medium mt-2 ${textPrimary}`}>"Excellent 5s organization yesterday!" - Manager</p>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      {/* ─── 5. Modern Request System Modal ─── */}
+      <Dialog open={isLateModalOpen} onOpenChange={setIsLateModalOpen}>
+        <DialogContent className={`sm:max-w-md border shadow-2xl ${isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
+          <DialogHeader className="mb-4">
+            <DialogTitle className={`text-2xl font-black ${textPrimary}`}>Submit Request</DialogTitle>
+            <DialogDescription className={`text-xs font-bold uppercase tracking-widest ${textMuted}`}>Kechikish / Sababli yo'qlik formasi</DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-6">
+
+            {/* Quick Presets */}
+            <div>
+              <Label className={`text-[10px] font-black uppercase tracking-widest ${textMuted} mb-3 block`}>1. Asosiy Sabab (Category)</Label>
+              <div className="grid grid-cols-3 gap-3">
+                <button onClick={() => setLateForm({ ...lateForm, category: 'Transport' })} className={`p-3 rounded-xl border flex flex-col items-center gap-2 transition-all ${lateForm.category === 'Transport' ? (isDark ? 'bg-indigo-600/20 border-indigo-500 text-indigo-400' : 'bg-indigo-50 border-indigo-500 text-indigo-700') : (isDark ? 'bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-600' : 'bg-slate-50 border-slate-200 text-slate-600')}`}>
+                  <Car className="w-5 h-5" /> <span className="text-[10px] font-black uppercase">Transport</span>
+                </button>
+                <button onClick={() => setLateForm({ ...lateForm, category: 'Health' })} className={`p-3 rounded-xl border flex flex-col items-center gap-2 transition-all ${lateForm.category === 'Health' ? (isDark ? 'bg-rose-600/20 border-rose-500 text-rose-400' : 'bg-rose-50 border-rose-500 text-rose-700') : (isDark ? 'bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-600' : 'bg-slate-50 border-slate-200 text-slate-600')}`}>
+                  <Heart className="w-5 h-5" /> <span className="text-[10px] font-black uppercase">Sog'liq</span>
+                </button>
+                <button onClick={() => setLateForm({ ...lateForm, category: 'Family' })} className={`p-3 rounded-xl border flex flex-col items-center gap-2 transition-all ${lateForm.category === 'Family' ? (isDark ? 'bg-amber-600/20 border-amber-500 text-amber-400' : 'bg-amber-50 border-amber-500 text-amber-700') : (isDark ? 'bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-600' : 'bg-slate-50 border-slate-200 text-slate-600')}`}>
+                  <UserMinus className="w-5 h-5" /> <span className="text-[10px] font-black uppercase">Oila</span>
+                </button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label className={`text-[10px] font-black uppercase tracking-widest ${textMuted} mb-2 block`}>2. Vaqt (Soat)</Label>
+                <Input type="number" placeholder="Uzunligi (mas: 2)" value={lateForm.hours} onChange={e => setLateForm({ ...lateForm, hours: e.target.value })} className={`h-12 font-black ${isDark ? 'bg-slate-950 border-slate-800' : ''}`} />
+              </div>
+              <div>
+                <Label className={`text-[10px] font-black uppercase tracking-widest ${textMuted} mb-2 block`}>3. Isbot (Ixtiyoriy)</Label>
+                <div className={`relative h-12 rounded-xl flex items-center justify-center border-2 border-dashed cursor-pointer overflow-hidden transition-all ${lateForm.photo ? (isDark ? 'border-emerald-500' : 'border-emerald-500') : (isDark ? 'border-slate-700 hover:border-slate-500' : 'border-slate-300')}`}>
+                  {lateForm.photo ? <img src={lateForm.photo} className="w-full h-full object-cover opacity-50" /> : <Camera className={`w-5 h-5 ${textMuted}`} />}
+                  <input type="file" accept="image/*" onChange={handlePhotoUpload} className="absolute inset-0 opacity-0 cursor-pointer w-full h-full" />
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <Label className={`text-[10px] font-black uppercase tracking-widest ${textMuted} mb-2 block`}>4. Izoh (Comment)</Label>
+              <Textarea placeholder="Qo'shimcha tafsilotlar..." value={lateForm.text} onChange={e => setLateForm({ ...lateForm, text: e.target.value })} className={`resize-none h-24 ${isDark ? 'bg-slate-950 border-slate-800' : ''}`} />
+            </div>
+
+          </div>
+
+          <DialogFooter className="mt-6 border-t pt-4 border-slate-800">
+            <Button onClick={() => setIsLateModalOpen(false)} variant="ghost" className={`font-black uppercase tracking-widest text-[10px] ${textMuted} hover:${textPrimary}`}>Cancel</Button>
+            <Button onClick={submitRequest} className={`px-6 font-black uppercase tracking-widest text-[10px] rounded-xl shadow-lg ${isDark ? 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-indigo-900/50' : 'bg-slate-900 text-white hover:bg-slate-800'}`}>
+              <Send className="w-4 h-4 mr-2" /> Submit to HR
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
-  );
-}
 
-interface DetailRowProps {
-  icon: React.ComponentType<{ className?: string }>;
-  label: string;
-  value: string;
-}
-
-function DetailRow({ icon: Icon, label, value }: DetailRowProps) {
-  return (
-    <div className="flex items-center gap-2">
-      <Icon className="w-4 h-4 text-gray-400 dark:text-gray-500" />
-      <div>
-        <span className="text-xs text-gray-500 dark:text-gray-400">{label}: </span>
-        <span className="text-sm font-medium text-gray-900 dark:text-white">{value}</span>
-      </div>
     </div>
   );
 }
