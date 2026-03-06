@@ -68,6 +68,24 @@ const fakeSalaryTrend = [
   { month: 'Fev', val: 3600000 }
 ];
 
+type DocStatus = 'Yangi' | 'Ko\'rilgan' | 'Tasdiqlangan';
+interface ArchiveDoc {
+  id: string;
+  title: string;
+  category: string;
+  date: string;
+  status: DocStatus;
+  type: 'pdf' | 'img';
+  size: string;
+}
+
+const initialArchiveDocs: ArchiveDoc[] = [
+  { id: 'd1', title: 'Liniya Operatori Yo\'riqnomasi v2.0', category: 'SOP', date: '2026-03-01', status: 'Yangi', type: 'pdf', size: '2.4 MB' },
+  { id: 'd2', title: 'Mart 2026 Smena Jadvali', category: 'Ish grafigi', date: '2026-02-28', status: 'Ko\'rilgan', type: 'img', size: '1.2 MB' },
+  { id: 'd3', title: 'Qo\'shimcha bonus hisoblash tartibi', category: 'Buyruq va Farmoyishlar', date: '2026-02-15', status: 'Tasdiqlangan', type: 'pdf', size: '0.8 MB' },
+  { id: 'd4', title: 'LEAN va 5S Praktikasi Sertifikati', category: 'Sertifikat va Mukofotlar', date: '2026-01-20', status: 'Tasdiqlangan', type: 'pdf', size: '3.5 MB' },
+];
+
 const generateHeatmap = () => {
   const days = [];
   for (let i = 0; i < 30; i++) days.push(Math.random() > 0.15 ? 'present' : (Math.random() > 0.5 ? 'late' : 'absent'));
@@ -80,6 +98,9 @@ export function EmployeeCabinetPage() {
   const [isLateModalOpen, setIsLateModalOpen] = useState(false);
   const [lateForm, setLateForm] = useState({ category: '', hours: '', text: '', photo: null as string | null });
   const [overtimeEst, setOvertimeEst] = useState('');
+
+  const [archiveDocs, setArchiveDocs] = useState<ArchiveDoc[]>(initialArchiveDocs);
+  const [viewingDoc, setViewingDoc] = useState<ArchiveDoc | null>(null);
 
   const heatmap = generateHeatmap();
 
@@ -106,6 +127,21 @@ export function EmployeeCabinetPage() {
     toast.success("So'rov muvaffaqiyatli yuborildi", { description: "HR bo'limi ko'rib chiqmoqda." });
     setIsLateModalOpen(false);
     setLateForm({ category: '', hours: '', text: '', photo: null });
+  };
+
+  const handleAcknowledge = () => {
+    if (viewingDoc) {
+      setArchiveDocs(prev => prev.map(d => d.id === viewingDoc.id ? { ...d, status: 'Tasdiqlangan' } : d));
+      toast.success("Hujjat tasdiqlandi", { description: "Tasdiqlash HR tizimiga yozildi.", icon: <CheckCircle2 className="w-5 h-5 text-emerald-500" /> });
+      setViewingDoc(null);
+    }
+  };
+
+  const handleView = (doc: ArchiveDoc) => {
+    if (doc.status === 'Yangi') {
+      setArchiveDocs(prev => prev.map(d => d.id === doc.id ? { ...d, status: 'Ko\'rilgan' } : d));
+    }
+    setViewingDoc(doc);
   };
 
   // ─── 1. Smart Header & Identity ───
@@ -293,6 +329,44 @@ export function EmployeeCabinetPage() {
 
           </div>
         </div>
+
+        {/* ─── 5. My Digital Archive ─── */}
+        <div className={`mt-8 border rounded-3xl p-6 sm:p-8 flex flex-col ${cardClass}`}>
+          <h3 className={`text-lg font-black uppercase tracking-widest flex items-center gap-2 mb-6 border-b pb-4 ${textPrimary} ${isDark ? 'border-slate-800' : 'border-slate-200'}`}>
+            <FileText className={`w-5 h-5 ${isDark ? 'text-indigo-400' : 'text-indigo-600'}`} /> SHAXSIY HUJJATLAR ARXIVI
+          </h3>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {archiveDocs.map(doc => {
+              const isNew = doc.status === 'Yangi';
+              const isAck = doc.status === 'Tasdiqlangan';
+              return (
+                <div key={doc.id} className={`p-5 rounded-3xl border flex flex-col relative transition-all duration-300 hover:-translate-y-1.5 hover:shadow-xl cursor-pointer group overflow-hidden ${isDark ? 'bg-slate-950/50 border-slate-800 hover:border-indigo-500/50 hover:bg-slate-900' : 'bg-slate-50 border-slate-200 hover:border-indigo-300 hover:bg-white'}`} onClick={() => handleView(doc)}>
+                  {isNew && <div className="absolute top-0 right-0 py-1.5 px-3 bg-rose-500 text-white text-[9px] font-black uppercase tracking-widest rounded-bl-xl shadow-lg shadow-rose-500/30">New</div>}
+
+                  <div className="flex justify-between items-start mb-5 text-[10px] font-black uppercase tracking-widest pt-1">
+                    <span className={isDark ? 'text-indigo-400' : 'text-indigo-600'}>{doc.category}</span>
+                  </div>
+
+                  <div className="flex items-start gap-4 mb-6">
+                    <div className={`p-3.5 rounded-2xl flex-shrink-0 ${isDark ? 'bg-slate-800' : 'bg-white border'}`}>
+                      <FileText className={`w-6 h-6 ${doc.type === 'pdf' ? 'text-rose-500' : 'text-emerald-500'}`} />
+                    </div>
+                    <h4 className={`text-sm font-black leading-snug ${textPrimary} group-hover:text-indigo-500 transition-colors`}>{doc.title}</h4>
+                  </div>
+
+                  <div className="mt-auto flex justify-between items-center pt-4 border-t border-slate-800/20 dark:border-slate-700/50">
+                    <Badge className={`font-mono text-[9px] font-black uppercase px-2 py-0.5 ${isNew ? 'bg-rose-500/10 text-rose-500' :
+                        isAck ? 'bg-emerald-500/10 text-emerald-500' :
+                          'bg-amber-500/10 text-amber-500'
+                      }`}>{doc.status}</Badge>
+                    <span className={`text-[10px] font-bold ${textMuted} flex items-center gap-1.5`}><Calendar className="w-3.5 h-3.5" /> {doc.date}</span>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
       </div>
 
       {/* ─── 5. Modern Request System Modal ─── */}
@@ -350,6 +424,47 @@ export function EmployeeCabinetPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* ─── 6. Document Viewer Modal ─── */}
+      <Dialog open={!!viewingDoc} onOpenChange={(o) => (!o) && setViewingDoc(null)}>
+        <DialogContent className={`sm:max-w-4xl border shadow-2xl h-[85vh] flex flex-col p-0 overflow-hidden ${isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
+          <DialogHeader className="mb-0 shrink-0 border-b p-6 pb-5 border-slate-800/50">
+            <div className="flex justify-between items-start pr-6">
+              <div>
+                <Badge className={`font-mono text-[10px] uppercase font-black px-2 py-0.5 mb-2 ${isDark ? 'bg-indigo-500/10 text-indigo-400' : 'bg-indigo-100 text-indigo-700'}`}>{viewingDoc?.category}</Badge>
+                <DialogTitle className={`text-2xl font-black ${textPrimary} leading-tight`}>{viewingDoc?.title}</DialogTitle>
+                <DialogDescription className={`text-xs font-bold uppercase tracking-widest ${textMuted} mt-2 flex items-center gap-3`}>
+                  <span><Calendar className="w-3.5 h-3.5 inline mr-1" /> {viewingDoc?.date}</span>
+                  <span>•</span>
+                  <span>File Size: {viewingDoc?.size}</span>
+                </DialogDescription>
+              </div>
+              <Button className={`font-black uppercase tracking-widest text-[10px] h-10 px-4 rounded-xl ${isDark ? 'bg-slate-800 hover:bg-slate-700 text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-900'}`}><Download className="w-4 h-4 mr-2" /> Yuklab olish</Button>
+            </div>
+          </DialogHeader>
+
+          <div className={`flex-1 m-6 mt-2 rounded-2xl border flex items-center justify-center relative shadow-inner overflow-hidden ${isDark ? 'bg-slate-950 border-slate-800' : 'bg-slate-100 border-slate-200'}`}>
+            <div className="absolute inset-0 flex flex-col items-center justify-center opacity-20 select-none">
+              <FileText className="w-32 h-32 mb-6 text-slate-500" />
+              <p className="text-xl font-black uppercase tracking-widest">SECURE PDF PREVIEW</p>
+              <p className="text-sm font-bold mt-2 font-mono">UID: {viewingDoc?.id} • HR VALIDATED</p>
+            </div>
+          </div>
+
+          <div className="p-6 pt-0 shrink-0">
+            {viewingDoc?.status !== 'Tasdiqlangan' ? (
+              <Button onClick={handleAcknowledge} className={`w-full h-14 font-black uppercase tracking-widest text-sm rounded-xl shadow-[0_0_30px_rgba(16,185,129,0.2)] hover:shadow-[0_0_40px_rgba(16,185,129,0.4)] transition-all transform hover:-translate-y-1 ${isDark ? 'bg-emerald-600 hover:bg-emerald-500 text-white' : 'bg-emerald-600 text-white hover:bg-emerald-700'}`}>
+                <CheckCircle2 className="w-5 h-5 mr-3" /> Tanishdim va Tasdiqlayman
+              </Button>
+            ) : (
+              <div className={`w-full h-14 flex items-center justify-center font-black uppercase tracking-widest text-sm rounded-xl border-2 ${isDark ? 'bg-emerald-950/30 border-emerald-900/50 text-emerald-500' : 'bg-emerald-50 border-emerald-200 text-emerald-700'}`}>
+                <ShieldCheck className="w-5 h-5 mr-3" /> Hujjat Tasdiqlangan (HR Synced)
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
 
     </div>
   );
