@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useLanguage } from '../context/LanguageContext';
-import { Package, AlertTriangle, CheckCircle, Search, ArrowRight, Layers, Box, AlertCircle, Info, Check, Image as ImageIcon, TrendingDown, MapPin, Zap, Clock, Undo2, Filter, X, ChevronDown, ChevronRight, ArrowUpDown, ArrowUp, ArrowDown, ShieldAlert, Plus, Trash2, PackageCheck, Printer, ScanLine, Barcode, Keyboard, Settings2 } from 'lucide-react';
+import { Package, AlertTriangle, CheckCircle, Search, ArrowRight, Layers, Box, AlertCircle, Info, Check, Image as ImageIcon, TrendingDown, MapPin, Zap, Clock, Undo2, Filter, X, ChevronDown, ChevronRight, ArrowUpDown, ArrowUp, ArrowDown, ShieldAlert, Plus, Trash2, PackageCheck, Printer, ScanLine, Barcode, Keyboard, Settings2, User, UserPlus } from 'lucide-react';
 import { Button } from './ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from './ui/dialog';
 import { Input } from './ui/input';
@@ -118,7 +118,7 @@ const initialMaterials: MockMaterial[] = [
 ];
 
 export function Warehouse() {
-  const { requests, updateRequestStatus } = useWarehouse();
+  const { requests, updateRequestStatus, assignRequest } = useWarehouse();
   const { productionLines } = useFactory();
 
   const totalDowntime = productionLines.reduce((acc, line) => acc + (line.downtimeRecord?.accumulatedMinutes || 0), 0);
@@ -708,90 +708,139 @@ export function Warehouse() {
     return <ArrowUpDown className="w-3 h-3 ml-1 inline opacity-20 group-hover:opacity-100 transition-opacity" />;
   };
 
-  const RequestCard = ({ req }: { req: MockRequest }) => {
+  const TaskCard = ({ req }: { req: MockRequest }) => {
     const isIssuedToLine = req.status === 'ON LINE' || req.status === 'Completed';
     const isPicking = req.status === 'Issuing';
 
     // Timer Logic
     const [timeLeft, setTimeLeft] = useState<number>(Math.max(0, req.targetTime - Date.now()));
-    const isUrgent = timeLeft < 5 * 60000; // less than 5 minutes
 
     useEffect(() => {
       if (isIssuedToLine) return;
-
       const interval = setInterval(() => {
-        const remaining = Math.max(0, req.targetTime - Date.now());
-        setTimeLeft(remaining);
+        setTimeLeft(Math.max(0, req.targetTime - Date.now()));
       }, 1000);
-
       return () => clearInterval(interval);
     }, [req.targetTime, isIssuedToLine]);
 
     const formatTime = (ms: number) => {
       const totalSeconds = Math.floor(ms / 1000);
-      const minutes = Math.floor(totalSeconds / 60);
-      const seconds = totalSeconds % 60;
-      return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+      const m = Math.floor(totalSeconds / 60);
+      const s = totalSeconds % 60;
+      return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
     };
 
-    // Calculate shortages
-    const shortages = req.items.filter(item => {
-      const m = materials.find(x => x.id === item.partNumber);
-      return m ? (m.current_stock < item.requiredQty) : true;
-    });
-    const hasShortage = shortages.length > 0;
+    const isUrgent = timeLeft < 5 * 60000 && !isIssuedToLine;
+
+    const totalItems = req.items.reduce((acc, item) => acc + item.requiredQty, 0);
+
+    const handleAssign = () => {
+      assignRequest(req.id, 'Demo Worker');
+    };
+
+    const handleStatusMove = () => {
+      if (req.status === 'Pending') updateRequestStatus(req.id, 'Issuing');
+      else if (req.status === 'Issuing') handleOpenKit(req);
+    };
+
+    const priorityColors: Record<string, string> = {
+      High: 'bg-red-500 text-white',
+      Normal: 'bg-blue-500 text-white',
+      Low: 'bg-slate-400 text-white'
+    };
+
+    const priorityColor = req.priority ? priorityColors[req.priority] : priorityColors.Normal;
 
     return (
-      <div className={`border rounded p-3 transition-colors relative overflow-hidden ${isIssuedToLine ? 'bg-green-500/5 border-green-500/20' : isPicking ? 'bg-indigo-500/5 border-indigo-500/20' : 'bg-background border-border shadow-sm hover:border-primary/40'}`}>
-        <div className={`absolute left-0 top-0 bottom-0 w-1 ${isIssuedToLine ? 'bg-green-500' : isPicking ? 'bg-indigo-500' : 'bg-blue-500'}`} />
+      <div className={`relative bg-background border ${isUrgent ? 'border-red-500/50 shadow-red-500/10' : 'border-border'} rounded-xl shadow-sm hover:shadow-md transition-all overflow-hidden flex flex-col group`}>
+        {/* Priority Left Border */}
+        <div className={`absolute left-0 top-0 bottom-0 w-1.5 ${priorityColor}`} />
 
-        <div className="flex justify-between items-start mb-1.5 pl-1.5">
-          <span className={`text-[10px] font-bold tracking-widest ${isIssuedToLine ? 'text-green-600 dark:text-green-500' : isPicking ? 'text-indigo-500' : 'text-blue-500'}`}>{req.id}</span>
-          <span className="text-[10px] font-medium text-muted-foreground">{req.time}</span>
-        </div>
+        <div className="p-3 pl-4 flex flex-col h-full gap-3">
+          {/* Header Row */}
+          <div className="flex justify-between items-start gap-2">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 mb-1">
+                <span className="font-mono text-xs font-bold shrink-0">#{req.id}</span>
+                <Badge variant="secondary" className="text-[9px] uppercase tracking-wider py-0 shadow-sm shrink-0">
+                  {req.type || 'Picking'}
+                </Badge>
+                {req.priority && (
+                  <Badge variant="outline" className={`text-[9px] uppercase tracking-wider py-0 px-1 border-0 ${priorityColor} shrink-0`}>
+                    {req.priority}
+                  </Badge>
+                )}
+              </div>
+              <h4 className="font-bold text-sm truncate" title={req.planId}>{req.planId}</h4>
+            </div>
 
-        <p className="font-bold text-sm mb-2 pl-1.5 text-foreground">{req.planId}</p>
-
-        <div className="flex items-center justify-between pl-1.5 mb-3">
-          <div className="flex items-center gap-2 text-xs text-muted-foreground font-mono">
-            <Layers className="w-3.5 h-3.5 text-muted-foreground/60" />
-            <span>{req.items.length} SKUs</span>
+            {/* Timestamp & Countdown */}
+            <div className="flex flex-col items-end gap-1 shrink-0">
+              {req.createdAt && (
+                <span className="text-[10px] text-muted-foreground flex items-center gap-1">
+                  <Clock className="w-3 h-3" />
+                  {new Date(req.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </span>
+              )}
+              {req.priority === 'High' && !isIssuedToLine && (
+                <div className={`text-[10px] font-bold px-1.5 py-0.5 rounded border flex items-center gap-1 ${isUrgent ? 'animate-pulse bg-red-500/10 text-red-500 border-red-500/30' : 'bg-orange-500/10 text-orange-500 border-orange-500/30'}`}>
+                  {formatTime(timeLeft)}
+                </div>
+              )}
+            </div>
           </div>
 
-          {/* TIME TO LINE TRACKING */}
+          {/* Source & Destination Row */}
+          <div className="bg-muted/30 rounded p-2 flex items-center justify-between text-[11px] font-medium text-muted-foreground border border-border/50">
+            <div className="flex items-center gap-1.5 truncate">
+              <MapPin className="w-3.5 h-3.5 shrink-0" />
+              <span className="truncate">{req.source || 'Bins'}</span>
+            </div>
+            <ArrowRight className="w-3 h-3 mx-2 opacity-50 shrink-0" />
+            <div className="flex items-center gap-1.5 truncate">
+              <span className="truncate">{req.destination || 'Line'}</span>
+            </div>
+          </div>
+
+          {/* Stats Row */}
+          <div className="flex items-center justify-between mt-auto">
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-mono" title={`${req.items.length} SKUs`}>
+                <Layers className="w-3.5 h-3.5" />
+                <span>{req.items.length}</span>
+              </div>
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-mono" title={`${totalItems} Total Pcs`}>
+                <Box className="w-3.5 h-3.5" />
+                <span>{totalItems}</span>
+              </div>
+            </div>
+
+            {/* Assignment & Action */}
+            <div className="flex items-center gap-2">
+              {req.assignee ? (
+                <div className="flex items-center gap-1.5 bg-primary/10 text-primary border border-primary/20 rounded-full px-2 py-1 text-[10px] font-bold">
+                  <User className="w-3 h-3" />
+                  <span className="max-w-[70px] truncate">{req.assignee}</span>
+                </div>
+              ) : (
+                <Button variant="ghost" size="sm" onClick={handleAssign} className="h-6 px-2 text-[10px] border border-dashed border-border text-muted-foreground hover:text-foreground">
+                  <UserPlus className="w-3 h-3 mr-1" /> Assign Me
+                </Button>
+              )}
+            </div>
+          </div>
+
+          {/* Bottom Action Footer */}
           {!isIssuedToLine && (
-            <div className={`flex items-center gap-1.5 text-[10px] font-bold px-2 py-0.5 rounded border ${isUrgent ? 'bg-red-500/10 text-red-600 border-red-500/30 animate-pulse' : 'bg-muted/50 text-muted-foreground border-border/50'}`}>
-              <Clock className="w-3 h-3" />
-              {timeLeft === 0 ? "LATE" : formatTime(timeLeft)} min
+            <div className="pt-2 mt-1 border-t border-border/40">
+              <Button
+                onClick={handleStatusMove}
+                className={`w-full h-7 text-[10px] font-bold tracking-wider uppercase ${req.status === 'Pending' ? 'bg-indigo-500 hover:bg-indigo-600 text-white shadow-md' : 'bg-primary hover:bg-primary/90 text-primary-foreground shadow-md'}`}
+              >
+                {req.status === 'Pending' ? 'Start Picking' : 'Complete & Issue'} <ArrowRight className="w-3 h-3 ml-1.5" />
+              </Button>
             </div>
           )}
-        </div>
-
-        {hasShortage && !isIssuedToLine && (
-          <div className="pl-1.5 mb-3">
-            <Button variant="ghost" className="h-6 px-2 text-[10px] text-red-500 hover:text-red-600 hover:bg-red-500/10 border border-red-500/20" onClick={() => {
-              setSearchTerm(shortages[0].partNumber);
-              setActiveTab('inventory');
-            }}>
-              <AlertTriangle className="w-3 h-3 mr-1" /> Missing Parts
-            </Button>
-          </div>
-        )}
-
-        <div className="pt-2 border-t border-border/40 flex justify-between items-center pl-1.5 mt-auto">
-          <span className={`text-[10px] uppercase font-bold tracking-wider flex items-center gap-1 ${isIssuedToLine ? 'text-green-500' : isPicking ? 'text-indigo-500' : 'text-blue-600 dark:text-blue-400'}`}>
-            {(isIssuedToLine || isPicking) && <div className={`w-1.5 h-1.5 rounded-full animate-pulse ${isIssuedToLine ? 'bg-green-500' : 'bg-indigo-500'}`} />}
-            {req.status}
-          </span>
-          <Button
-            size="sm"
-            variant={isIssuedToLine ? "outline" : "default"}
-            className={`h-7 px-3 text-xs font-semibold uppercase tracking-wide ${!isIssuedToLine && 'shadow-sm'}`}
-            onClick={() => handleOpenKit(req)}
-            disabled={isIssuedToLine}
-          >
-            {isIssuedToLine ? 'View Log' : (<>Review Kit <ArrowRight className="w-3 h-3 ml-1.5" /></>)}
-          </Button>
         </div>
       </div>
     );
@@ -1449,35 +1498,83 @@ export function Warehouse() {
           </div>
         </TabsContent>
 
-        <TabsContent value="operations" className="flex-1 min-h-[500px]">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 h-full max-h-[80vh]">
-            <div className="bg-muted/10 border border-border rounded-lg flex flex-col overflow-hidden max-h-full">
-              <div className="p-3 border-b border-border bg-muted/30 font-bold text-sm flex items-center justify-between">
-                <span>To Do</span>
-                <span className="text-[10px] bg-muted px-2 py-0.5 rounded border border-border/50">{requests.filter(r => r.status === 'Pending').length}</span>
+        <TabsContent value="operations" className="flex-1 min-h-[500px] flex flex-col pt-2">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="text-lg font-bold text-foreground">Task Execution Board</h3>
+              <p className="text-sm text-muted-foreground">Monitor and manage warehouse operations in real-time.</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Badge variant="outline" className="bg-muted text-xs font-mono"><Layers className="w-3.5 h-3.5 mr-1.5" /> {requests.length} Total Tasks</Badge>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 lg:gap-6 flex-1 h-full min-h-0">
+            {/* To Do Column */}
+            <div className="bg-muted/10 border border-border rounded-xl flex flex-col overflow-hidden h-full shadow-sm max-h-[75vh]">
+              <div className="p-3 border-b border-border/60 bg-muted/20 flex flex-col gap-1 shrink-0">
+                <div className="flex items-center justify-between font-bold text-sm text-foreground">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2.5 h-2.5 rounded-full bg-slate-400 shadow-[0_0_8px_rgba(148,163,184,0.5)]"></div>
+                    <span>To Do</span>
+                  </div>
+                  <Badge variant="secondary" className="text-xs">{requests.filter(r => r.status === 'Pending').length}</Badge>
+                </div>
               </div>
-              <div className="p-3 overflow-y-auto flex-1 space-y-3">
-                {requests.filter(r => r.status === 'Pending').map(req => <RequestCard key={req.id} req={req} />)}
+              <div className="p-3 overflow-y-auto flex-1 bg-gradient-to-b from-muted/5 to-transparent flex flex-col gap-3">
+                {requests.filter(r => r.status === 'Pending').length === 0 ? (
+                  <div className="flex flex-col items-center justify-center flex-1 text-muted-foreground opacity-60 min-h-[150px]">
+                    <PackageCheck className="w-10 h-10 mb-2 opacity-30" />
+                    <span className="text-sm font-medium">No pending tasks</span>
+                  </div>
+                ) : (
+                  requests.filter(r => r.status === 'Pending').map(req => <TaskCard key={req.id} req={req} />)
+                )}
               </div>
             </div>
 
-            <div className="bg-indigo-500/5 border border-indigo-500/20 rounded-lg flex flex-col overflow-hidden max-h-full">
-              <div className="p-3 border-b border-indigo-500/20 bg-indigo-500/10 font-bold text-sm text-indigo-600 dark:text-indigo-400 flex items-center justify-between">
-                <span>In Progress (Picking)</span>
-                <span className="text-[10px] bg-indigo-500/20 px-2 py-0.5 rounded">{requests.filter(r => r.status === 'Issuing').length}</span>
+            {/* In Progress Column */}
+            <div className="bg-indigo-500/5 border border-indigo-500/20 rounded-xl flex flex-col overflow-hidden h-full shadow-sm max-h-[75vh]">
+              <div className="p-3 border-b border-indigo-500/10 bg-indigo-500/10 flex flex-col gap-1 shrink-0">
+                <div className="flex items-center justify-between font-bold text-sm text-indigo-700 dark:text-indigo-400">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2.5 h-2.5 rounded-full bg-indigo-500 animate-pulse shadow-[0_0_8px_rgba(99,102,241,0.6)]"></div>
+                    <span>In Progress (Picking)</span>
+                  </div>
+                  <Badge className="bg-indigo-500/20 text-indigo-700 dark:text-indigo-400 hover:bg-indigo-500/30 border-0">{requests.filter(r => r.status === 'Issuing').length}</Badge>
+                </div>
               </div>
-              <div className="p-3 overflow-y-auto flex-1 space-y-3">
-                {requests.filter(r => r.status === 'Issuing').map(req => <RequestCard key={req.id} req={req} />)}
+              <div className="p-3 overflow-y-auto flex-1 bg-gradient-to-b from-indigo-500/5 to-transparent flex flex-col gap-3">
+                {requests.filter(r => r.status === 'Issuing').length === 0 ? (
+                  <div className="flex flex-col items-center justify-center flex-1 text-indigo-500/50 min-h-[150px]">
+                    <Box className="w-10 h-10 mb-2 opacity-30" />
+                    <span className="text-sm font-medium">No active picking tasks</span>
+                  </div>
+                ) : (
+                  requests.filter(r => r.status === 'Issuing').map(req => <TaskCard key={req.id} req={req} />)
+                )}
               </div>
             </div>
 
-            <div className="bg-green-500/5 border border-green-500/20 rounded-lg flex flex-col overflow-hidden max-h-full">
-              <div className="p-3 border-b border-green-500/20 bg-green-500/10 font-bold text-sm text-green-600 dark:text-green-500 flex items-center justify-between">
-                <span>Issued</span>
-                <span className="text-[10px] bg-green-500/20 px-2 py-0.5 rounded">{requests.filter(r => r.status === 'ON LINE' || r.status === 'Completed').length}</span>
+            {/* Completed Column */}
+            <div className="bg-green-500/5 border border-green-500/20 rounded-xl flex flex-col overflow-hidden h-full shadow-sm max-h-[75vh]">
+              <div className="p-3 border-b border-green-500/10 bg-green-500/10 flex flex-col gap-1 shrink-0">
+                <div className="flex items-center justify-between font-bold text-sm text-green-700 dark:text-green-500">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2.5 h-2.5 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]"></div>
+                    <span>Issued / Complete</span>
+                  </div>
+                  <Badge className="bg-green-500/20 text-green-700 dark:text-green-500 hover:bg-green-500/30 border-0">{requests.filter(r => r.status === 'ON LINE' || r.status === 'Completed').length}</Badge>
+                </div>
               </div>
-              <div className="p-3 overflow-y-auto flex-1 space-y-3">
-                {requests.filter(r => r.status === 'ON LINE' || r.status === 'Completed').map(req => <RequestCard key={req.id} req={req} />)}
+              <div className="p-3 overflow-y-auto flex-1 bg-gradient-to-b from-green-500/5 to-transparent flex flex-col gap-3">
+                {requests.filter(r => r.status === 'ON LINE' || r.status === 'Completed').length === 0 ? (
+                  <div className="flex flex-col items-center justify-center flex-1 text-green-500/50 min-h-[150px]">
+                    <CheckCircle className="w-10 h-10 mb-2 opacity-30" />
+                    <span className="text-sm font-medium">No completed tasks yet</span>
+                  </div>
+                ) : (
+                  requests.filter(r => r.status === 'ON LINE' || r.status === 'Completed').map(req => <TaskCard key={req.id} req={req} />)
+                )}
               </div>
             </div>
           </div>

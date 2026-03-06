@@ -17,7 +17,12 @@ export interface MockRequest {
   time: string;
   items: PickListItem[];
   targetTime: number;
-  priority?: 'Normal' | 'High';
+  priority?: 'High' | 'Normal' | 'Low';
+  assignee?: string;
+  type?: string;
+  source?: string;
+  destination?: string;
+  createdAt?: string;
 }
 
 interface WarehouseContextType {
@@ -31,8 +36,9 @@ interface WarehouseContextType {
   reserveFinishedGoods: (sku: string, quantity: number) => void;
   releaseReservation: (sku: string, quantity: number) => void;
   requests: MockRequest[];
-  addMaterialRequest: (planId: string, items: PickListItem[], priority?: 'Normal' | 'High') => void;
+  addMaterialRequest: (planId: string, items: PickListItem[], priority?: 'High' | 'Normal' | 'Low', type?: string, destination?: string) => void;
   updateRequestStatus: (id: string, status: MockRequest['status']) => void;
+  assignRequest: (id: string, workerName: string) => void;
 }
 
 const WarehouseContext = createContext<WarehouseContextType | undefined>(undefined);
@@ -91,14 +97,69 @@ const initialFinishedGoods: FinishedGoodsRecord[] = [
   },
 ];
 
-const initialRequests: MockRequest[] = [];
+const initialRequests: MockRequest[] = [
+  {
+    id: 'PK-102',
+    planId: 'Plan B-2',
+    status: 'Pending',
+    time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+    items: [
+      { id: '1', name: 'Metal Clips', partNumber: 'COMP-001', requiredQty: 200, currentStock: 50000 },
+      { id: '2', name: 'Rubber Seals', partNumber: 'COMP-002', requiredQty: 50, currentStock: 200 }
+    ],
+    targetTime: Date.now() + 45 * 60000,
+    priority: 'Normal',
+    type: 'Picking',
+    source: 'Zone A',
+    destination: 'Line B',
+    createdAt: new Date(Date.now() - 10 * 60000).toISOString()
+  },
+  {
+    id: 'PK-105',
+    planId: 'Plan C-1 (URGENT)',
+    status: 'Issuing',
+    time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+    items: [
+      { id: '3', name: 'Masterbatch Black', partNumber: 'RM-002', requiredQty: 100, currentStock: 800 }
+    ],
+    targetTime: Date.now() + 3 * 60000,
+    priority: 'High',
+    type: 'Picking',
+    source: 'Rack-03',
+    destination: 'Line C',
+    assignee: 'Alex Foster',
+    createdAt: new Date(Date.now() - 5 * 60000).toISOString()
+  },
+  {
+    id: 'PK-098',
+    planId: 'Plan A-1',
+    status: 'ON LINE',
+    time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+    items: [
+      { id: '4', name: 'Polypropylene Granules', partNumber: 'RM-001', requiredQty: 500, currentStock: 15000 }
+    ],
+    targetTime: Date.now() - 10 * 60000,
+    priority: 'Low',
+    type: 'Replenishment',
+    source: 'Silo-01',
+    destination: 'Line A',
+    assignee: 'Sarah Chen',
+    createdAt: new Date(Date.now() - 120 * 60000).toISOString()
+  }
+];
 
 export function WarehouseProvider({ children }: { children: ReactNode }) {
   const [transferDocuments, setTransferDocuments] = useState<TransferDocument[]>(initialTransferDocuments);
   const [finishedGoods, setFinishedGoods] = useState<FinishedGoodsRecord[]>(initialFinishedGoods);
   const [requests, setRequests] = useState<MockRequest[]>(initialRequests);
 
-  const addMaterialRequest = (planId: string, items: PickListItem[], priority: 'Normal' | 'High' = 'Normal') => {
+  const addMaterialRequest = (
+    planId: string,
+    items: PickListItem[],
+    priority: 'High' | 'Normal' | 'Low' = 'Normal',
+    type: string = 'Picking',
+    destination: string = 'Production Line'
+  ) => {
     const newRequest: MockRequest = {
       id: `REQ-${Math.floor(Math.random() * 1000).toString().padStart(4, '0')}`,
       planId,
@@ -106,13 +167,20 @@ export function WarehouseProvider({ children }: { children: ReactNode }) {
       time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
       items,
       targetTime: Date.now() + (priority === 'High' ? 15 * 60000 : 45 * 60000),
-      priority
+      priority,
+      type,
+      destination,
+      createdAt: new Date().toISOString()
     };
     setRequests(prev => [newRequest, ...prev]);
   };
 
   const updateRequestStatus = (id: string, status: MockRequest['status']) => {
     setRequests(prev => prev.map(r => r.id === id ? { ...r, status } : r));
+  };
+
+  const assignRequest = (id: string, assignee: string) => {
+    setRequests(prev => prev.map(r => r.id === id ? { ...r, assignee } : r));
   };
 
   const createTransferDocument = (transfer: Omit<TransferDocument, 'id' | 'qrCode' | 'createdAt'>): TransferDocument => {
@@ -269,6 +337,7 @@ export function WarehouseProvider({ children }: { children: ReactNode }) {
         requests,
         addMaterialRequest,
         updateRequestStatus,
+        assignRequest,
       }}
     >
       {children}

@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useFactory } from '../context/FactoryContext';
 import { useLanguage } from '../context/LanguageContext';
 import { useDailyProductionPlan } from '../context/DailyProductionPlanContext';
+import { useWarehouse } from '../context/WarehouseContext';
 import { maintenanceApi } from '../services/maintenanceApi';
 import { ArrowLeft, Package, PlayCircle, PauseCircle, Settings, Plus, Activity, Layers, BarChart3 } from 'lucide-react';
 import { Button } from './ui/button';
@@ -15,6 +16,7 @@ export function ProductionLineDetail() {
   const { productionLines, materials, updateProductionLine, requestMaterials } = useFactory();
   const { t } = useLanguage();
   const { getTodayLinePlan } = useDailyProductionPlan();
+  const { requests } = useWarehouse();
   const [showMaterialModal, setShowMaterialModal] = useState(false);
   const [maintenanceDescription, setMaintenanceDescription] = useState('');
   const [maintenanceDateTime, setMaintenanceDateTime] = useState('');
@@ -304,17 +306,36 @@ export function ProductionLineDetail() {
                   const material = materials.find(m => m.id === req.materialId);
                   if (!material) return null;
 
-                  const available = material.quantity >= req.quantity;
+                  // Compute active inbound transit operations from the Warehouse task board
+                  const activeRequests = requests.filter(r =>
+                    (r.status === 'Pending' || r.status === 'Issuing') &&
+                    r.items.some(rp => rp.partNumber === req.materialId)
+                  );
+                  const transitAmount = activeRequests.reduce((acc, currentReq) => {
+                    const item = currentReq.items.find(i => i.partNumber === req.materialId);
+                    return acc + (item ? item.requiredQty : 0);
+                  }, 0);
+
+                  const totalAvailable = material.quantity + transitAmount;
+                  const perfectlyAvailable = material.quantity >= req.quantity;
+                  const availableWithTransit = totalAvailable >= req.quantity;
 
                   return (
-                    <div key={req.materialId} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+                    <div key={req.materialId} className={`border rounded-lg p-4 transition-colors ${transitAmount > 0 && !perfectlyAvailable ? 'border-yellow-400/50 bg-yellow-50/50 dark:bg-yellow-900/10' : 'border-gray-200 dark:border-gray-700'}`}>
                       <div className="flex items-start justify-between">
                         <div className="flex items-start gap-3 flex-1">
-                          <div className="w-10 h-10 rounded-lg bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center mt-1">
-                            <Package className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                          <div className={`w-10 h-10 rounded-lg flex items-center justify-center mt-1 ${transitAmount > 0 ? 'bg-yellow-100 dark:bg-yellow-900/30' : 'bg-blue-50 dark:bg-blue-900/20'}`}>
+                            {transitAmount > 0 ? <Activity className="w-5 h-5 text-yellow-600 dark:text-yellow-400 animate-pulse" /> : <Package className="w-5 h-5 text-blue-600 dark:text-blue-400" />}
                           </div>
                           <div className="flex-1">
-                            <h4 className="font-medium text-gray-900 dark:text-white">{material.name}</h4>
+                            <h4 className="font-medium text-gray-900 dark:text-white flex items-center gap-2">
+                              {material.name}
+                              {transitAmount > 0 && (
+                                <Badge variant="outline" className="bg-yellow-100 dark:bg-yellow-900/50 text-yellow-800 dark:text-yellow-400 border-yellow-300 dark:border-yellow-700 font-mono text-xs py-0 h-5">
+                                  In Transit: {transitAmount}
+                                </Badge>
+                              )}
+                            </h4>
                             <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{material.category}</p>
                             <div className="mt-3 grid grid-cols-3 gap-4">
                               <div>
@@ -327,8 +348,8 @@ export function ProductionLineDetail() {
                               </div>
                               <div>
                                 <p className="text-xs text-gray-500 dark:text-gray-400">{t('productionDetail.status')}</p>
-                                <p className={`text-sm font-semibold ${available ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                                  {available ? t('productionDetail.sufficient') : t('productionDetail.insufficient')}
+                                <p className={`text-sm font-semibold ${perfectlyAvailable ? 'text-green-600 dark:text-green-400' : availableWithTransit ? 'text-yellow-600 dark:text-yellow-400' : 'text-red-600 dark:text-red-400'}`}>
+                                  {perfectlyAvailable ? t('productionDetail.sufficient') : availableWithTransit ? 'In Transit (Picking)' : t('productionDetail.insufficient')}
                                 </p>
                               </div>
                             </div>

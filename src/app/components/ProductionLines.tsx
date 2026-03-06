@@ -2,9 +2,10 @@ import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useFactory } from '../context/FactoryContext';
 import { useLanguage } from '../context/LanguageContext';
+import { useDailyProductionPlan } from '../context/DailyProductionPlanContext';
 import {
   Factory, Plus, Activity, AlertCircle, PlayCircle, PauseCircle,
-  TrendingUp, Target, Wrench, PackageX
+  TrendingUp, Target, Wrench, PackageX, Clock, ShieldCheck, CheckCircle2
 } from 'lucide-react';
 
 // ---------------- Analytics header ----------------
@@ -46,35 +47,31 @@ function AnalyticCard({ icon, iconBg, label, value, sub, accent = 'blue', pulse 
 export function ProductionLines() {
   const { productionLines, addProductionLine, materials } = useFactory();
   const { t } = useLanguage();
+  const { getTodayLinePlan } = useDailyProductionPlan();
   const [showAddModal, setShowAddModal] = useState(false);
   const navigate = useNavigate();
 
-  // ── Analytics calculations ──────────────────────────────────────────────
+  // ── SAP Analytics Calculations ──
   const analytics = useMemo(() => {
     const lines = productionLines;
 
-    // 1. Overall OEE: average efficiency across all lines
-    const avgOEE = lines.length
-      ? Math.round(lines.reduce((s, l) => s + l.efficiency, 0) / lines.length)
-      : 0;
+    // 1. Factory Capacity: Active lines / Total lines
+    const activeLines = lines.filter(l => l.status === 'active').length;
+    const capacity = lines.length ? Math.round((activeLines / lines.length) * 100) : 0;
 
-    // 2. Daily target progress: sum of outputs vs a fixed daily target per line (500 units each)
-    const TARGET_PER_LINE = 500;
-    const totalTarget = lines.length * TARGET_PER_LINE;
-    const totalProduced = lines.reduce((s, l) => s + (l.output || 0), 0);
-
-    // 3. Maintenance alerts: lines in red/yellow states
-    const linesDown = lines.filter(l => l.status === 'maintenance_requested').length;
-    const linesUnderRepair = lines.filter(l => l.status === 'maintenance').length;
-
-    // 4. Material risk: materials with quantity < threshold indicating < 30 min risk
-    // Using minStock / 2 as a proxy for "30-min buffer" (rough heuristic)
-    const THIRTY_MIN_THRESHOLD_RATIO = 0.3; // 30% of minStock
+    // 2. Material Readiness
+    const THIRTY_MIN_THRESHOLD_RATIO = 0.3;
     const riskCount = materials.filter(m =>
       m.minStock > 0 && m.quantity < m.minStock * THIRTY_MIN_THRESHOLD_RATIO
     ).length;
+    // Mock SAP readiness heuristic: subtract 5% per critical part risk
+    const readiness = Math.max(0, 100 - (riskCount * 5));
 
-    return { avgOEE, totalTarget, totalProduced, linesDown, linesUnderRepair, riskCount };
+    // 3. Downtime Impact (Hours lost)
+    const downtimeMinutes = lines.reduce((s, l) => s + (l.downtimeRecord?.accumulatedMinutes || 0), 0);
+    const downtimeHours = (downtimeMinutes / 60).toFixed(1);
+
+    return { capacity, readiness, downtimeHours, riskCount };
   }, [productionLines, materials]);
 
   const getStatusIcon = (status: string) => {
@@ -95,7 +92,9 @@ export function ProductionLines() {
     }
   };
 
-  const maintenanceAlert = analytics.linesDown > 0 || analytics.linesUnderRepair > 0;
+  const linesDown = productionLines.filter(l => l.status === 'maintenance_requested').length;
+  const linesUnderRepair = productionLines.filter(l => l.status === 'maintenance').length;
+  const maintenanceAlert = linesDown > 0 || linesUnderRepair > 0;
 
   return (
     <div className="p-8 bg-gray-50 dark:bg-gray-900 min-h-screen">
@@ -114,121 +113,106 @@ export function ProductionLines() {
         </button>
       </div>
 
-      {/* ── Production Analytics Header ── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-8">
-        {/* 1. Overall OEE */}
+      {/* ── SAP KPI Header ── */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        {/* 1. Factory Capacity */}
         <AnalyticCard
-          icon={<Activity className="w-5 h-5 text-blue-400" />}
-          iconBg="bg-blue-500"
-          label="Overall OEE (Average)"
-          value={`${analytics.avgOEE}%`}
-          sub={`Across ${productionLines.length} active lines`}
-          accent={analytics.avgOEE >= 80 ? 'green' : analytics.avgOEE >= 60 ? 'yellow' : 'red'}
+          icon={<Factory className="w-6 h-6 text-blue-400" />}
+          iconBg="bg-blue-600"
+          label="Factory Capacity"
+          value={`${analytics.capacity}%`}
+          sub="Overall lines utilized"
+          accent={analytics.capacity >= 80 ? 'green' : analytics.capacity >= 50 ? 'yellow' : 'red'}
         />
 
-        {/* 2. Daily Target Progress */}
-        <div className="relative bg-gray-900 dark:bg-gray-900 border border-gray-700/60 rounded-xl p-5 overflow-hidden shadow-lg flex flex-col gap-3">
-          <div className="absolute inset-0 opacity-[0.04] bg-green-500 rounded-xl" />
-          <div className="flex items-center justify-between relative">
-            <span className="text-[11px] font-semibold uppercase tracking-widest text-gray-400">Daily Target Progress</span>
-            <span className="p-2 rounded-lg bg-green-500 bg-opacity-20">
-              <Target className="w-5 h-5 text-green-400" />
-            </span>
-          </div>
-          <div className="relative">
-            <p className="text-2xl font-bold tracking-tight text-green-400">
-              {analytics.totalProduced.toLocaleString()} / {analytics.totalTarget.toLocaleString()}
-            </p>
-            <div className="mt-2 w-full h-1.5 bg-gray-700 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-green-500 rounded-full transition-all"
-                style={{ width: `${Math.min(100, Math.round((analytics.totalProduced / analytics.totalTarget) * 100))}%` }}
-              />
-            </div>
-            <p className="text-xs text-gray-500 mt-1">
-              {Math.min(100, Math.round((analytics.totalProduced / analytics.totalTarget) * 100))}% of daily target
-            </p>
-          </div>
-        </div>
-
-        {/* 3. Maintenance Alerts */}
+        {/* 2. Material Readiness */}
         <AnalyticCard
-          icon={<Wrench className={`w-5 h-5 ${maintenanceAlert ? 'text-red-400' : 'text-gray-400'}`} />}
-          iconBg={maintenanceAlert ? 'bg-red-500' : 'bg-gray-500'}
-          label="Active Maintenance Alerts"
-          value={maintenanceAlert ? `${analytics.linesDown} Line${analytics.linesDown !== 1 ? 's' : ''} Down` : 'All Clear'}
-          sub={analytics.linesUnderRepair > 0 ? `${analytics.linesUnderRepair} under repair` : 'No repairs in progress'}
-          accent={maintenanceAlert ? 'red' : 'green'}
-          pulse={maintenanceAlert}
+          icon={<ShieldCheck className="w-6 h-6 text-green-400" />}
+          iconBg="bg-green-600"
+          label="Material Readiness"
+          value={`${analytics.readiness}%`}
+          sub={analytics.riskCount === 0 ? 'All plans sufficiently covered' : `${analytics.riskCount} parts in critical shortage`}
+          accent={analytics.readiness > 90 ? 'green' : analytics.readiness > 70 ? 'yellow' : 'red'}
+          pulse={analytics.readiness < 90}
         />
 
-        {/* 4. Material Availability Risk */}
+        {/* 3. Downtime Impact */}
         <AnalyticCard
-          icon={<PackageX className={`w-5 h-5 ${analytics.riskCount > 0 ? 'text-yellow-400' : 'text-gray-400'}`} />}
-          iconBg={analytics.riskCount > 0 ? 'bg-yellow-500' : 'bg-gray-500'}
-          label="Material Availability Risk"
-          value={analytics.riskCount > 0 ? `${analytics.riskCount} Part${analytics.riskCount !== 1 ? 's' : ''} Critical` : 'No Risk'}
-          sub="Stock < 30 min remaining"
-          accent={analytics.riskCount > 0 ? 'yellow' : 'green'}
-          pulse={analytics.riskCount > 0}
+          icon={<Clock className="w-6 h-6 text-red-400" />}
+          iconBg="bg-red-600"
+          label="Downtime Impact"
+          value={`${analytics.downtimeHours} hr`}
+          sub="Cumulative operational time lost"
+          accent={parseFloat(analytics.downtimeHours) === 0 ? 'green' : 'red'}
+          pulse={parseFloat(analytics.downtimeHours) > 0}
         />
       </div>
 
       {/* Lines grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {productionLines.map(line => (
-          <div
-            key={line.id}
-            onClick={() => navigate(`/production-lines/${line.id}`)}
-            className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 hover:shadow-md transition-all cursor-pointer"
-          >
-            <div className="flex items-start justify-between mb-4">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-lg bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center">
-                  <Factory className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+        {productionLines.map(line => {
+          const todayPlan = getTodayLinePlan(line.id);
+          const activeShift = todayPlan?.shift || 'No active plan';
+          const onTrack = line.efficiency >= 85;
+
+          return (
+            <div
+              key={line.id}
+              onClick={() => navigate(`/production-lines/${line.id}`)}
+              className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 hover:shadow-md transition-all cursor-pointer flex flex-col"
+            >
+              <div className="flex items-start justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${line.status === 'active' ? 'bg-green-50 dark:bg-green-900/20' : 'bg-blue-50 dark:bg-blue-900/20'}`}>
+                    <Factory className={`w-6 h-6 ${line.status === 'active' ? 'text-green-600 dark:text-green-400' : 'text-blue-600 dark:text-blue-400'}`} />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-gray-900 dark:text-white text-lg tracking-tight">{line.name}</h3>
+                    <p className="text-sm font-mono text-gray-400 dark:text-gray-500">ID: {line.id}</p>
+                  </div>
                 </div>
+                {getStatusIcon(line.status)}
+              </div>
+
+              <div className="flex-1 space-y-4">
+                {/* Active Shift */}
+                <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-700/50 pb-2">
+                  <span className="text-sm font-medium text-gray-500 dark:text-gray-400">Current Shift</span>
+                  <span className={`text-sm font-bold ${activeShift !== 'No active plan' ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400 dark:text-gray-500'}`}>
+                    {activeShift}
+                  </span>
+                </div>
+
+                {/* Real-Time OEE */}
                 <div>
-                  <h3 className="font-semibold text-gray-900 dark:text-white">{line.name}</h3>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">{t('common.id')}: {line.id}</p>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-sm font-medium text-gray-500 dark:text-gray-400">Real-Time OEE</span>
+                    <span className="text-sm font-bold text-gray-900 dark:text-white">{line.efficiency}%</span>
+                  </div>
+                  <div className="w-full h-2.5 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full transition-all duration-500 ${line.efficiency >= 85 ? 'bg-green-500' : line.efficiency >= 60 ? 'bg-yellow-500' : 'bg-red-500'}`}
+                      style={{ width: `${line.efficiency}%` }}
+                    />
+                  </div>
+                </div>
+
+                {/* Status & Health Bar */}
+                <div className="flex items-center justify-between border-t border-gray-100 dark:border-gray-700/50 pt-2">
+                  <div className="flex items-center gap-2">
+                    <span className={`w-2 h-2 rounded-full ${onTrack ? 'bg-green-500' : 'bg-red-500 animate-pulse'}`} />
+                    <span className={`text-sm font-semibold tracking-wide ${onTrack ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                      {onTrack ? 'ON TRACK' : 'DELAYED'}
+                    </span>
+                  </div>
+                  <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold uppercase ${getStatusColor(line.status)}`}>
+                    {t(`production.${line.status}`)}
+                  </span>
                 </div>
               </div>
-              {getStatusIcon(line.status)}
             </div>
-
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600 dark:text-gray-400">{t('production.status')}</span>
-                <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(line.status)}`}>
-                  {t(`production.${line.status}`)}
-                </span>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600 dark:text-gray-400">{t('production.efficiency')}</span>
-                <span className="text-sm font-semibold text-gray-900 dark:text-white">{line.efficiency}%</span>
-              </div>
-
-              <div>
-                <div className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                  <div
-                    className={`h-full transition-all ${line.efficiency >= 80 ? 'bg-green-500' : line.efficiency >= 60 ? 'bg-yellow-500' : 'bg-red-500'}`}
-                    style={{ width: `${line.efficiency}%` }}
-                  />
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between pt-3 border-t border-gray-200 dark:border-gray-700">
-                <span className="text-sm text-gray-600 dark:text-gray-400">{t('production.output')}</span>
-                <span className="text-sm font-semibold text-gray-900 dark:text-white">{line.output} {t('production.unitsPerDay')}</span>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600 dark:text-gray-400">{t('production.materialsRequired')}</span>
-                <span className="text-sm font-semibold text-gray-900 dark:text-white">{line.requiredMaterials.length} {t('production.types')}</span>
-              </div>
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {showAddModal && (

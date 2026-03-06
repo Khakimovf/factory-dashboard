@@ -11,6 +11,7 @@ import { ProductionLivePage } from './pages/production/ProductionLivePage';
 import { LineBufferPage } from './pages/production/LineBufferPage';
 import { LineAnalyticsPage } from './pages/production/LineAnalyticsPage';
 import { OperatorDailyLinePlan } from './components/production/OperatorDailyLinePlan';
+import { OperatorLinePlanPage } from './pages/production/OperatorLinePlanPage';
 import { HRDepartment } from './components/HRDepartment';
 import { DailyProductionPlanForm } from './components/DailyProductionPlanForm';
 import { DailyLinePlanEntry } from './components/hr/DailyLinePlanEntry';
@@ -66,6 +67,7 @@ export default function App() {
                           <Route path="/warehouse/receiving" element={<WarehouseReceivingPage />} />
                           <Route path="/production-lines" element={<ProductionLines />} />
                           <Route path="/production-lines/operator-plans" element={<OperatorDailyLinePlan />} />
+                          <Route path="/operator-plans/:lineId" element={<OperatorLinePlanPage />} />
                           <Route path="/production-lines/:id/live" element={<ProductionLivePage />} />
                           <Route path="/production-lines/:lineId/buffer" element={<LineBufferPage />} />
                           <Route path="/production-lines/:id/analytics" element={<LineAnalyticsPage />} />
