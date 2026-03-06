@@ -1,126 +1,156 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { useLanguage } from '../../context/LanguageContext';
 import { useWarehouse } from '../../context/WarehouseContext';
 import {
-  Package, Search, MapPin, Download, FileSpreadsheet, Factory,
-  Calendar, CheckCircle, XCircle, ChevronDown, ChevronUp, Filter,
-  Truck, ShieldAlert, AlertTriangle, FileText, Map, CheckCircle2, ArrowRight
+  Package, Search, MapPin, Download, Factory,
+  Calendar, CheckCircle, XCircle, Filter, ChevronRight,
+  Truck, ShieldAlert, AlertTriangle, FileText, CheckCircle2,
+  ArrowRight, QrCode, LogIn, Boxes, ScanLine, Clock, Layers
 } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Input } from '../../components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { toast } from 'sonner';
+import { Checkbox } from '../../components/ui/checkbox';
+
+type TabMode = 'receipt' | 'inventory' | 'shipping';
 
 export function FinishedGoodsPage() {
   const { t } = useLanguage();
-  const { finishedGoods } = useWarehouse();
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedLocation, setSelectedLocation] = useState<string>('all');
-  const [selectedQCStatus, setSelectedQCStatus] = useState<string>('all');
-  const [expandedProducts, setExpandedProducts] = useState<Set<string>>(new Set());
+  // We'll mock some dispatch interactions locally since we are heavily customizing the UI above the context
+  const { finishedGoods: initialGoods } = useWarehouse();
 
-  // Dispatch Cockpit State
-  const [shippingQueue, setShippingQueue] = useState<{ productId: string, batchId: string, qty: number, productName: string, maxQty: number }[]>([]);
+  // Local state for the complex modular dashboard
+  const [activeTab, setActiveTab] = useState<TabMode>('inventory');
+  const [finishedGoods, setFinishedGoods] = useState(initialGoods);
+  const [searchTerm, setSearchTerm] = useState('');
+
+  // 1. Dispatch/Shipping State
+  const [shippingQueue, setShippingQueue] = useState<{ productId: string, batchId: string, qty: number, productName: string }[]>([]);
   const [qualityHolds, setQualityHolds] = useState<Set<string>>(new Set());
   const [shippedBatches, setShippedBatches] = useState<Set<string>>(new Set());
 
+  // 2. Receipt State
+  const [receiptScannerInput, setReceiptScannerInput] = useState('');
+
+  // 3. Inventory Bulk State
+  const [selectedBatches, setSelectedBatches] = useState<Set<string>>(new Set());
+
+  // 4. Analytics
   const dailyTarget = 15000;
 
-  // Calculate summary statistics
+  // -- QR Code Global Listener --
+  const barcodeBuffer = useRef('');
+  const lastKeyTime = useRef(0);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ignore if typing in an input field (unless it's the specific scanner input which we handle directly)
+      const target = e.target as HTMLElement;
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return;
+
+      const currentTime = Date.now();
+
+      if (currentTime - lastKeyTime.current > 50) {
+        barcodeBuffer.current = '';
+      }
+
+      if (e.key === 'Enter') {
+        if (barcodeBuffer.current.length > 3) {
+          handleQRScan(barcodeBuffer.current);
+          barcodeBuffer.current = '';
+        }
+      } else if (e.key.length === 1) {
+        barcodeBuffer.current += e.key;
+      }
+
+      lastKeyTime.current = currentTime;
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [activeTab, finishedGoods, qualityHolds, shippedBatches, shippingQueue]);
+
+  const handleQRScan = (code: string) => {
+    // Mock QR Code parsing: assume format "BATCH_ID" or "SKU-QTY"
+    const scannedBatch = code.trim().toUpperCase();
+
+    if (activeTab === 'receipt') {
+      receiveBatch(scannedBatch);
+    } else if (activeTab === 'shipping') {
+      // Find batch and add to queue
+      scanToDispatch(scannedBatch);
+    } else {
+      toast.info(`Scanned: ${scannedBatch}`, { description: 'Switch to Receipt or Shipping tab for automated actions.' });
+    }
+  };
+
+  const receiveBatch = (code: string) => {
+    // For demo: create a dummy batch assigned to a random bin layout
+    const bins = ['A-10', 'B-14', 'C-05', 'D-22'];
+    const assignedBin = bins[Math.floor(Math.random() * bins.length)];
+    toast.success('Goods Receipt Successful', {
+      description: `Scanned ${code}. Storage Bin Assignment: ${assignedBin}`,
+      icon: <CheckCircle2 className="text-emerald-400 w-5 h-5" />
+    });
+    setReceiptScannerInput('');
+  };
+
+  const scanToDispatch = (batchId: string) => {
+    // Find item by batch
+    for (const item of finishedGoods) {
+      const b = item.batches.find(x => x.batch.toUpperCase() === batchId.toUpperCase());
+      if (b) {
+        addToQueue(item.id, b.batch, b.quantity, item.productName, item.batches, true);
+        return;
+      }
+    }
+    toast.error('Dispatch Failed', { description: `Batch ${batchId} not found in inventory.` });
+  };
+
+
+  // -- Computed Analytics --
   const summary = useMemo(() => {
-    let totalProducts = 0;
-    let totalQuantity = 0;
     let availableQuantity = 0;
     let reservedQuantity = 0;
 
     finishedGoods.forEach(fg => {
-      // Adjust quantities based on mock shipped state
       let shippedQty = 0;
       fg.batches.forEach(b => {
         if (shippedBatches.has(b.batch)) shippedQty += b.quantity;
       });
-
-      totalProducts++;
-      totalQuantity += (fg.totalQuantity - shippedQty);
-      availableQuantity += (fg.availableQuantity - shippedQty); // assuming shipped comes from available
+      availableQuantity += (fg.availableQuantity - shippedQty);
       reservedQuantity += fg.reservedQuantity;
     });
 
-    return { totalProducts, totalQuantity, availableQuantity, reservedQuantity };
+    return { availableQuantity, reservedQuantity };
   }, [finishedGoods, shippedBatches]);
 
   const readinessPercent = summary.availableQuantity + summary.reservedQuantity > 0
-    ? Math.round((summary.availableQuantity / (summary.availableQuantity + summary.reservedQuantity)) * 100)
-    : 0;
+    ? Math.round((summary.availableQuantity / (summary.availableQuantity + summary.reservedQuantity)) * 100) : 0;
 
-  const dispatchProgress = Math.min(Math.round(((15000 - summary.availableQuantity) / dailyTarget) * 100), 100); // Mock progress relative to missing inventory or just a static progress
-  // A better dispatch progress: total shipped today. Let's calculate shipped qty
-  let totalShippedToday = 0;
-  finishedGoods.forEach(fg => {
-    fg.batches.forEach(b => {
-      if (shippedBatches.has(b.batch)) totalShippedToday += b.quantity;
-    });
-  });
+  let totalShippedToday = Array.from(shippedBatches).length * 850; // mocking avg size for visual
   const actualDispatchProgress = Math.min(Math.round((totalShippedToday / dailyTarget) * 100), 100);
 
-  // Extract filter options
-  const allLocations = useMemo(() => {
-    const locations = new Set<string>();
-    finishedGoods.forEach(fg => {
-      fg.warehouseLocations.forEach(loc => locations.add(loc));
-    });
-    return Array.from(locations).sort();
-  }, [finishedGoods]);
+  // Helper arrays
+  const allBatches = useMemo(() => {
+    return finishedGoods.flatMap(item =>
+      item.batches.map(b => ({
+        ...b,
+        productId: item.id,
+        productName: item.productName,
+        sku: item.sku,
+        isShipped: shippedBatches.has(b.batch),
+        isHeld: qualityHolds.has(b.batch),
+        isQueued: shippingQueue.some(q => q.batchId === b.batch),
+        parentBatches: item.batches
+      }))
+    ).filter(b => !b.isShipped)
+      .sort((a, b) => new Date(a.receivedAt).getTime() - new Date(b.receivedAt).getTime());
+  }, [finishedGoods, shippedBatches, qualityHolds, shippingQueue]);
 
-  // Filter products
-  const filteredGoods = useMemo(() => {
-    return finishedGoods.filter(item => {
-      const matchesSearch =
-        item.sku.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.productName.toLowerCase().includes(searchTerm.toLowerCase());
-
-      const matchesLocation =
-        selectedLocation === 'all' ||
-        item.warehouseLocations.includes(selectedLocation);
-
-      const matchesQCStatus =
-        selectedQCStatus === 'all' ||
-        (selectedQCStatus === 'passed' && item.batches.length > 0 &&
-          item.batches.every(batch => batch.qcDate));
-
-      // Hide if all batches are shipped
-      const allShipped = item.batches.every(b => shippedBatches.has(b.batch));
-
-      return matchesSearch && matchesLocation && matchesQCStatus && !allShipped;
-    });
-  }, [finishedGoods, searchTerm, selectedLocation, selectedQCStatus, shippedBatches]);
-
-  const sortBatchesByDate = (batches: typeof finishedGoods[0]['batches']) => {
-    return [...batches].sort((a, b) => {
-      const dateA = new Date(a.receivedAt).getTime();
-      const dateB = new Date(b.receivedAt).getTime();
-      return dateA - dateB;
-    });
-  };
-
-  const toggleProductExpansion = (productId: string) => {
-    setExpandedProducts(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(productId)) newSet.delete(productId);
-      else newSet.add(productId);
-      return newSet;
-    });
-  };
-
-  const handleExportManifest = () => {
-    toast.success('Manifest Generated', { description: 'PDF & Excel manifests downloaded.', icon: <FileText className="w-4 h-4 text-cyan-400" /> });
-  };
-
-  const openBinMap = (locations: string[]) => {
-    toast('Warehouse Bin Map', { description: `Highlighting locations: ${locations.join(', ')}`, icon: <Map className="w-4 h-4 text-cyan-400" /> });
-  };
+  // -- Actions --
 
   const toggleQualityHold = (batchId: string) => {
     setQualityHolds(prev => {
@@ -131,30 +161,48 @@ export function FinishedGoodsPage() {
       } else {
         newSet.add(batchId);
         toast.error(`Quality Hold applied on ${batchId}`, { icon: <ShieldAlert className="w-4 h-4" /> });
-        setShippingQueue(q => q.filter(i => i.batchId !== batchId)); // Remove from queue if held
+        setShippingQueue(q => q.filter(i => i.batchId !== batchId));
+        setSelectedBatches(s => { const ns = new Set(s); ns.delete(batchId); return ns; });
       }
       return newSet;
     });
   };
 
-  const addToQueue = (productId: string, batchId: string, maxQty: number, productName: string, itemBatches: any[]) => {
+  const checkFIFO = (productId: string, batchId: string, itemBatches: any[]): string | null => {
+    const validBatches = itemBatches
+      .filter(b => !qualityHolds.has(b.batch) && !shippedBatches.has(b.batch))
+      .sort((a, b) => new Date(a.receivedAt).getTime() - new Date(b.receivedAt).getTime());
+
+    if (validBatches.length > 0) {
+      const oldestBatch = validBatches[0];
+      if (oldestBatch.batch !== batchId) {
+        // Double check if oldest is already queued
+        const oldestQueued = shippingQueue.some(q => q.batchId === oldestBatch.batch);
+        if (!oldestQueued) {
+          return oldestBatch.batch;
+        }
+      }
+    }
+    return null;
+  };
+
+  const addToQueue = (productId: string, batchId: string, maxQty: number, productName: string, itemBatches: any[], silentFifoOverride = false) => {
     if (qualityHolds.has(batchId)) {
-      toast.error('Quality Hold Active', { description: 'Batch is on hold and cannot be shipped.' });
-      return;
+      toast.error('Quality Hold Active', { description: `${batchId} is on hold and cannot be shipped.` });
+      return false;
     }
 
-    const validBatches = sortBatchesByDate(itemBatches).filter(b => !qualityHolds.has(b.batch) && !shippedBatches.has(b.batch));
-    const oldestBatch = validBatches[0];
-
-    if (oldestBatch && oldestBatch.batch !== batchId) {
-      toast.error('Violates FIFO', { description: `Older batch ${oldestBatch.batch} must be shipped first.` });
-      return;
+    const fifoConflict = checkFIFO(productId, batchId, itemBatches);
+    if (fifoConflict && !silentFifoOverride) {
+      toast.error('FIFO Warning', { description: `Violates FIFO: Older Batch [${fifoConflict}] is still available in stock. Process it first.`, icon: <AlertTriangle className="w-5 h-5 text-amber-500" /> });
+      return false;
     }
 
-    if (!shippingQueue.find(q => q.batchId === batchId)) {
-      setShippingQueue([...shippingQueue, { productId, batchId, qty: maxQty, productName, maxQty }]);
-      toast.success('Added to Dispatch');
-    }
+    setShippingQueue(prev => {
+      if (prev.some(q => q.batchId === batchId)) return prev;
+      return [...prev, { productId, batchId, qty: maxQty, productName }];
+    });
+    return true;
   };
 
   const removeFromQueue = (batchId: string) => {
@@ -163,239 +211,352 @@ export function FinishedGoodsPage() {
 
   const executeShipment = () => {
     if (shippingQueue.length === 0) return;
-    toast.success('Shipment Executed', { description: 'Manifest Generated & Stock marked "In Transit"' });
+    toast.success('Shipment Executed', { description: 'PDF Manifest Generated & Stock marked "In Transit"' });
     const newShipped = new Set(shippedBatches);
-    shippingQueue.forEach(q => newShipped.add(q.batchId));
+    shippingQueue.forEach(q => {
+      newShipped.add(q.batchId);
+      setSelectedBatches(s => { const ns = new Set(s); ns.delete(q.batchId); return ns; });
+    });
     setShippedBatches(newShipped);
     setShippingQueue([]);
   };
 
-  const queueTotal = shippingQueue.reduce((acc, curr) => acc + curr.qty, 0);
+  // Bulk Actions
+  const toggleSelectBatch = (batchId: string) => {
+    setSelectedBatches(prev => {
+      const n = new Set(prev);
+      if (n.has(batchId)) n.delete(batchId);
+      else n.add(batchId);
+      return n;
+    });
+  };
 
-  return (
-    <div className="min-h-screen p-6 md:p-8 bg-slate-950 font-mono text-slate-300 animate-in fade-in slide-in-from-bottom-3 duration-400">
+  const selectAll = (checked: boolean) => {
+    if (checked) {
+      const add = new Set(selectedBatches);
+      allBatches.slice(0, 50).forEach(b => add.add(b.batch)); // limit for performance
+      setSelectedBatches(add);
+    } else {
+      setSelectedBatches(new Set());
+    }
+  };
 
-      {/* 1. Global Analytics Header */}
-      <div className="mb-8 grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-1 border border-slate-800 bg-slate-900/50 rounded-2xl p-6 shadow-xl relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-cyan-600/10 rounded-full blur-3xl" />
-          <h2 className="text-2xl font-black text-white flex items-center gap-3 mb-2 tracking-tight">
-            <Truck className="w-8 h-8 text-cyan-400" />
-            Dispatch Center
-          </h2>
-          <p className="text-xs text-slate-400 uppercase tracking-widest font-bold">ZPP_OUTBOUND_01</p>
+  const handleBulkShip = () => {
+    let queuesAdded = 0;
+    Array.from(selectedBatches).forEach(batchId => {
+      const batchData = allBatches.find(b => b.batch === batchId);
+      if (batchData) {
+        // Add passing true for silent FIFO override for bulk or let it error individually:
+        const success = addToQueue(batchData.productId, batchData.batch, batchData.quantity, batchData.productName, batchData.parentBatches, false);
+        if (success) queuesAdded++;
+      }
+    });
+    if (queuesAdded > 0) {
+      toast.success(`Bulk Dispatch`, { description: `Added ${queuesAdded} batches to shipping queue.` });
+      setSelectedBatches(new Set());
+    }
+  };
+
+  const handleBulkRelocate = () => {
+    toast.info('Bulk Relocation', { description: `${selectedBatches.size} batches marked for Bin transfer. Task created for forklifts.` });
+    setSelectedBatches(new Set());
+  };
+
+
+  // --- Render Tabs ---
+
+  const renderReceiptTab = () => (
+    <div className="flex flex-col items-center justify-center p-12 bg-slate-900 border border-slate-800 rounded-2xl min-h-[500px] shadow-2xl relative overflow-hidden">
+      <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1586528116311-ad8ed7c83a7f?q=80&w=1000')] bg-cover bg-center opacity-5 mix-blend-luminosity" />
+      <div className="relative z-10 w-full max-w-xl text-center flex flex-col items-center">
+        <div className="w-24 h-24 bg-cyan-500/10 border border-cyan-500/30 rounded-full flex items-center justify-center mb-8 shadow-[0_0_30px_rgba(6,182,212,0.2)]">
+          <ScanLine className="w-10 h-10 text-cyan-400" />
+        </div>
+        <h2 className="text-3xl font-black text-white mb-4 tracking-tight">Incoming Goods Receipt</h2>
+        <p className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-10">Scan barcode or type ID to register to warehouse</p>
+
+        <div className="relative w-full">
+          <QrCode className="absolute left-6 top-1/2 -translate-y-1/2 w-6 h-6 text-cyan-400 animate-pulse" />
+          <Input
+            value={receiptScannerInput}
+            onChange={e => setReceiptScannerInput(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') receiveBatch(receiptScannerInput); }}
+            placeholder="Awaiting Scanner Input..."
+            autoFocus
+            className="w-full text-xl h-20 pl-16 pr-6 bg-slate-950/80 border-2 border-slate-700 focus-visible:ring-cyan-500 focus-visible:border-cyan-500 rounded-2xl text-center font-mono font-black text-white placeholder:text-slate-600 shadow-inner"
+          />
+        </div>
+        <Button onClick={() => receiveBatch(receiptScannerInput)} disabled={!receiptScannerInput} className="mt-8 h-12 px-10 bg-cyan-600 hover:bg-cyan-500 text-white font-black uppercase tracking-widest rounded-xl">
+          Register Manually
+        </Button>
+      </div>
+    </div>
+  );
+
+  const renderInventoryTab = () => (
+    <div className="flex flex-col gap-6">
+      {/* Filters & Bulk Actions */}
+      <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 flex items-center justify-between gap-4 flex-wrap shadow-lg">
+        <div className="flex items-center gap-4 flex-1">
+          <div className="relative min-w-[250px] max-w-sm">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+            <Input
+              placeholder="Filter by SKU, Batch, or Bin..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-9 h-10 bg-slate-950 border-slate-700 text-white font-mono rounded-lg"
+            />
+          </div>
+          <Select defaultValue="all">
+            <SelectTrigger className="w-40 h-10 bg-slate-950 border-slate-700 text-slate-300 font-mono rounded-lg"><SelectValue placeholder="QC Status" /></SelectTrigger>
+            <SelectContent className="bg-slate-900 border-slate-700 text-white"><SelectItem value="all">All Status</SelectItem><SelectItem value="passed">Approved</SelectItem></SelectContent>
+          </Select>
         </div>
 
-        <div className="lg:col-span-2 grid grid-cols-2 gap-6">
-          <div className="border border-slate-800 rounded-2xl p-5 bg-slate-900 shadow-xl flex flex-col justify-center">
-            <div className="flex justify-between items-center mb-3">
-              <span className="text-xs text-slate-400 font-bold uppercase tracking-widest">Readiness for UzAuto</span>
-              <span className="text-emerald-400 font-black text-sm">{readinessPercent}%</span>
+        {/* Bulk Actions Controller */}
+        {selectedBatches.size > 0 && (
+          <div className="flex items-center gap-3 animate-in fade-in slide-in-from-right-4 duration-300 p-1.5 pl-4 rounded-lg bg-cyan-500/10 border border-cyan-500/30">
+            <span className="text-xs font-black text-cyan-400 uppercase tracking-widest">{selectedBatches.size} selected</span>
+            <div className="w-px h-5 bg-cyan-500/30 mx-1" />
+            <Button size="sm" onClick={handleBulkRelocate} variant="outline" className="h-8 px-3 text-[10px] font-black uppercase tracking-widest bg-slate-900 border-cyan-500/30 text-slate-300 hover:text-white hover:bg-slate-800">
+              <Layers className="w-3.5 h-3.5 mr-1.5" /> Bulk Relocate
+            </Button>
+            <Button size="sm" onClick={handleBulkShip} className="h-8 px-3 text-[10px] font-black uppercase tracking-widest bg-cyan-600 hover:bg-cyan-500 text-white border-transparent">
+              <Truck className="w-3.5 h-3.5 mr-1.5" /> Bulk Ship
+            </Button>
+          </div>
+        )}
+      </div>
+
+      {/* Full-width Searchable Grid */}
+      <div className="border border-slate-800 bg-slate-900 rounded-xl overflow-hidden shadow-xl">
+        <div className="grid grid-cols-[50px_1fr_120px_140px_120px_120px_140px] gap-4 px-6 py-4 bg-slate-950/80 border-b border-slate-800 text-[10px] font-black text-slate-500 uppercase tracking-widest">
+          <div className="flex items-center"><Checkbox onCheckedChange={selectAll} /></div>
+          <span>Product & SKU</span>
+          <span>Batch ID</span>
+          <span>Bin Location</span>
+          <span className="text-right">Quantity</span>
+          <span>Prod. Date</span>
+          <span className="text-right">Actions</span>
+        </div>
+
+        <div className="divide-y divide-slate-800/50 max-h-[600px] overflow-y-auto">
+          {allBatches.filter(b => b.productName.toLowerCase().includes(searchTerm.toLowerCase()) || b.batch.toLowerCase().includes(searchTerm.toLowerCase()) || b.warehouseLocation.toLowerCase().includes(searchTerm.toLowerCase())).map((batch) => (
+            <div key={batch.batch} className={`grid grid-cols-[50px_1fr_120px_140px_120px_120px_140px] gap-4 items-center px-6 py-4 hover:bg-slate-800/50 transition-colors ${selectedBatches.has(batch.batch) ? 'bg-cyan-900/10' : ''} ${batch.isHeld ? 'bg-red-500/5 opacity-80' : ''}`}>
+              <div className="flex items-center"><Checkbox checked={selectedBatches.has(batch.batch)} onCheckedChange={() => toggleSelectBatch(batch.batch)} /></div>
+
+              <div className="min-w-0">
+                <p className="text-sm font-bold text-slate-200 truncate">{batch.productName}</p>
+                <p className="text-[10px] text-slate-500 font-mono mt-0.5">{batch.sku}</p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span className={`text-xs font-black font-mono ${batch.isHeld ? 'text-red-400 line-through' : 'text-cyan-400'}`}>{batch.batch}</span>
+                {batch.isHeld && <ShieldAlert className="w-3 h-3 text-red-500" />}
+              </div>
+
+              <div className="flex items-center gap-2">
+                <MapPin className="w-3.5 h-3.5 text-slate-500" />
+                <Badge variant="outline" className="bg-slate-950 text-slate-400 border-slate-700 font-mono text-[10px] px-1.5">{batch.warehouseLocation}</Badge>
+              </div>
+
+              <span className="text-sm font-black text-white text-right">{batch.quantity.toLocaleString()}</span>
+
+              <div className="flex flex-col">
+                <span className="text-xs text-slate-400 font-mono">{batch.receivedAt.split('T')[0]}</span>
+                {batch.qcDate ? <span className="text-[9px] font-black text-emerald-500">QC PASSED</span> : <span className="text-[9px] font-black text-amber-500">QC PENDING</span>}
+              </div>
+
+              <div className="flex items-center justify-end gap-2">
+                <Button size="icon" variant="ghost" onClick={() => toggleQualityHold(batch.batch)} className={`h-8 w-8 rounded-lg ${batch.isHeld ? 'text-red-400 bg-red-400/10 hover:bg-red-400/20' : 'text-slate-500 hover:text-red-400 hover:bg-slate-800'}`}>
+                  <ShieldAlert className="w-4 h-4" />
+                </Button>
+                {batch.isQueued ? (
+                  <Badge variant="outline" className="h-8 justify-center min-w-[80px] bg-cyan-500/10 text-cyan-400 border-cyan-500/30 text-[10px] font-black uppercase">Queued</Badge>
+                ) : (
+                  <Button size="sm" disabled={batch.isHeld} onClick={() => addToQueue(batch.productId, batch.batch, batch.quantity, batch.productName, batch.parentBatches)} variant="outline" className="h-8 min-w-[80px] border-slate-700 bg-slate-950 text-slate-300 hover:text-white hover:border-cyan-500 text-[10px] font-black uppercase tracking-widest">
+                    To Ship
+                  </Button>
+                )}
+              </div>
             </div>
-            <div className="h-2.5 bg-slate-950 rounded-full overflow-hidden border border-slate-800 shadow-inner">
-              <div className="h-full bg-emerald-500 rounded-full transition-all duration-1000" style={{ width: `${readinessPercent}%` }} />
-            </div>
-            <div className="flex justify-between mt-3 text-[10px] text-slate-500 font-bold">
-              <span>AVAILABLE: <span className="text-emerald-400">{summary.availableQuantity}</span></span>
-              <span>ALLOCATED/BAND: <span className="text-amber-400">{summary.reservedQuantity}</span></span>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderShippingTab = () => (
+    <div className="flex flex-col xl:flex-row gap-6 items-start">
+      {/* Left: Orders & Scan input */}
+      <div className="flex-1 w-full flex flex-col gap-6">
+        <div className="border border-slate-800 bg-slate-900 rounded-2xl p-8 shadow-xl flex items-center justify-between relative overflow-hidden">
+          <div className="absolute top-0 left-0 w-2 h-full bg-cyan-500" />
+          <div>
+            <h3 className="text-2xl font-black text-white flex items-center gap-3 tracking-tight"><FileText className="w-7 h-7 text-cyan-400" /> Vagon Loading Plan - UZAUTO</h3>
+            <p className="text-slate-500 text-sm mt-2 font-bold uppercase tracking-widest">Route Tracker: Andijan Assembly Plant Sector 4</p>
+          </div>
+          <div className="flex items-center gap-4 text-slate-400">
+            <Clock className="w-5 h-5" />
+            <div className="text-right">
+              <p className="text-[10px] font-black uppercase tracking-widest">Departure in</p>
+              <p className="text-xl font-mono font-black text-white">04:22:15</p>
             </div>
           </div>
+        </div>
 
-          <div className="border border-slate-800 rounded-2xl p-5 bg-slate-900 shadow-xl flex flex-col justify-center">
-            <div className="flex justify-between items-center mb-3">
-              <span className="text-xs text-slate-400 font-bold uppercase tracking-widest">Daily Dispatch Target</span>
-              <span className="text-cyan-400 font-black text-sm">{actualDispatchProgress}%</span>
-            </div>
-            <div className="h-2.5 bg-slate-950 rounded-full overflow-hidden border border-slate-800 shadow-inner">
-              <div className="h-full bg-cyan-500 shadow-[0_0_10px_rgba(6,182,212,0.5)] rounded-full transition-all duration-1000" style={{ width: `${actualDispatchProgress}%` }} />
-            </div>
-            <div className="flex justify-between mt-3 text-[10px] text-slate-500 font-bold">
-              <span>SHIPPED: <span className="text-white">{totalShippedToday.toLocaleString()}</span></span>
-              <span>TARGET: <span className="text-slate-400">{dailyTarget.toLocaleString()}</span></span>
-            </div>
+        <div className="border border-slate-800 bg-slate-900 rounded-2xl p-6 shadow-xl relative">
+          <Badge variant="outline" className="absolute top-6 right-6 bg-cyan-500/10 text-cyan-400 border-cyan-500/30 text-[10px] font-black uppercase">Auto-Scan Enabled</Badge>
+          <h4 className="text-sm font-black text-slate-300 uppercase tracking-widest mb-4">Fast-Scan Dispatch</h4>
+          <div className="relative">
+            <QrCode className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
+            <Input
+              placeholder="Scan Barcode to add to Shipping Queue..."
+              onKeyDown={e => {
+                if (e.key === 'Enter') {
+                  scanToDispatch(e.currentTarget.value);
+                  e.currentTarget.value = '';
+                }
+              }}
+              className="pl-12 h-14 bg-slate-950 border-slate-700 text-lg font-mono text-white rounded-xl shadow-inner focus-visible:ring-cyan-500"
+            />
           </div>
         </div>
       </div>
 
-      <div className="flex flex-col xl:flex-row gap-8">
-
-        {/* Left Side: Advanced Grid Features */}
-        <div className="flex-1 min-w-0 flex flex-col gap-6">
-          {/* Filters */}
-          <div className="border border-slate-800 bg-slate-900 rounded-xl p-4 flex items-center gap-4 flex-wrap shadow-lg">
-            <div className="flex-1 relative min-w-[200px]">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-              <Input
-                placeholder="Search SKU or Name..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-9 h-10 bg-slate-950 border-slate-700 text-white font-mono rounded-lg"
-              />
+      {/* Right: Sticky Ready for Shipping Dispatch Cockpit */}
+      <aside className="w-full xl:w-[420px] shrink-0 sticky top-6">
+        <div className="border border-slate-800 bg-slate-900 rounded-3xl shadow-2xl flex flex-col overflow-hidden h-[calc(100vh-140px)] max-h-[800px]">
+          <div className="p-6 border-b border-slate-800 bg-slate-950/70">
+            <h3 className="text-xl font-black text-white flex items-center gap-3 tracking-tight">
+              <Truck className="w-6 h-6 text-cyan-400" /> Ready for Shipping
+            </h3>
+            <div className="flex items-center justify-between mt-3">
+              <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">Staging Area & Manifest</p>
+              <Badge variant="outline" className="bg-slate-900 text-slate-400 border-slate-700 text-[10px] font-mono">{shippingQueue.length} BATCHES</Badge>
             </div>
-            <Select value={selectedLocation} onValueChange={setSelectedLocation}>
-              <SelectTrigger className="w-48 h-10 bg-slate-950 border-slate-700 text-slate-300 font-mono rounded-lg">
-                <SelectValue placeholder="Location" />
-              </SelectTrigger>
-              <SelectContent className="bg-slate-900 border-slate-700 text-slate-300">
-                <SelectItem value="all">Barcha joylar</SelectItem>
-                {allLocations.map(loc => <SelectItem key={loc} value={loc}>{loc}</SelectItem>)}
-              </SelectContent>
-            </Select>
-            <Select value={selectedQCStatus} onValueChange={setSelectedQCStatus}>
-              <SelectTrigger className="w-48 h-10 bg-slate-950 border-slate-700 text-slate-300 font-mono rounded-lg">
-                <SelectValue placeholder="QC Status" />
-              </SelectTrigger>
-              <SelectContent className="bg-slate-900 border-slate-700 text-slate-300">
-                <SelectItem value="all">Hammasi</SelectItem>
-                <SelectItem value="passed">QC Approved</SelectItem>
-              </SelectContent>
-            </Select>
           </div>
 
-          {/* Grid View */}
-          <div className="space-y-4">
-            {filteredGoods.map(item => {
-              const sortedBatches = sortBatchesByDate(item.batches).filter(b => !shippedBatches.has(b.batch));
-              if (sortedBatches.length === 0) return null;
-              const isExpanded = expandedProducts.has(item.id);
-
-              // Recalculate Available for display
-              const dispAvailable = item.availableQuantity - item.batches.filter(b => shippedBatches.has(b.batch)).reduce((s, b) => s + b.quantity, 0);
-
-              return (
-                <div key={item.id} className="border border-slate-800 bg-slate-900 rounded-xl overflow-hidden shadow-lg hover:border-slate-700 transition-colors">
-                  <div className="p-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
-                        <h3 className="text-lg font-black text-white">{item.productName}</h3>
-                        <Badge variant="outline" className="font-mono text-[10px] bg-slate-950 text-slate-400 border-slate-700">{item.sku}</Badge>
-                      </div>
-                      <div className="flex items-center gap-6 text-sm">
-                        <div className="flex items-center gap-2">
-                          <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                          <span className="text-slate-400 font-bold text-xs uppercase tracking-widest">Mavjud: <span className="text-emerald-400 font-black text-base">{dispAvailable}</span></span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <AlertTriangle className="w-4 h-4 text-amber-500" />
-                          <span className="text-slate-400 font-bold text-xs uppercase tracking-widest">Band: <span className="text-amber-400 font-black text-base">{item.reservedQuantity}</span></span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-3">
-                      <Button variant="outline" onClick={() => openBinMap(item.warehouseLocations)} className="h-9 px-4 text-xs font-bold uppercase tracking-widest bg-slate-950 border-slate-700 text-slate-400 hover:text-cyan-400 hover:border-cyan-500 shrink-0">
-                        <MapPin className="w-3.5 h-3.5 mr-2" /> Bin Map
-                      </Button>
-                      <Button variant="ghost" onClick={() => toggleProductExpansion(item.id)} className="h-9 w-9 p-0 text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 shrink-0 rounded-lg">
-                        {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                      </Button>
+          <div className="flex-1 overflow-y-auto p-4 bg-slate-950/30">
+            {shippingQueue.length === 0 ? (
+              <div className="h-full flex flex-col items-center justify-center text-slate-600 space-y-4">
+                <Boxes className="w-16 h-16 opacity-50" />
+                <p className="text-xs font-black uppercase tracking-widest text-center">Scan or select batches<br />from inventory to stage</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {shippingQueue.map((q, i) => (
+                  <div key={i} className="p-4 border border-cyan-500/30 bg-cyan-950/30 rounded-2xl group relative backdrop-blur-sm">
+                    <button onClick={() => removeFromQueue(q.batchId)} className="absolute top-3 right-3 text-slate-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity bg-slate-900 rounded-full p-1"><XCircle className="w-4 h-4" /></button>
+                    <h4 className="text-sm font-bold text-slate-200 truncate pr-8 leading-tight mb-2">{q.productName}</h4>
+                    <div className="flex justify-between items-center">
+                      <Badge variant="outline" className="bg-slate-900 text-cyan-400 font-mono text-[10px] border-cyan-900">{q.batchId}</Badge>
+                      <span className="text-white font-black font-mono text-base">{q.qty.toLocaleString()} <span className="text-[10px] text-slate-500 font-sans">PCS</span></span>
                     </div>
                   </div>
-
-                  {/* 2. Advanced Grid Features: Expandable Rows */}
-                  {isExpanded && (
-                    <div className="border-t border-slate-800 bg-slate-950/50 p-4">
-                      <div className="grid grid-cols-[100px_1fr_100px_120px_100px_160px] gap-4 mb-3 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-slate-500 border-b border-slate-800/50">
-                        <span>Batch ID</span>
-                        <span>Location</span>
-                        <span className="text-right">Qty</span>
-                        <span>Prod. Date</span>
-                        <span>QC Status</span>
-                        <span className="text-right">Actions</span>
-                      </div>
-                      <div className="space-y-2">
-                        {sortedBatches.map((batch, idx) => {
-                          const isHeld = qualityHolds.has(batch.batch);
-                          const isQueued = shippingQueue.some(q => q.batchId === batch.batch);
-
-                          return (
-                            <div key={idx} className={`grid grid-cols-[100px_1fr_100px_120px_100px_160px] gap-4 items-center px-4 py-3 rounded-lg border transition-all ${isHeld ? 'bg-red-500/5 border-red-500/20' : isQueued ? 'bg-cyan-500/10 border-cyan-500/30' : 'bg-slate-900 border-slate-800 hover:border-slate-700'}`}>
-                              <span className={`text-xs font-bold ${isHeld ? 'text-red-400 line-through' : 'text-slate-300'}`}>{batch.batch}</span>
-                              <span className="text-xs text-slate-400">{batch.warehouseLocation}</span>
-                              <span className="text-xs font-black text-right text-white">{batch.quantity}</span>
-                              <span className="text-xs text-slate-500">{batch.receivedAt.split('T')[0]}</span>
-                              <div>
-                                {batch.qcDate ? (
-                                  <Badge variant="outline" className="bg-emerald-500/10 text-emerald-400 border-emerald-500/20 text-[9px]">APPROVED</Badge>
-                                ) : (
-                                  <Badge variant="outline" className="bg-amber-500/10 text-amber-400 border-amber-500/20 text-[9px]">PENDING</Badge>
-                                )}
-                              </div>
-                              <div className="flex items-center justify-end gap-2">
-                                <Button size="sm" variant="ghost" onClick={() => toggleQualityHold(batch.batch)} className={`h-7 w-7 p-0 rounded-md ${isHeld ? 'text-red-500 bg-red-500/10 hover:bg-red-500/20 hover:text-red-400' : 'text-slate-500 hover:text-red-400 hover:bg-red-500/10'}`}>
-                                  <ShieldAlert className="w-3.5 h-3.5" />
-                                </Button>
-                                {isQueued ? (
-                                  <Button size="sm" variant="outline" onClick={() => removeFromQueue(batch.batch)} className="h-7 px-3 text-[10px] bg-slate-950 border-slate-700 text-slate-400 hover:text-white rounded-md">UNQUEUE</Button>
-                                ) : (
-                                  <Button size="sm" disabled={isHeld} onClick={() => addToQueue(item.id, batch.batch, batch.quantity, item.productName, item.batches)} className={`h-7 px-3 text-[10px] font-bold rounded-md uppercase tracking-wider ${isHeld ? 'bg-slate-800 text-slate-600' : 'bg-cyan-600 hover:bg-cyan-500 text-white'}`}>
-                                    + ADD
-                                  </Button>
-                                )}
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* 3. Dispatch Cockpit Sidebar */}
-        <aside className="w-full xl:w-96 shrink-0 flex flex-col gap-6 sticky top-6 self-start">
-          <div className="border border-slate-800 bg-slate-900 rounded-2xl shadow-2xl flex flex-col overflow-hidden h-[calc(100vh-4rem)] max-h-[800px]">
-            <div className="p-5 border-b border-slate-800 bg-slate-950/50">
-              <h3 className="text-lg font-black text-white flex items-center gap-2">
-                <Truck className="w-5 h-5 text-cyan-400" /> Ready for Shipping
-              </h3>
-              <p className="text-xs text-slate-500 mt-1 uppercase tracking-widest font-bold">Staging Area & Manifest</p>
-            </div>
-
-            <div className="flex-1 overflow-y-auto p-5 pb-2">
-              {shippingQueue.length === 0 ? (
-                <div className="h-full flex flex-col items-center justify-center text-slate-500 space-y-3">
-                  <Package className="w-12 h-12 text-slate-800" />
-                  <p className="text-sm font-bold uppercase tracking-widest">No Batches Queued</p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {shippingQueue.map((q, i) => (
-                    <div key={i} className="p-3 border border-cyan-500/30 bg-cyan-500/5 rounded-xl group relative">
-                      <button onClick={() => removeFromQueue(q.batchId)} className="absolute top-2 right-2 text-slate-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"><XCircle className="w-4 h-4" /></button>
-                      <h4 className="text-sm font-black text-slate-200 truncate pr-6">{q.productName}</h4>
-                      <div className="flex justify-between items-center mt-2">
-                        <Badge variant="outline" className="bg-slate-950 text-slate-400 font-mono text-[9px] border-slate-700">{q.batchId}</Badge>
-                        <span className="text-cyan-400 font-black text-sm">{q.qty} <span className="text-xs text-slate-500">pcs</span></span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            <div className="p-5 bg-slate-950 border-t border-slate-800 shadow-[0_-10px_30px_rgba(0,0,0,0.5)]">
-              <div className="flex justify-between items-end mb-4">
-                <div className="text-xs font-bold text-slate-500 uppercase tracking-widest leading-tight">Total Volume<br /><span className="text-2xl font-black text-white font-mono mt-1 block">{queueTotal.toLocaleString()} <span className="text-sm text-slate-500">units</span></span></div>
-                <Button variant="ghost" onClick={handleExportManifest} disabled={shippingQueue.length === 0} className="text-cyan-400 hover:text-cyan-300 hover:bg-cyan-950 transition-colors h-9 px-3 text-[10px] font-black uppercase tracking-widest">
-                  <Download className="w-3.5 h-3.5 mr-1.5" /> Manifest
-                </Button>
+                ))}
               </div>
-              <Button
-                onClick={executeShipment}
-                disabled={shippingQueue.length === 0}
-                className={`w-full h-12 rounded-xl font-black uppercase tracking-widest text-xs flex items-center justify-center gap-2 transition-all duration-300 ${shippingQueue.length > 0 ? 'bg-cyan-600 hover:bg-cyan-500 text-white shadow-[0_0_20px_rgba(6,182,212,0.4)] hover:shadow-[0_0_30px_rgba(6,182,212,0.6)]' : 'bg-slate-900 text-slate-600 cursor-not-allowed border border-slate-800'}`}
-              >
-                EXECUTE SHIPMENT <ArrowRight className="w-4 h-4" />
+            )}
+          </div>
+
+          <div className="p-6 bg-slate-950 border-t border-slate-800 shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
+            <div className="flex justify-between items-end mb-6">
+              <div>
+                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Total Payload Volume</p>
+                <p className="text-3xl font-black text-white font-mono">{shippingQueue.reduce((a, c) => a + c.qty, 0).toLocaleString()}</p>
+              </div>
+              <Button variant="outline" disabled={shippingQueue.length === 0} className="text-cyan-400 border-cyan-500/30 bg-cyan-950/30 hover:bg-cyan-900 hover:text-white transition-colors h-10 px-4 text-xs font-black uppercase tracking-widest rounded-xl">
+                <Download className="w-4 h-4 mr-2" /> Manifest
               </Button>
             </div>
+            <Button
+              onClick={executeShipment}
+              disabled={shippingQueue.length === 0}
+              className={`w-full h-14 rounded-2xl font-black uppercase tracking-widest text-xs flex items-center justify-center gap-3 transition-all duration-300 shadow-xl ${shippingQueue.length > 0 ? 'bg-cyan-600 hover:bg-cyan-500 text-white shadow-cyan-500/20 hover:shadow-cyan-500/40' : 'bg-slate-900 text-slate-600 cursor-not-allowed border border-slate-800'}`}
+            >
+              EXECUTE SHIPMENT <ArrowRight className="w-5 h-5" />
+            </Button>
           </div>
-        </aside>
+        </div>
+      </aside>
+    </div>
+  );
 
+  // --- Main Layout ---
+  return (
+    <div className="min-h-screen p-6 md:p-8 bg-slate-950 font-sans text-slate-300 animate-in fade-in slide-in-from-bottom-4 duration-500">
+
+      {/* Intelligent Global Analytics Header */}
+      <div className="mb-6 grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="col-span-1 border border-slate-800 bg-slate-900 rounded-3xl p-6 shadow-2xl relative overflow-hidden flex flex-col justify-center">
+          <div className="absolute -top-10 -right-10 w-40 h-40 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none" />
+          <h2 className="text-3xl font-black text-white flex items-center gap-3 mb-1 tracking-tight">
+            <Factory className="w-8 h-8 text-cyan-400" /> Distribution Center
+          </h2>
+          <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">SAP High-Volume Hub</p>
+        </div>
+
+        <div className="col-span-2 border border-slate-800 rounded-3xl p-6 bg-slate-900 shadow-lg flex gap-8 items-center">
+          <div className="flex-1">
+            <div className="flex justify-between items-center mb-3">
+              <span className="text-[10px] text-slate-400 font-black uppercase tracking-widest flex items-center gap-2"><CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" /> Readiness for UzAuto</span>
+              <span className="text-emerald-400 font-black font-mono text-base">{readinessPercent}%</span>
+            </div>
+            <div className="h-2 bg-slate-950 rounded-full overflow-hidden border border-slate-800 shadow-inner">
+              <div className="h-full bg-emerald-500 rounded-full transition-all duration-1000" style={{ width: `${readinessPercent}%` }} />
+            </div>
+            {/* 4. Intelligence & Risk Prediction */}
+            <p className="text-[10px] font-bold text-amber-500 mt-2 flex items-center gap-1"><AlertTriangle className="w-3 h-3" /> Stock will be depleted in 48 hours based on demand.</p>
+          </div>
+
+          <div className="w-px h-16 bg-slate-800 hidden md:block" />
+
+          <div className="flex-1">
+            <div className="flex justify-between items-center mb-3">
+              <span className="text-[10px] text-slate-400 font-black uppercase tracking-widest flex items-center gap-2"><Truck className="w-3.5 h-3.5 text-cyan-400" /> Daily Dispatch Target</span>
+              <span className="text-cyan-400 font-black font-mono text-base">{actualDispatchProgress}%</span>
+            </div>
+            <div className="h-2 bg-slate-950 rounded-full overflow-hidden border border-slate-800 shadow-inner">
+              <div className="h-full bg-cyan-500 shadow-[0_0_10px_rgba(6,182,212,0.5)] rounded-full transition-all duration-1000" style={{ width: `${actualDispatchProgress}%` }} />
+            </div>
+            <div className="flex justify-between mt-2 text-[10px] text-slate-500 font-black uppercase tracking-widest">
+              <span>SHIPPED: <span className="text-white font-mono">{totalShippedToday.toLocaleString()}</span></span>
+              <span>TARGET: <span className="text-slate-400 font-mono">{dailyTarget.toLocaleString()}</span></span>
+            </div>
+          </div>
+        </div>
       </div>
+
+      {/* Modular Workspace Tabs UI */}
+      <div className="flex items-center gap-2 mb-6 border-b border-slate-800 pb-px">
+        {[
+          { id: 'receipt', icon: LogIn, label: 'Goods Receipt', sub: 'Qabul qilish' },
+          { id: 'inventory', icon: Boxes, label: 'Inventory & Bin Map', sub: 'Zaxira va Xarita' },
+          { id: 'shipping', icon: Truck, label: 'Shipping & Dispatch', sub: "Jo'natish", badge: shippingQueue.length > 0 ? shippingQueue.length : null }
+        ].map(tab => {
+          const Icon = tab.icon;
+          const isActive = activeTab === tab.id;
+          return (
+            <button key={tab.id} onClick={() => setActiveTab(tab.id as TabMode)} className={`relative flex items-center gap-3 px-6 py-4 rounded-t-2xl transition-all ${isActive ? 'bg-slate-900 border-t border-x border-slate-800 text-white shadow-[0_-10px_20px_rgba(0,0,0,0.2)]' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-900/50'}`}>
+              <Icon className={`w-5 h-5 ${isActive ? 'text-cyan-400' : ''}`} />
+              <div className="text-left">
+                <p className="text-xs font-black uppercase tracking-widest leading-none mb-1 shadow-sm">{tab.label}</p>
+                <p className="text-[9px] font-bold text-slate-500 uppercase">{tab.sub}</p>
+              </div>
+              {tab.badge && <Badge variant="secondary" className="absolute top-3 right-3 bg-cyan-500 text-slate-950 font-black text-[9px] px-1.5 h-4 min-w-[16px] flex items-center justify-center rounded-full animate-bounce">{tab.badge}</Badge>}
+              {isActive && <div className="absolute bottom-0 left-0 w-full h-[2px] bg-cyan-500 translate-y-px" />}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Render Active Workspace */}
+      <div className="animate-in fade-in slide-in-from-right-4 duration-300">
+        {activeTab === 'receipt' && renderReceiptTab()}
+        {activeTab === 'inventory' && renderInventoryTab()}
+        {activeTab === 'shipping' && renderShippingTab()}
+      </div>
+
     </div>
   );
 }
