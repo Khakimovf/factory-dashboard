@@ -1,19 +1,22 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useLanguage } from '../context/LanguageContext';
 import { useFactory } from '../context/FactoryContext';
 import {
   Wrench, AlertCircle, Clock, CheckCircle, Factory, X,
   Activity, ShieldAlert, Cpu, Zap, UserCircle, CheckCircle2,
-  TrendingDown, TrendingUp, AlertTriangle, MapPin, ArrowRight
+  TrendingDown, TrendingUp, AlertTriangle, MapPin, ArrowRight,
+  ClipboardList, Image as ImageIcon, Send, Upload, FileSignature
 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
+import { Input } from './ui/input';
+import { Textarea } from './ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { toast } from 'sonner';
 
-// Define the shape of a Smart Work Order
+// Define the shape of a Smart Work Order with 4 dynamic statuses
 type Severity = 'CRITICAL' | 'WARNING' | 'INFO';
-type NodeStatus = 'NORMAL' | 'ISSUE_REPORTED' | 'TECHNICIAN_ASSIGNED';
+type NodeStatus = 'OPEN' | 'ASSIGNED' | 'IN_PROGRESS' | 'VERIFIED';
 
 interface WorkOrder {
   id: string;
@@ -26,6 +29,8 @@ interface WorkOrder {
   history: string[];
   toolsRequired: string[];
   assignedTo?: string;
+  evidencePhoto?: string;
+  resolutionSteps?: string;
 }
 
 export function MaintenanceDashboard() {
@@ -35,6 +40,7 @@ export function MaintenanceDashboard() {
   // Real-time Dashboard Counters
   const [mttr, setMttr] = useState(42);
   const [uptime, setUptime] = useState(98.4);
+  const [activeCount, setActiveCount] = useState(2);
 
   // Mock Active Work Orders
   const [workOrders, setWorkOrders] = useState<WorkOrder[]>([
@@ -44,14 +50,13 @@ export function MaintenanceDashboard() {
       source: 'Assembly Line A - Sector 4',
       issue: 'Hydraulic Pressure Drop in Press Module',
       severity: 'CRITICAL',
-      status: 'ISSUE_REPORTED',
+      status: 'OPEN',
       reportedAt: new Date(Date.now() - 15 * 60000), // 15 mins ago
       history: [
         'Valve Replacement (2 months ago)',
         'Fluid Top-up (3 months ago)',
         'Sensor Calibration (6 months ago)',
-        'Routine Inspection (8 months ago)',
-        'Filter Change (1 year ago)'
+        'Routine Inspection (8 months ago)'
       ],
       toolsRequired: ['Hydraulic Seal X-200', 'Pressure Gauge Kit', 'Wrench Set M10-M24']
     },
@@ -61,28 +66,35 @@ export function MaintenanceDashboard() {
       source: 'Assembly Line D - Sector 2',
       issue: 'Conveyor Belt Motor Overheating',
       severity: 'WARNING',
-      status: 'TECHNICIAN_ASSIGNED',
+      status: 'ASSIGNED',
       reportedAt: new Date(Date.now() - 45 * 60000), // 45 mins ago
       history: [
         'Bearing Lubrication (1 month ago)',
         'Motor Alignment (4 months ago)',
         'Electrical Diagnostic (5 months ago)',
-        'Belt Tension Adjustment (7 months ago)',
-        'Routine Cleanup (9 months ago)'
+        'Belt Tension Adjustment (7 months ago)'
       ],
       toolsRequired: ['Thermal Camera', 'Lubricant V-90', 'Multimeter'],
-      assignedTo: 'Eng. Rustamov'
+      assignedTo: 'Jamoliddin J'
     }
   ]);
 
   const [selectedOrder, setSelectedOrder] = useState<WorkOrder | null>(null);
 
+  // Modal Navigation State
+  const [activeTab, setActiveTab] = useState<'details' | 'assignment' | 'verification'>('details');
+
+  // Evidence Form State
+  const [evidencePhoto, setEvidencePhoto] = useState<string | null>(null);
+  const [resolutionSteps, setResolutionSteps] = useState('');
+  const [showFinalConfirmation, setShowFinalConfirmation] = useState(false);
+
   // System-Wide Alerts (Mock)
-  const systemAlerts = [
+  const [systemAlerts, setSystemAlerts] = useState([
     { source: 'Warehouse', msg: 'Low stock on Hydraulic Seal X-200', type: 'warning', time: '10 mins ago' },
     { source: 'Quality Control', msg: 'Tolerance drift detected on Line B', type: 'info', time: '1 hour ago' },
     { source: 'Power Grid', msg: 'Voltage fluctuation in Sector 4', type: 'critical', time: '2 mins ago' }
-  ];
+  ]);
 
   // Helper: Format elapsed downtime
   const [now, setNow] = useState(new Date());
@@ -91,34 +103,96 @@ export function MaintenanceDashboard() {
     return () => clearInterval(timer);
   }, []);
 
-  const formatDowntime = (startTime: Date) => {
+  useEffect(() => {
+    // Sync active count dynamically (dont count VERIFIED in active)
+    setActiveCount(workOrders.filter(wo => wo.status !== 'VERIFIED').length);
+  }, [workOrders]);
+
+  const formatDowntime = (startTime: Date, isVerified = false) => {
+    if (isVerified) return '00:00'; // Stopped clock
     const diff = Math.floor((now.getTime() - startTime.getTime()) / 1000);
     const m = Math.floor(diff / 60);
     const s = diff % 60;
     return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
 
+  const getStatusColor = (status: NodeStatus) => {
+    switch (status) {
+      case 'OPEN': return 'text-red-500 bg-red-500/10 border-red-500/30 shadow-[0_0_15px_rgba(239,68,68,0.2)]';
+      case 'ASSIGNED': return 'text-amber-500 bg-amber-500/10 border-amber-500/30 shadow-[0_0_15px_rgba(245,158,11,0.2)]';
+      case 'IN_PROGRESS': return 'text-blue-400 bg-blue-500/10 border-blue-500/30 shadow-[0_0_15px_rgba(59,130,246,0.2)]';
+      case 'VERIFIED': return 'text-emerald-500 bg-emerald-500/10 border-emerald-500/30 shadow-[0_0_15px_rgba(16,185,129,0.2)]';
+    }
+  };
+
   const assignTech = (orderId: string, technician: string) => {
     setWorkOrders(prev => prev.map(wo => {
       if (wo.id === orderId) {
-        return { ...wo, status: 'TECHNICIAN_ASSIGNED', assignedTo: technician };
+        return { ...wo, status: 'ASSIGNED', assignedTo: technician };
       }
       return wo;
     }));
     toast.success('Assignment Synchronized', {
-      description: `Engineer ${technician} is en route. Expected arrival: 5 mins`,
-      icon: <UserCircle className="w-5 h-5 text-cyan-400" />
+      description: `Engineer ${technician} is en route to you.`,
+      icon: <UserCircle className="w-5 h-5 text-amber-500" />
     });
-    setSelectedOrder(prev => prev && prev.id === orderId ? { ...prev, status: 'TECHNICIAN_ASSIGNED', assignedTo: technician } : prev);
+    // Add socket mock to system alerts
+    setSystemAlerts(prev => [{ source: 'Maintenance Dispatch', msg: `Engineer ${technician} en route to ${selectedOrder?.source}`, type: 'warning', time: 'Just now' }, ...prev]);
+
+    setSelectedOrder(prev => prev && prev.id === orderId ? { ...prev, status: 'ASSIGNED', assignedTo: technician } : prev);
   };
 
-  const confirmFix = (orderId: string) => {
-    setWorkOrders(prev => prev.filter(wo => wo.id !== orderId));
-    toast.success('Maintenance Completed', {
-      description: `Line status automatically reverted to NORMAL. System updated.`,
+  const startWorkProcess = (orderId: string) => {
+    setWorkOrders(prev => prev.map(wo => {
+      if (wo.id === orderId) return { ...wo, status: 'IN_PROGRESS' };
+      return wo;
+    }));
+    toast.info('Work Started', { description: `Engineer is now fixing the issue` });
+    setSelectedOrder(prev => prev && prev.id === orderId ? { ...prev, status: 'IN_PROGRESS' } : prev);
+  };
+
+  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const reader = new FileReader();
+      reader.onload = (event) => setEvidencePhoto(event.target?.result as string);
+      reader.readAsDataURL(e.target.files[0]);
+    }
+  };
+
+  const submitTicket = () => {
+    if (!evidencePhoto || !resolutionSteps.trim()) return;
+    setShowFinalConfirmation(true);
+  };
+
+  const confirmFinalClosure = () => {
+    if (!selectedOrder) return;
+
+    setWorkOrders(prev => prev.map(wo => {
+      if (wo.id === selectedOrder.id) {
+        return { ...wo, status: 'VERIFIED', evidencePhoto, resolutionSteps };
+      }
+      return wo;
+    }));
+
+    // Hard Lock Logic / MTTR update
+    setMttr(prev => Math.max(12, prev - 2)); // Improve MTTR
+    toast.success('Work Order Verified & Closed', {
+      description: `Evidence sent back to ${selectedOrder.source}. Line Status -> NORMAL.`,
       icon: <CheckCircle2 className="w-5 h-5 text-emerald-400" />
     });
+
+    setSystemAlerts(prev => [{ source: 'Maintenance Control', msg: `Ticket ${selectedOrder.id} successfully resolved. Line restored.`, type: 'info', time: 'Just now' }, ...prev]);
+
+    setShowFinalConfirmation(false);
     setSelectedOrder(null);
+    setEvidencePhoto(null);
+    setResolutionSteps('');
+    setActiveTab('details');
+  };
+
+  const openWorkOrderModal = (wo: WorkOrder) => {
+    setSelectedOrder(wo);
+    setActiveTab(wo.status === 'VERIFIED' ? 'details' : wo.status === 'IN_PROGRESS' ? 'verification' : wo.status === 'ASSIGNED' ? 'assignment' : 'details');
   };
 
   return (
@@ -163,9 +237,9 @@ export function MaintenanceDashboard() {
             <div>
               <p className="text-sm font-bold text-slate-500 uppercase tracking-widest mt-4">Active Work Orders</p>
               <div className="flex items-end gap-2 text-white">
-                <p className="text-5xl font-black font-mono tracking-tighter">{workOrders.length}</p>
+                <p className="text-5xl font-black font-mono tracking-tighter">{activeCount}</p>
               </div>
-              <p className="text-xs text-slate-500 mt-2">Requiring immediate attention</p>
+              <p className="text-xs text-slate-500 mt-2">Open / Assigned / In Progress</p>
             </div>
           </div>
 
@@ -206,7 +280,7 @@ export function MaintenanceDashboard() {
       </div>
 
       {/* 2. Smart Work Order Cards */}
-      <h3 className="text-xl font-black text-white mb-6 tracking-tight flex items-center gap-2"><ShieldAlert className="w-6 h-6 text-amber-500" /> Active Maintenance Incidents</h3>
+      <h3 className="text-xl font-black text-white mb-6 tracking-tight flex items-center gap-2"><ShieldAlert className="w-6 h-6 text-amber-500" /> Actionable Maintenance Incidents</h3>
       <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-6">
         {workOrders.length === 0 ? (
           <div className="col-span-full py-16 flex flex-col items-center justify-center text-slate-500 border-2 border-slate-800 border-dashed rounded-3xl bg-slate-900/50">
@@ -216,26 +290,30 @@ export function MaintenanceDashboard() {
           </div>
         ) : (
           workOrders.map(wo => {
-            const isCritical = wo.severity === 'CRITICAL';
+            const isCritical = wo.severity === 'CRITICAL' && wo.status !== 'VERIFIED';
+            const isVerified = wo.status === 'VERIFIED';
 
             return (
               <div
                 key={wo.id}
-                onClick={() => setSelectedOrder(wo)}
+                onClick={() => openWorkOrderModal(wo)}
                 className={`group cursor-pointer border rounded-3xl p-6 transition-all hover:-translate-y-1 relative overflow-hidden shadow-lg
-                  ${isCritical ? 'bg-red-950/20 border-red-900/50 hover:border-red-500/50 hover:shadow-red-900/20' : 'bg-slate-900/80 border-slate-800 hover:border-amber-500/50 hover:shadow-amber-900/20'}`}
+                  ${isVerified ? 'bg-slate-950/80 border-emerald-900/50 hover:border-emerald-500/50' :
+                    isCritical ? 'bg-red-950/20 border-red-900/50 hover:border-red-500/50 hover:shadow-red-900/20'
+                      : 'bg-slate-900/80 border-slate-800 hover:border-amber-500/50 hover:shadow-amber-900/20'}`}
               >
-                {/* Glowing LED Indicator */}
-                <div className={`absolute top-0 left-0 w-full h-1 ${isCritical ? 'bg-red-500 shadow-[0_0_20px_rgba(239,68,68,1)]' : 'bg-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.5)]'}`} />
+                {/* Glowing status line */}
+                <div className={`absolute top-0 left-0 w-full h-1 ${isVerified ? 'bg-emerald-500' : isCritical ? 'bg-red-500 shadow-[0_0_20px_rgba(239,68,68,1)]' : wo.status === 'IN_PROGRESS' ? 'bg-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.5)]' : 'bg-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.5)]'}`} />
+
                 {isCritical && <div className="absolute top-6 right-6 w-3 h-3 bg-red-500 rounded-full animate-ping opacity-75" />}
 
                 <div className="flex justify-between items-start mb-5">
-                  <Badge variant="outline" className={`font-mono text-[10px] px-2.5 py-1 font-black shadow-inner ${isCritical ? 'bg-red-500/10 text-red-400 border-red-500/30' : 'bg-amber-500/10 text-amber-400 border-amber-500/30'}`}>
-                    {wo.id}
+                  <Badge variant="outline" className={`font-mono text-[10px] px-2.5 py-1 font-black shadow-inner ${getStatusColor(wo.status)}`}>
+                    {wo.id} • {wo.status.replace('_', ' ')}
                   </Badge>
                   <div className="flex items-center gap-2 text-slate-400">
                     <Clock className="w-4 h-4" />
-                    <span className="font-mono text-base font-black text-white bg-slate-950 px-2 py-0.5 rounded-lg border border-slate-800">{formatDowntime(wo.reportedAt)}</span>
+                    <span className={`font-mono text-base font-black px-2 py-0.5 rounded-lg border border-slate-800 ${isVerified ? 'text-emerald-500 bg-emerald-950/50' : 'text-white bg-slate-950'}`}>{formatDowntime(wo.reportedAt, isVerified)}</span>
                   </div>
                 </div>
 
@@ -243,10 +321,12 @@ export function MaintenanceDashboard() {
                 <p className="text-xs font-black text-slate-400 flex items-center gap-2 uppercase tracking-widest"><Factory className="w-4 h-4 text-cyan-500" /> {wo.source}</p>
 
                 <div className="mt-8 flex items-center justify-between border-t border-slate-800/60 pt-5">
-                  <span className={`text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg ${wo.status === 'TECHNICIAN_ASSIGNED' ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 shadow-inner' : 'bg-slate-950 text-slate-500 border border-slate-800 shadow-inner'}`}>
-                    {wo.status === 'TECHNICIAN_ASSIGNED' ? `ASSIGNED: ${wo.assignedTo}` : 'AWAITING ASSIGNMENT'}
+                  <span className={`text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg border shadow-inner ${getStatusColor(wo.status)}`}>
+                    {wo.status === 'OPEN' ? 'AWAITING DISPATCH' :
+                      wo.status === 'ASSIGNED' ? `EN ROUTE: ${wo.assignedTo}` :
+                        wo.status === 'IN_PROGRESS' ? `FIXING: ${wo.assignedTo}` : `RESOLVED`}
                   </span>
-                  <span className="text-xs text-cyan-400 font-black flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity bg-cyan-950/50 px-3 py-1.5 rounded-lg">DIAGNOSE <ArrowRight className="w-3.5 h-3.5" /></span>
+                  {!isVerified && <span className="text-xs text-cyan-400 font-black flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity bg-cyan-950/50 px-3 py-1.5 rounded-lg">PROCESS <ArrowRight className="w-3.5 h-3.5" /></span>}
                 </div>
               </div>
             );
@@ -254,102 +334,226 @@ export function MaintenanceDashboard() {
         )}
       </div>
 
-      {/* 3. Diagnostic Modal ("Fix-it" View) */}
+      {/* 3. 3-Tab Modular Diagnostic Modal ("Fix-it" View) */}
       {selectedOrder && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in zoom-in-95 duration-200">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl w-full max-w-5xl flex flex-col md:flex-row overflow-hidden max-h-[90vh] shadow-cyan-900/20">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-md animate-in fade-in zoom-in-95 duration-200">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl w-full max-w-5xl flex flex-col overflow-hidden max-h-[95vh] shadow-cyan-900/20">
 
-            {/* Modal Left: Details & Actions */}
-            <div className="flex-1 p-8 md:p-10 overflow-y-auto">
-              <div className="flex justify-between items-start mb-8">
-                <div>
-                  <Badge variant="outline" className={`font-mono text-[10px] font-black px-2 pb-0.5 mb-4 ${selectedOrder.severity === 'CRITICAL' ? 'bg-red-500/10 text-red-400 border-red-500/30' : 'bg-amber-500/10 text-amber-400 border-amber-500/30'}`}>{selectedOrder.id} • {selectedOrder.severity}</Badge>
-                  <h2 className="text-3xl font-black text-white leading-tight mb-3 tracking-tight">{selectedOrder.issue}</h2>
-                  <p className="text-sm font-black text-slate-400 uppercase tracking-widest flex items-center gap-2"><MapPin className="w-4 h-4 text-cyan-500" /> {selectedOrder.source}</p>
-                </div>
-                <button onClick={() => setSelectedOrder(null)} className="p-2.5 rounded-full hover:bg-slate-800 text-slate-500 hover:text-white transition-colors bg-slate-950 border border-slate-800"><X className="w-5 h-5" /></button>
+            {/* Modal Header */}
+            <div className="flex justify-between items-center p-6 border-b border-slate-800 bg-slate-950 shrink-0">
+              <div className="flex items-center gap-4">
+                <Badge variant="outline" className={`font-mono text-[10px] font-black px-2 py-0.5 ${getStatusColor(selectedOrder.status)}`}>{selectedOrder.id} • {selectedOrder.status.replace('_', ' ')}</Badge>
+                <h2 className="text-xl font-black text-white tracking-tight">{selectedOrder.issue}</h2>
               </div>
+              <button onClick={() => setSelectedOrder(null)} className="p-2 rounded-full hover:bg-slate-800 text-slate-500 hover:text-white transition-colors bg-slate-950 border border-slate-800"><X className="w-5 h-5" /></button>
+            </div>
 
-              <div className="grid grid-cols-2 gap-4 mb-10">
-                <div className="bg-slate-950 border border-slate-800 rounded-2xl p-5 shadow-inner">
-                  <p className="text-[10px] text-slate-500 uppercase tracking-widest font-black mb-2">Downtime Clock</p>
-                  <p className="text-4xl font-mono font-black text-red-500 animate-pulse drop-shadow-[0_0_10px_rgba(239,68,68,0.5)]">{formatDowntime(selectedOrder.reportedAt)}</p>
-                </div>
-                <div className="bg-slate-950 border border-slate-800 rounded-2xl p-5 shadow-inner">
-                  <p className="text-[10px] text-slate-500 uppercase tracking-widest font-black mb-2">Reported At</p>
-                  <p className="text-3xl font-mono font-black text-white mt-1">{selectedOrder.reportedAt.toLocaleTimeString('uz-UZ')}</p>
-                </div>
-              </div>
+            {/* Application Tabs */}
+            <div className="flex items-center gap-2 px-6 pt-6 border-b border-slate-800 bg-slate-950 shrink-0">
+              <button onClick={() => setActiveTab('details')} className={`flex items-center gap-2 px-6 py-3 rounded-t-xl text-[11px] font-black uppercase tracking-widest border border-b-0 transition-colors ${activeTab === 'details' ? 'bg-slate-900 border-slate-800 text-cyan-400 relative z-10 bottom-[-1px]' : 'border-transparent text-slate-500 hover:text-slate-300 hover:bg-slate-900/50'}`}>
+                <Activity className="w-4 h-4" /> Issue Details
+              </button>
+              <button disabled={selectedOrder.status === 'VERIFIED'} onClick={() => setActiveTab('assignment')} className={`flex items-center gap-2 px-6 py-3 rounded-t-xl text-[11px] font-black uppercase tracking-widest border border-b-0 transition-colors ${activeTab === 'assignment' ? 'bg-slate-900 border-slate-800 text-amber-400 relative z-10 bottom-[-1px]' : 'border-transparent text-slate-500 hover:text-slate-300 hover:bg-slate-900/50'} ${selectedOrder.status === 'VERIFIED' ? 'opacity-30 cursor-not-allowed' : ''}`}>
+                <UserCircle className="w-4 h-4" /> Assignment
+              </button>
+              <button disabled={selectedOrder.status === 'OPEN'} onClick={() => setActiveTab('verification')} className={`flex items-center gap-2 px-6 py-3 rounded-t-xl text-[11px] font-black uppercase tracking-widest border border-b-0 transition-colors ${activeTab === 'verification' ? 'bg-slate-900 border-slate-800 text-emerald-400 relative z-10 bottom-[-1px]' : 'border-transparent text-slate-500 hover:text-slate-300 hover:bg-slate-900/50'} ${selectedOrder.status === 'OPEN' ? 'opacity-30 cursor-not-allowed' : ''}`}>
+                <ClipboardList className="w-4 h-4" /> Evd. & Verification
+              </button>
+            </div>
 
-              {selectedOrder.status === 'ISSUE_REPORTED' && (
-                <div className="bg-slate-950 border border-slate-800 rounded-2xl p-8 mb-8 shadow-xl">
-                  <h4 className="text-sm font-black text-white uppercase tracking-widest mb-5 flex items-center gap-2"><UserCircle className="w-5 h-5 text-cyan-400" /> Assign Technician</h4>
-                  <div className="flex gap-4">
-                    <Select onValueChange={(val) => assignTech(selectedOrder.id, val)}>
-                      <SelectTrigger className="w-full bg-slate-900 border-slate-700 text-white font-black h-14 rounded-xl shadow-inner text-base">
-                        <SelectValue placeholder="Select Engineer to Dispatch..." />
-                      </SelectTrigger>
-                      <SelectContent className="bg-slate-800 border-slate-700 text-white font-bold">
-                        <SelectItem value="Eng. Rustamov">Eng. Rustamov (Electrical)</SelectItem>
-                        <SelectItem value="Eng. Aliyev">Eng. Aliyev (Mechanical)</SelectItem>
-                        <SelectItem value="Tech. Nurov">Tech. Nurov (General PM)</SelectItem>
-                      </SelectContent>
-                    </Select>
+            <div className="flex-1 overflow-y-auto p-8 relative min-h-[400px]">
+              {/* TAB 1: DETAILS */}
+              {activeTab === 'details' && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 animate-in fade-in slide-in-from-bottom-4 duration-300">
+                  <div>
+                    <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-5 flex items-center gap-2"><MapPin className="w-4 h-4 text-cyan-500" /> Location & Clock</h4>
+                    <div className="bg-slate-950 border border-slate-800 rounded-2xl p-6 shadow-inner mb-6">
+                      <p className="text-[10px] text-slate-500 uppercase tracking-widest font-black mb-2">Downtime Fault Origin</p>
+                      <p className="text-xl font-black text-white">{selectedOrder.source}</p>
+                      <div className="mt-4 pt-4 border-t border-slate-800 flex justify-between items-center">
+                        <div>
+                          <p className="text-[10px] text-slate-500 uppercase tracking-widest font-black mb-1">Time Passed</p>
+                          <p className="text-3xl font-mono font-black text-red-500 drop-shadow-[0_0_10px_rgba(239,68,68,0.5)]">{formatDowntime(selectedOrder.reportedAt, selectedOrder.status === 'VERIFIED')}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-[10px] text-slate-500 uppercase tracking-widest font-black mb-1">Reported</p>
+                          <p className="text-xl font-mono font-black text-white">{selectedOrder.reportedAt.toLocaleTimeString('uz-UZ')}</p>
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                </div>
-              )}
 
-              {selectedOrder.status === 'TECHNICIAN_ASSIGNED' && (
-                <div className="bg-cyan-950/20 border border-cyan-500/30 rounded-2xl p-8 mb-8 shadow-xl overflow-hidden relative">
-                  <div className="absolute top-0 left-0 w-2 h-full bg-cyan-500" />
-                  <div className="flex items-center gap-4 mb-6">
-                    <div className="w-12 h-12 bg-cyan-500/20 rounded-full flex items-center justify-center border border-cyan-500/50 shadow-[0_0_15px_rgba(6,182,212,0.3)]">
-                      <UserCircle className="w-6 h-6 text-cyan-400" />
+                  <div className="space-y-8 border-l border-slate-800 pl-8">
+                    <div>
+                      <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2"><Wrench className="w-4 h-4 text-amber-500" /> Required Tools / Parts</h4>
+                      <div className="flex flex-wrap gap-2">
+                        {selectedOrder.toolsRequired.map((tool, i) => (
+                          <Badge key={i} variant="outline" className="bg-slate-950 border-slate-700 text-slate-300 font-bold px-3 py-1.5"><CheckCircle className="w-3.5 h-3.5 mr-2 text-emerald-500" /> {tool}</Badge>
+                        ))}
+                      </div>
                     </div>
                     <div>
-                      <h4 className="text-[10px] font-black text-cyan-400 uppercase tracking-widest mb-0.5">Active Assignment</h4>
-                      <p className="text-2xl font-black text-white">{selectedOrder.assignedTo}</p>
+                      <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2"><Activity className="w-4 h-4 text-cyan-500" /> Component History</h4>
+                      <div className="relative border-l-2 border-slate-800 pl-5 space-y-4 ml-2">
+                        {selectedOrder.history.map((hist, i) => (
+                          <div key={i} className="relative">
+                            <div className="absolute -left-[27px] top-1 w-2.5 h-2.5 bg-slate-700 rounded-full border-2 border-slate-950" />
+                            <p className="text-xs text-slate-300 font-bold leading-tight">{hist.split('(')[0]}</p>
+                            <p className="text-[9px] uppercase font-bold text-slate-500 mt-0.5">{hist.split('(')[1]?.replace(')', '')}</p>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   </div>
-                  <Button onClick={() => confirmFix(selectedOrder.id)} className="w-full h-14 bg-emerald-600 hover:bg-emerald-500 text-white font-black uppercase tracking-widest rounded-xl shadow-[0_0_20px_rgba(16,185,129,0.3)] hover:shadow-emerald-500/40 transition-all text-sm">
-                    <CheckCircle2 className="w-5 h-5 mr-3" /> Confirm Fix & Restore Line
-                  </Button>
                 </div>
               )}
-            </div>
 
-            {/* Modal Right: Diagnostics */}
-            <div className="w-full md:w-[380px] bg-slate-950 p-8 md:p-10 border-l border-slate-800 flex flex-col gap-10 overflow-y-auto shadow-inner">
+              {/* TAB 2: ASSIGNMENT */}
+              {activeTab === 'assignment' && (
+                <div className="max-w-2xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-300 flex flex-col justify-center h-full">
+                  {selectedOrder.status === 'OPEN' ? (
+                    <div className="bg-slate-950 border border-slate-800 rounded-3xl p-10 shadow-xl text-center">
+                      <UserCircle className="w-16 h-16 text-cyan-500 mx-auto mb-6 opacity-80" />
+                      <h3 className="text-2xl font-black text-white mb-2 tracking-tight">Dispatch Engineer</h3>
+                      <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-8">Select a qualified PM technician to route to the line</p>
 
-              <div>
-                <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-5 flex items-center gap-2"><Wrench className="w-4 h-4 text-amber-500" /> Required Tools & Parts</h4>
-                <ul className="space-y-4">
-                  {selectedOrder.toolsRequired.map((tool, i) => (
-                    <li key={i} className="flex items-center gap-3 text-sm font-bold text-slate-300 bg-slate-900 border border-slate-800 p-3 rounded-xl shadow-sm">
-                      <CheckCircle className="w-5 h-5 text-emerald-500 shrink-0" /> {tool}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              <div>
-                <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-5 flex items-center gap-2"><Activity className="w-4 h-4 text-cyan-500" /> Machine History</h4>
-                <div className="relative border-l-2 border-slate-800 pl-5 space-y-6 ml-2">
-                  {selectedOrder.history.map((hist, i) => (
-                    <div key={i} className="relative">
-                      <div className="absolute -left-[27px] top-1.5 w-3 h-3 bg-slate-700 rounded-full border-2 border-slate-950" />
-                      <p className="text-sm text-slate-300 font-bold leading-tight">{hist.split('(')[0]}</p>
-                      <p className="text-[10px] uppercase font-bold text-slate-500 mt-1">{hist.split('(')[1]?.replace(')', '')}</p>
+                      <div className="max-w-xs mx-auto space-y-4">
+                        <Select onValueChange={(val) => assignTech(selectedOrder.id, val)}>
+                          <SelectTrigger className="w-full bg-slate-900 border-slate-700 text-white font-black h-14 rounded-xl shadow-inner text-base">
+                            <SelectValue placeholder="Select Technician..." />
+                          </SelectTrigger>
+                          <SelectContent className="bg-slate-800 border-slate-700 text-white font-bold">
+                            <SelectItem value="Jamoliddin J">Jamoliddin J (Lead Tech)</SelectItem>
+                            <SelectItem value="Rustamov A">Rustamov A (Mechanical)</SelectItem>
+                            <SelectItem value="Nurov S">Nurov S (Electrical)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </div>
-                  ))}
+                  ) : (
+                    <div className="bg-amber-950/20 border border-amber-500/30 rounded-3xl p-10 shadow-xl text-center relative overflow-hidden">
+                      <div className="absolute top-0 left-0 w-full h-2 bg-amber-500 shadow-[0_0_20px_rgba(245,158,11,1)]" />
+                      <Activity className="w-16 h-16 text-amber-500 mx-auto mb-6 opacity-80 animate-pulse" />
+                      <h3 className="text-2xl font-black text-white mb-2 tracking-tight">Active Deployment</h3>
+                      <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-8">Engineer <span className="text-amber-400">{selectedOrder.assignedTo}</span> is currently processing this order.</p>
+
+                      {selectedOrder.status === 'ASSIGNED' && (
+                        <Button onClick={() => startWorkProcess(selectedOrder.id)} className="h-14 px-8 bg-blue-600 hover:bg-blue-500 text-white font-black uppercase tracking-widest rounded-xl text-sm transition-all shadow-lg hover:-translate-y-1">
+                          <Wrench className="w-5 h-5 mr-3" /> Acknowledge & Start Work
+                        </Button>
+                      )}
+
+                      {selectedOrder.status === 'IN_PROGRESS' && (
+                        <div className="inline-flex items-center gap-3 bg-blue-500/10 border border-blue-500/30 text-blue-400 px-6 py-4 rounded-xl font-black font-mono tracking-widest shadow-inner">
+                          <div className="w-3 h-3 bg-blue-400 rounded-full animate-ping" />
+                          WORK CURRENTLY IN PROGRESS
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
-              </div>
+              )}
+
+              {/* TAB 3: VERIFICATION */}
+              {activeTab === 'verification' && (
+                <div className="max-w-3xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-300">
+                  {selectedOrder.status === 'VERIFIED' ? (
+                    <div className="bg-emerald-950/20 border border-emerald-900/50 rounded-3xl p-10 text-center relative overflow-hidden">
+                      <div className="absolute top-0 left-0 w-full h-2 bg-emerald-500" />
+                      <CheckCircle2 className="w-16 h-16 text-emerald-500 mx-auto mb-4" />
+                      <h3 className="text-3xl font-black text-white mb-2">Work Order Closed</h3>
+                      <p className="text-emerald-400 font-bold tracking-widest uppercase text-xs">Line operation restored to normal parameters.</p>
+                      <div className="mt-8 mx-auto w-64 h-64 rounded-xl overflow-hidden border-4 border-emerald-900/50 relative">
+                        <img src={selectedOrder.evidencePhoto} alt="Fixed" className="w-full h-full object-cover" />
+                        <div className="absolute bottom-0 w-full bg-slate-950/80 backdrop-blur text-left p-3">
+                          <p className="text-[10px] text-emerald-400 font-black uppercase tracking-widest font-mono">Verified Fix Evidence</p>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="bg-slate-950 border border-slate-800 rounded-2xl p-8 mb-6 shadow-inner">
+                        <h4 className="text-sm font-black text-white flex items-center gap-2 mb-6 tracking-widest"><FileSignature className="w-5 h-5 text-emerald-500" /> Verification Gateway</h4>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                          {/* Evidence Photo Upload */}
+                          <div className="space-y-3">
+                            <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">1. Photographic Evidence *</p>
+                            <div className="relative border-2 border-dashed border-slate-700 hover:border-emerald-500/50 rounded-2xl h-48 flex items-center justify-center overflow-hidden bg-slate-900 transition-colors group">
+                              {evidencePhoto ? (
+                                <>
+                                  <img src={evidencePhoto} alt="Evidence" className="w-full h-full object-cover opacity-80" />
+                                  <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <p className="text-white font-black text-xs uppercase tracking-widest"><Upload className="w-4 h-4 inline mr-2" /> Change Photo</p>
+                                  </div>
+                                </>
+                              ) : (
+                                <div className="text-center">
+                                  <ImageIcon className="w-10 h-10 text-slate-600 mx-auto mb-2" />
+                                  <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Upload Fixed Photo</p>
+                                </div>
+                              )}
+                              <input type="file" accept="image/*" onChange={handlePhotoUpload} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
+                            </div>
+                          </div>
+
+                          {/* Resolution Steps Textarea */}
+                          <div className="space-y-3 flex flex-col">
+                            <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">2. Resolution Steps (Bajarilgan ish) *</p>
+                            <Textarea
+                              value={resolutionSteps}
+                              onChange={(e) => setResolutionSteps(e.target.value)}
+                              placeholder="Describe the exact actions taken to resolve the issue..."
+                              className="flex-1 min-h-[192px] bg-slate-900 border-slate-700 text-slate-300 font-medium rounded-2xl shadow-inner focus-visible:ring-emerald-500 font-mono text-sm leading-relaxed p-4"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Execute Action */}
+                        <div className="mt-8 pt-6 border-t border-slate-800 flex justify-end">
+                          <Button
+                            disabled={!evidencePhoto || resolutionSteps.trim().length === 0}
+                            onClick={submitTicket}
+                            className={`h-14 px-8 font-black uppercase tracking-widest rounded-xl text-sm transition-all flex items-center gap-3 ${evidencePhoto && resolutionSteps.trim().length > 0
+                                ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-[0_0_20px_rgba(16,185,129,0.3)] hover:shadow-[0_0_30px_rgba(16,185,129,0.5)]'
+                                : 'bg-slate-900 text-slate-600 cursor-not-allowed border border-slate-800'
+                              }`}
+                          >
+                            EXECUTE ORDER & SEND TICKET <Send className="w-5 h-5" />
+                          </Button>
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
 
             </div>
-
           </div>
         </div>
       )}
+
+      {/* 4. Final Confirmation Hard-Lock Modal */}
+      {showFinalConfirmation && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/90 backdrop-blur-xl animate-in fade-in duration-300">
+          <div className="bg-slate-950 border border-emerald-900/50 rounded-3xl shadow-[0_0_100px_rgba(16,185,129,0.15)] w-full max-w-lg overflow-hidden flex flex-col items-center p-10 text-center relative">
+            <div className="absolute top-0 w-full h-1 bg-gradient-to-r from-emerald-600 via-cyan-500 to-emerald-600" />
+            <CheckCircle2 className="w-20 h-20 text-emerald-500 mb-6 drop-shadow-[0_0_15px_rgba(16,185,129,0.5)]" />
+            <h2 className="text-3xl font-black text-white mb-2">Confirm Resolution</h2>
+            <p className="text-slate-400 text-sm font-bold uppercase tracking-widest mb-8 leading-relaxed">This action will close the ticket, reset the downtime clock, and unlock {selectedOrder?.source}.</p>
+
+            <div className="w-full h-48 rounded-xl overflow-hidden border-2 border-slate-800 mb-8">
+              <img src={evidencePhoto!} alt="Verify" className="w-full h-full object-cover" />
+            </div>
+
+            <div className="flex gap-4 w-full">
+              <Button onClick={() => setShowFinalConfirmation(false)} variant="outline" className="h-14 flex-1 bg-slate-900 border-slate-700 text-slate-400 hover:text-white font-black uppercase tracking-widest rounded-xl">Cancel</Button>
+              <Button onClick={confirmFinalClosure} className="h-14 flex-1 bg-emerald-600 hover:bg-emerald-500 text-white shadow-[0_0_20px_rgba(16,185,129,0.4)] font-black uppercase tracking-widest rounded-xl">Verify & Close</Button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
