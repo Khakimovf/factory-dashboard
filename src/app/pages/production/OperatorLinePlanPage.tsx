@@ -11,7 +11,8 @@ import { Badge } from '../../components/ui/badge';
 import {
     Plus, Trash2, ArrowLeft, AlertTriangle, Search,
     Clock, ChevronRight, BarChart3, Layers, ShieldCheck,
-    CheckCircle2, XCircle, Truck, Zap, Factory, PackagePlus
+    CheckCircle2, XCircle, Truck, Zap, Factory, PackagePlus,
+    Eye, BellRing, Info
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -169,13 +170,13 @@ function PartSearchGrid({ value, onChange, lineKey }: { value: string; onChange:
 }
 
 // ── Tab 1: Schedule ───────────────────────────────────────────────────────────
-function TabSchedule({ rows, addRow, removeRow, updateRow, totalReja, lk }: {
+function TabSchedule({ rows, addRow, removeRow, updateRow, totalReja, lk, taktTime = 2.0 }: {
     rows: PlanRow[]; addRow: () => void; removeRow: (id: string) => void;
     updateRow: (id: string, f: keyof PlanRow, v: string | number | undefined) => void;
-    totalReja: number; lk: string;
+    totalReja: number; lk: string; taktTime?: number;
 }) {
     return (
-        <div className="bg-slate-900/50 rounded-2xl border border-slate-800 p-6 md:p-8 shadow-xl">
+        <div className="bg-slate-950 rounded-2xl border border-slate-800 p-6 md:p-8 shadow-xl">
             <div className="flex items-center justify-between mb-6 flex-wrap gap-4">
                 <div>
                     <h3 className="text-sm font-black text-slate-200 uppercase tracking-widest">Production Schedule Matrix</h3>
@@ -185,16 +186,19 @@ function TabSchedule({ rows, addRow, removeRow, updateRow, totalReja, lk }: {
                     <Plus className="w-4 h-4" /> ADD ROW
                 </Button>
             </div>
-            <div className="grid grid-cols-[36px_1fr_140px_52px] gap-4 px-3 pb-3 mb-4 text-[10px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-800">
-                <span className="text-center">#</span><span>Part Definition</span><span className="text-center">REJA</span><span></span>
+            <div className="grid grid-cols-[36px_1fr_120px_100px_48px] gap-4 px-3 pb-3 mb-4 text-[10px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-800">
+                <span className="text-center">#</span><span>Part Definition</span><span className="text-center">REJA (Qty)</span><span className="text-center">Time (min)</span><span></span>
             </div>
             <div className="space-y-3">
                 {rows.map((row, idx) => (
-                    <div key={row.id} className="grid grid-cols-[36px_1fr_140px_52px] gap-4 items-center p-2 rounded-xl hover:bg-slate-900/70 border border-transparent hover:border-slate-800 transition-all">
+                    <div key={row.id} className="grid grid-cols-[36px_1fr_120px_100px_48px] gap-4 items-center p-2 rounded-xl hover:bg-slate-900/70 border border-transparent hover:border-slate-800 transition-all">
                         <span className="text-xs text-slate-500 font-mono font-black text-center bg-slate-900 w-8 h-8 rounded-lg flex items-center justify-center border border-slate-800">{String(idx + 1).padStart(2, '0')}</span>
                         <PartSearchGrid value={row.partNo} onChange={v => updateRow(row.id, 'partNo', v)} lineKey={lk} />
                         <Input type="number" min="1" required value={row.reja || ''} onChange={e => updateRow(row.id, 'reja', parseFloat(e.target.value) || 0)}
                             className="h-12 bg-slate-900 border-slate-700 text-cyan-300 text-center font-black font-mono text-base rounded-xl shadow-inner focus:ring-1 focus:ring-cyan-500" />
+                        <div className="h-12 bg-slate-900 border border-slate-800 rounded-xl flex items-center justify-center shadow-inner">
+                            <span className="text-sm font-black font-mono text-amber-400">{Math.round((row.reja || 0) * taktTime)}</span>
+                        </div>
                         {rows.length > 1
                             ? <button type="button" onClick={() => removeRow(row.id)} className="h-12 rounded-xl flex items-center justify-center text-red-500 bg-red-500/10 hover:bg-red-500 hover:text-white border border-red-500/20 transition-all"><Trash2 className="w-4 h-4" /></button>
                             : <div className="h-12" />}
@@ -213,31 +217,43 @@ function TabSchedule({ rows, addRow, removeRow, updateRow, totalReja, lk }: {
 // ── Tab 2: Logistics ──────────────────────────────────────────────────────────
 function TabLogistics({ bom, totalReja }: { bom: BomItem[]; totalReja: number }) {
     return (
-        <div className="bg-slate-900/50 rounded-2xl border border-slate-800 shadow-xl overflow-hidden">
-            <div className="grid grid-cols-[1fr_90px_90px_80px_110px_90px_130px] gap-3 px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-800 bg-slate-950/70">
-                <span>Component</span><span className="text-right">Req Qty</span><span className="text-right">A.Stock</span>
-                <span className="text-center">Status</span><span>Bin</span><span className="text-center">Lead Time</span><span>Supplier</span>
+        <div className="bg-slate-950 rounded-2xl border border-slate-800 shadow-xl overflow-hidden">
+            <div className="grid grid-cols-[1fr_60px_70px_80px_90px_140px] gap-3 px-5 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-800 bg-slate-950/70">
+                <span>Component</span><span className="text-right">Req</span><span className="text-right">Stock</span>
+                <span className="text-right">Safety</span><span className="text-center">Status</span><span className="text-center">Action / Request</span>
             </div>
             {bom.map((item, i) => {
                 const req = item.qtyPerUnit * totalReja;
                 const stock = mockStock[item.partId] ?? 0;
                 const short = req > stock;
+                const safety = Math.round(item.qtyPerUnit * 500) || 50;
                 return (
-                    <div key={item.partId} className={`grid grid-cols-[1fr_90px_90px_80px_110px_90px_130px] gap-3 items-center px-6 py-4 border-b border-slate-800/50 ${short ? 'bg-orange-950/20' : i % 2 === 0 ? 'bg-slate-900/20' : ''}`}>
+                    <div key={item.partId} className={`grid grid-cols-[1fr_60px_70px_80px_90px_140px] gap-3 items-center px-5 py-3 border-b border-slate-800/50 ${short ? 'bg-orange-950/20' : i % 2 === 0 ? 'bg-slate-900/20' : ''}`}>
                         <div className="flex items-center gap-3 min-w-0">
-                            <span className="text-xl bg-slate-800/60 p-1.5 rounded-lg border border-slate-700/50 leading-none shrink-0">{item.icon}</span>
+                            <span className="text-lg bg-slate-800/60 p-1.5 rounded-lg border border-slate-700/50 leading-none shrink-0">{item.icon}</span>
                             <div className="min-w-0"><p className="text-sm font-bold text-slate-200 truncate">{item.name}</p><p className="text-[10px] font-mono text-slate-500">{item.partId}</p></div>
                         </div>
                         <div className={`text-right text-sm font-mono font-black ${short ? 'text-orange-400' : 'text-emerald-400'}`}>{req.toLocaleString()}</div>
-                        <div className="text-right text-sm font-mono text-slate-500">{stock.toLocaleString()}</div>
+                        <div className={`text-right text-sm font-mono ${stock <= safety ? 'text-orange-400 font-bold' : 'text-slate-400'}`}>{stock.toLocaleString()}</div>
+                        <div className="text-right text-xs font-mono text-slate-500 mt-0.5">{safety.toLocaleString()}</div>
                         <div className="flex justify-center">
                             {short
                                 ? <span className="flex items-center gap-1 text-[9px] font-black text-orange-500 bg-orange-500/10 border border-orange-500/30 px-2 py-1 rounded-full"><XCircle className="w-3 h-3" /> SHORT</span>
                                 : <span className="flex items-center gap-1 text-[9px] font-black text-emerald-500 bg-emerald-500/10 border border-emerald-500/30 px-2 py-1 rounded-full"><CheckCircle2 className="w-3 h-3" /> READY</span>}
                         </div>
-                        <span className="text-xs font-mono text-slate-400">{item.bin || '—'}</span>
-                        <div className="flex justify-center"><span className={`text-xs font-mono font-black ${(item.leadDays ?? 0) > 3 ? 'text-amber-400' : 'text-slate-400'}`}>{item.leadDays ?? '—'} <span className="text-slate-600 text-[10px]">days</span></span></div>
-                        <div className="flex items-center gap-1.5 min-w-0"><Truck className="w-3.5 h-3.5 text-slate-600 shrink-0" /><span className="text-xs text-slate-500 truncate">{item.supplier || '—'}</span></div>
+                        <div className="flex justify-center">
+                            {stock <= safety || short ? (
+                                <button
+                                    type="button"
+                                    onClick={() => toast('Warehouse Request Sent', { description: `Material request dispatched to Logistics for ${item.name}`, icon: <PackagePlus className="w-4 h-4 text-cyan-400" /> })}
+                                    className="flex items-center justify-center gap-1.5 px-3 py-2 w-full rounded-lg bg-orange-500/10 hover:bg-orange-500 hover:text-white border border-orange-500/30 text-orange-400 text-[9px] font-black tracking-wider transition-all"
+                                >
+                                    <BellRing className="w-3.5 h-3.5 shrink-0" /> REPLENISH
+                                </button>
+                            ) : (
+                                <span className="text-[10px] text-slate-600 font-black">—</span>
+                            )}
+                        </div>
                     </div>
                 );
             })}
@@ -246,12 +262,10 @@ function TabLogistics({ bom, totalReja }: { bom: BomItem[]; totalReja: number })
 }
 
 // ── Tab 3: Quality ────────────────────────────────────────────────────────────
-function TabQuality({ lk, lineName }: { lk: string; lineName: string }) {
-    const checks = QC_CHECKLISTS[lk] || DEFAULT_QC;
-    const [passed, setPassed] = useState<Record<number, boolean>>({});
+function TabQuality({ lk, lineName, passed, setPassed, checks }: { lk: string; lineName: string; passed: Record<number, boolean>; setPassed: React.Dispatch<React.SetStateAction<Record<number, boolean>>>; checks: { check: string; standard: string; method: string }[] }) {
     const allPassed = checks.every((_, i) => passed[i]);
     return (
-        <div className="bg-slate-900/50 rounded-2xl border border-slate-800 shadow-xl overflow-hidden">
+        <div className="bg-slate-950 rounded-2xl border border-slate-800 shadow-xl overflow-hidden">
             <div className="flex items-center gap-4 px-6 py-5 border-b border-slate-800 bg-slate-950/70">
                 <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center shrink-0">
                     <ShieldCheck className="w-5 h-5 text-emerald-400" />
@@ -266,11 +280,11 @@ function TabQuality({ lk, lineName }: { lk: string; lineName: string }) {
                         : <span className="text-[10px] font-black text-slate-500 bg-slate-800 border border-slate-700 px-3 py-1.5 rounded-full">{Object.values(passed).filter(Boolean).length}/{checks.length} DONE</span>}
                 </div>
             </div>
-            <div className="grid grid-cols-[28px_1fr_180px_150px] gap-4 px-6 py-3 text-[10px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-800 bg-slate-950/50">
-                <span></span><span>Check Item</span><span>Standard</span><span>Method</span>
+            <div className="grid grid-cols-[28px_1fr_180px_150px_40px] gap-4 px-6 py-3 text-[10px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-800 bg-slate-950/50">
+                <span></span><span>Check Item</span><span>Standard</span><span>Method</span><span className="text-center">SOP</span>
             </div>
             {checks.map((c, i) => (
-                <div key={i} className={`grid grid-cols-[28px_1fr_180px_150px] gap-4 items-center px-6 py-4 border-b border-slate-800/50 transition-colors ${passed[i] ? 'bg-emerald-950/20' : i % 2 === 0 ? 'bg-slate-900/20' : ''}`}>
+                <div key={i} className={`grid grid-cols-[28px_1fr_180px_150px_40px] gap-4 items-center px-6 py-4 border-b border-slate-800/50 transition-colors ${passed[i] ? 'bg-emerald-950/20' : i % 2 === 0 ? 'bg-slate-900/20' : ''}`}>
                     <button type="button" onClick={() => setPassed(p => ({ ...p, [i]: !p[i] }))}
                         className={`w-6 h-6 rounded-lg border flex items-center justify-center transition-all ${passed[i] ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-slate-600 hover:border-emerald-500'}`}>
                         {passed[i] && <CheckCircle2 className="w-3.5 h-3.5" />}
@@ -278,6 +292,13 @@ function TabQuality({ lk, lineName }: { lk: string; lineName: string }) {
                     <p className={`text-sm font-bold ${passed[i] ? 'text-emerald-400 line-through decoration-emerald-700' : 'text-slate-200'}`}>{c.check}</p>
                     <span className="text-xs font-mono text-slate-400">{c.standard}</span>
                     <span className="text-xs text-slate-500 italic">{c.method}</span>
+                    <button
+                        type="button"
+                        onClick={() => toast('SOP Viewer', { description: `Displaying technical standard for: ${c.check} (${c.standard})`, icon: <Info className="text-cyan-400 w-5 h-5" /> })}
+                        className="w-8 h-8 rounded-lg flex items-center justify-center bg-slate-900 border border-slate-700 hover:bg-slate-800 text-slate-400 hover:text-white hover:border-cyan-500 transition-colors shadow-sm"
+                    >
+                        <Eye className="w-4 h-4" />
+                    </button>
                 </div>
             ))}
         </div>
@@ -306,6 +327,7 @@ export function OperatorLinePlanPage() {
         existingPlan?.rows.length ? existingPlan.rows : [{ id: '1', partNo: '', reja: 100 }]
     );
     const [activeTab, setActiveTab] = useState<TabId>('schedule');
+    const [qcPassedItems, setQcPassedItems] = useState<Record<number, boolean>>({});
 
     const addRow = () => setRows(p => [...p, { id: Date.now().toString(), partNo: '', reja: 0 }]);
     const removeRow = (id: string) => { if (rows.length > 1) setRows(p => p.filter(r => r.id !== id)); };
@@ -314,6 +336,8 @@ export function OperatorLinePlanPage() {
 
     const totalReja = rows.reduce((s, r) => s + (r.reja || 0), 0);
     const bom = LINE_BOMS[lk] || DEFAULT_BOM;
+    const checks = QC_CHECKLISTS[lk] || DEFAULT_QC;
+    const allQcPassed = checks.every((_, i) => qcPassedItems[i]);
 
     const bomWithStatus = useMemo(() =>
         bom.map(item => {
@@ -325,8 +349,9 @@ export function OperatorLinePlanPage() {
     const hasCriticalShortage = bomWithStatus.some(b => b.short);
     const readinessPct = bomWithStatus.length > 0 ? Math.round(bomWithStatus.filter(b => !b.short).length / bomWithStatus.length * 100) : 100;
     const SHIFT_CAP = 710;
-    const requiredMin = totalReja * 2;
-    const shiftPct = Math.min(Math.round(requiredMin / SHIFT_CAP * 100), 100);
+    const TAKT_TIME = 2.0;
+    const requiredMin = Math.round(totalReja * TAKT_TIME);
+    const shiftPct = Math.min(Math.round((requiredMin / SHIFT_CAP) * 100), 100);
     const excess = requiredMin > SHIFT_CAP;
     const [startH, endH] = shift === '1-smena' ? ['08:00', '19:50'] : ['20:00', '07:50'];
     const backPath = '/production-lines/operator-plans';
@@ -423,9 +448,9 @@ export function OperatorLinePlanPage() {
             <form id="op-form" onSubmit={handleSubmit}>
                 <div className="flex items-start">
                     <div className="flex-1 min-w-0 px-6 md:px-10 py-8 pb-40">
-                        {activeTab === 'schedule' && <TabSchedule rows={rows} addRow={addRow} removeRow={removeRow} updateRow={updateRow} totalReja={totalReja} lk={lk} />}
+                        {activeTab === 'schedule' && <TabSchedule rows={rows} addRow={addRow} removeRow={removeRow} updateRow={updateRow} totalReja={totalReja} lk={lk} taktTime={TAKT_TIME} />}
                         {activeTab === 'logistics' && <TabLogistics bom={bom} totalReja={totalReja} />}
-                        {activeTab === 'quality' && <TabQuality lk={lk} lineName={line.name} />}
+                        {activeTab === 'quality' && <TabQuality lk={lk} lineName={line.name} passed={qcPassedItems} setPassed={setQcPassedItems} checks={checks} />}
                     </div>
 
                     {/* Sticky Right Sidebar */}
@@ -491,9 +516,9 @@ export function OperatorLinePlanPage() {
             <div className="fixed bottom-0 left-0 w-full z-50 bg-slate-950/95 backdrop-blur-md border-t border-slate-800 shadow-[0_-4px_24px_rgba(0,0,0,0.5)]">
                 <div className="px-6 md:px-10 pt-4 pb-6 flex items-center justify-between gap-4 flex-wrap">
                     <div className="flex items-center gap-6 text-[11px] font-mono text-slate-500 uppercase tracking-widest">
-                        <span>Units: <span className="text-cyan-400 font-black text-sm">{totalReja.toLocaleString()}</span></span>
+                        <span>Total Units: <span className="text-cyan-400 font-black text-sm">{totalReja.toLocaleString()}</span></span>
                         <span className="text-slate-700">|</span>
-                        <span>Time: <span className={`font-black ${excess ? 'text-orange-400' : 'text-cyan-400'}`}>{requiredMin} min</span></span>
+                        <span>Total Cycle Time: <span className={`font-black ${excess ? 'text-orange-400' : 'text-cyan-400'} text-sm`}>{requiredMin} min</span></span>
                         <span className="text-slate-700">|</span>
                         <span>Readiness: <span className={`font-black ${readinessPct === 100 ? 'text-emerald-400' : 'text-orange-400'}`}>{readinessPct}%</span></span>
                         {hasCriticalShortage && (
@@ -507,12 +532,12 @@ export function OperatorLinePlanPage() {
                             className="h-11 px-6 text-slate-400 hover:text-white hover:bg-slate-800 uppercase tracking-widest text-[11px] font-black rounded-xl border border-slate-800 hover:border-slate-600 transition-all">
                             CANCEL
                         </Button>
-                        <Button type="submit" form="op-form" disabled={hasCriticalShortage}
-                            className={`h-11 px-8 rounded-xl font-black uppercase tracking-widest text-sm flex items-center gap-2.5 transition-all duration-300 ${hasCriticalShortage
-                                    ? 'bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700 opacity-50'
-                                    : readinessPct < 100
-                                        ? 'bg-orange-600 hover:bg-orange-500 text-white shadow-[0_0_20px_rgba(249,115,22,0.45)] border border-orange-500 animate-pulse'
-                                        : 'bg-cyan-600 hover:bg-cyan-500 text-white shadow-[0_0_20px_rgba(6,182,212,0.55)] hover:shadow-[0_0_32px_rgba(6,182,212,0.75)] border border-cyan-500'
+                        <Button type="submit" form="op-form" disabled={hasCriticalShortage || !allQcPassed}
+                            className={`h-11 px-8 rounded-xl font-black uppercase tracking-widest text-sm flex items-center gap-2.5 transition-all duration-300 ${hasCriticalShortage || !allQcPassed
+                                ? 'bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700 opacity-50'
+                                : readinessPct < 100
+                                    ? 'bg-orange-600 hover:bg-orange-500 text-white shadow-[0_0_20px_rgba(249,115,22,0.45)] border border-orange-500 animate-pulse'
+                                    : 'bg-cyan-600 hover:bg-cyan-500 text-white shadow-[0_0_20px_rgba(6,182,212,0.55)] hover:shadow-[0_0_32px_rgba(6,182,212,0.75)] border border-cyan-500'
                                 }`}>
                             EXECUTE / YUBORISH <ChevronRight className="w-4 h-4" />
                         </Button>
