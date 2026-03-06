@@ -16,7 +16,7 @@ import {
 import { toast } from 'sonner';
 
 // ─── Static BOM Data ─────────────────────────────────────────────────────────
-const ProductBOMs: Record<ProductOption, { partId: string; name: string; qtyPerUnit: number; bin?: string; icon: string }> = {
+const ProductBOMs: Record<ProductOption, { partId: string; name: string; qtyPerUnit: number; bin?: string; icon: string }[]> = {
   MIDNIGHT: [
     { partId: 'RM-002', name: 'Masterbatch Black', qtyPerUnit: 2.5, bin: 'Rack-03', icon: '🎨' },
     { partId: 'COMP-001', name: 'Metal Clips Type A', qtyPerUnit: 8, bin: 'A-101', icon: '🔩' },
@@ -617,10 +617,10 @@ export function OperatorLinePlanForm({ line, open, onClose, onSave }: OperatorLi
                   form="operator-cockpit-form"
                   disabled={hasCriticalShortage}
                   className={`h-12 px-10 rounded-xl outline-none font-black uppercase tracking-widest text-xs flex items-center gap-3 transition-all duration-300 ${hasCriticalShortage
-                      ? 'bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700 opacity-50'
-                      : readinessPct < 100
-                        ? 'bg-orange-600 hover:bg-orange-500 text-white shadow-[0_0_30px_rgba(249,115,22,0.4)] hover:shadow-[0_0_40px_rgba(249,115,22,0.7)] border border-orange-500 animate-pulse'
-                        : 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-[0_0_30px_rgba(79,70,229,0.4)] hover:shadow-[0_0_40px_rgba(79,70,229,0.7)] border border-indigo-500'
+                    ? 'bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700 opacity-50'
+                    : readinessPct < 100
+                      ? 'bg-orange-600 hover:bg-orange-500 text-white shadow-[0_0_30px_rgba(249,115,22,0.4)] hover:shadow-[0_0_40px_rgba(249,115,22,0.7)] border border-orange-500 animate-pulse'
+                      : 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-[0_0_30px_rgba(79,70,229,0.4)] hover:shadow-[0_0_40px_rgba(79,70,229,0.7)] border border-indigo-500'
                     }`}
                 >
                   EXECUTE / YUBORISH
