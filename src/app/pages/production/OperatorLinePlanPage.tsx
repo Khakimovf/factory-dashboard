@@ -250,7 +250,7 @@ function TabLogistics({ bom, totalReja }: { bom: BomItem[]; totalReja: number })
                         <div className="flex justify-center">
                             {(short || delta <= safety) ? (
                                 <span className={`flex items-center justify-center gap-1.5 px-3 py-1.5 w-full rounded-lg text-[9px] font-black tracking-wider border ${short ? 'bg-red-500/10 text-red-500 border-red-500/30' : 'bg-orange-500/10 text-orange-400 border-orange-500/30'}`}>
-                                    <Zap className="w-3 h-3 shrink-0" /> AUTO-TICKET
+                                    <Zap className="w-3 h-3 shrink-0" /> To'ldirish
                                 </span>
                             ) : (
                                 <span className="text-[10px] text-slate-600 font-black">—</span>
@@ -264,9 +264,9 @@ function TabLogistics({ bom, totalReja }: { bom: BomItem[]; totalReja: number })
 }
 
 // ── Tab 3: Quality ────────────────────────────────────────────────────────────
-function TabQuality({ lk, lineName, passed, setPassed, checks }: { lk: string; lineName: string; passed: Record<number, boolean>; setPassed: React.Dispatch<React.SetStateAction<Record<number, boolean>>>; checks: { check: string; standard: string; method: string }[] }) {
+function TabQuality({ lk, lineName, passed, setPassed, acked, setAcked, checks }: { lk: string; lineName: string; passed: Record<number, boolean>; setPassed: React.Dispatch<React.SetStateAction<Record<number, boolean>>>; acked: Record<number, boolean>; setAcked: React.Dispatch<React.SetStateAction<Record<number, boolean>>>; checks: { check: string; standard: string; method: string }[] }) {
     const allPassed = checks.every((_, i) => passed[i]);
-    const [sopModal, setSopModal] = useState<{ check: string, std: string, method: string } | null>(null);
+    const [sopModal, setSopModal] = useState<{ idx: number, check: string, std: string, method: string } | null>(null);
 
     return (
         <div className="bg-slate-950 rounded-2xl border border-slate-800 shadow-xl overflow-hidden font-mono relative">
@@ -290,7 +290,7 @@ function TabQuality({ lk, lineName, passed, setPassed, checks }: { lk: string; l
                                 <strong>Operator Instructions:</strong> Visually inspect the component along the defined contour. Use the calibrated gauge to verify tolerance does not exceed limits. Document any deviation on the QC terminal log.
                             </div>
                         </div>
-                        <Button onClick={() => setSopModal(null)} className="w-full mt-6 bg-cyan-600 hover:bg-cyan-500 text-white font-black tracking-widest text-xs h-10 rounded-xl transition-all">ACKNOWLEDGE & CLOSE</Button>
+                        <Button onClick={() => { setAcked(p => ({ ...p, [sopModal.idx]: true })); setSopModal(null); }} className="w-full mt-6 bg-cyan-600 hover:bg-cyan-500 text-white font-black tracking-widest text-xs h-10 rounded-xl transition-all">ACKNOWLEDGE & CLOSE</Button>
                     </div>
                 </div>
             )}
@@ -322,8 +322,8 @@ function TabQuality({ lk, lineName, passed, setPassed, checks }: { lk: string; l
                     <span className="text-xs text-slate-500 italic">{c.method}</span>
                     <button
                         type="button"
-                        onClick={() => setSopModal({ check: c.check, std: c.standard, method: c.method })}
-                        className="w-8 h-8 rounded-lg flex items-center justify-center bg-slate-900 border border-slate-700 hover:bg-slate-800 text-slate-400 hover:text-white hover:border-cyan-500 transition-colors shadow-sm"
+                        onClick={() => setSopModal({ idx: i, check: c.check, std: c.standard, method: c.method })}
+                        className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all shadow-sm ${acked[i] ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/50' : 'bg-slate-900 border border-slate-700 hover:bg-slate-800 text-slate-400 hover:text-white hover:border-cyan-500'}`}
                     >
                         <Eye className="w-4 h-4" />
                     </button>
@@ -356,6 +356,7 @@ export function OperatorLinePlanPage() {
     );
     const [activeTab, setActiveTab] = useState<TabId>('schedule');
     const [qcPassedItems, setQcPassedItems] = useState<Record<number, boolean>>({});
+    const [sopAckedItems, setSopAckedItems] = useState<Record<number, boolean>>({});
 
     const addRow = () => setRows(p => [...p, { id: Date.now().toString(), partNo: '', reja: 0 }]);
     const removeRow = (id: string) => { if (rows.length > 1) setRows(p => p.filter(r => r.id !== id)); };
@@ -366,6 +367,7 @@ export function OperatorLinePlanPage() {
     const bom = LINE_BOMS[lk] || DEFAULT_BOM;
     const checks = QC_CHECKLISTS[lk] || DEFAULT_QC;
     const allQcPassed = checks.every((_, i) => qcPassedItems[i]);
+    const allSopsAcked = checks.every((_, i) => sopAckedItems[i]);
 
     const bomWithStatus = useMemo(() =>
         bom.map(item => {
@@ -413,10 +415,11 @@ export function OperatorLinePlanPage() {
         const payloadRows = rows.map(r => ({ id: r.id, partNo: r.partNo.trim(), reja: r.reja }));
         if (existingPlan) {
             updateLinePlan(today, line.id, { shift, productOption: 'MIDNIGHT', rows: payloadRows });
-            toast.success('Plan yangilandi.');
+            toast.success('Plan yangilandi.', { description: 'Generating Warehouse Picking List...' });
         } else {
             createLinePlan({ date: today, lineId: line.id, lineName: line.name, shift, productOption: 'MIDNIGHT', productName: line.name, rows: payloadRows });
-            toast.success(`${line.name} rejasi yuborildi!`);
+            toast('Digital Signature Logged', { description: 'Secured via Operator ID', icon: '📝' });
+            toast.success(`${line.name} Target Posted!`, { description: 'Dashboard updated and material picking list dispatched to warehouse queue.' });
         }
         navigate(backPath);
     };
@@ -492,7 +495,7 @@ export function OperatorLinePlanPage() {
                     <div className="flex-1 min-w-0 px-6 md:px-10 py-8 pb-40">
                         {activeTab === 'schedule' && <TabSchedule rows={rows} addRow={addRow} removeRow={removeRow} updateRow={updateRow} totalReja={totalReja} lk={lk} taktTime={TAKT_TIME} />}
                         {activeTab === 'logistics' && <TabLogistics bom={bom} totalReja={totalReja} />}
-                        {activeTab === 'quality' && <TabQuality lk={lk} lineName={line.name} passed={qcPassedItems} setPassed={setQcPassedItems} checks={checks} />}
+                        {activeTab === 'quality' && <TabQuality lk={lk} lineName={line.name} passed={qcPassedItems} setPassed={setQcPassedItems} acked={sopAckedItems} setAcked={setSopAckedItems} checks={checks} />}
                     </div>
 
                     {/* Sticky Right Sidebar */}
@@ -585,14 +588,14 @@ export function OperatorLinePlanPage() {
                             className="h-11 px-6 text-slate-400 hover:text-white hover:bg-slate-800 uppercase tracking-widest text-[11px] font-black rounded-xl border border-slate-800 hover:border-slate-600 transition-all">
                             CANCEL
                         </Button>
-                        <Button type="submit" form="op-form" disabled={hasCriticalShortage || !allQcPassed || excess}
-                            className={`h-11 px-6 rounded-xl font-black uppercase tracking-widest text-[11px] flex items-center gap-2.5 transition-all duration-300 font-mono ${hasCriticalShortage || !allQcPassed || excess
+                        <Button type="submit" form="op-form" disabled={hasCriticalShortage || !allQcPassed || !allSopsAcked || excess}
+                            className={`h-11 px-6 rounded-xl font-black uppercase tracking-widest text-[11px] flex items-center gap-2.5 transition-all duration-300 font-mono ${hasCriticalShortage || !allQcPassed || !allSopsAcked || excess
                                 ? 'bg-slate-900 text-slate-600 cursor-not-allowed border border-slate-800 opacity-80'
                                 : readinessPct < 100
                                     ? 'bg-orange-600 hover:bg-orange-500 text-white shadow-[0_0_20px_rgba(249,115,22,0.45)] border border-orange-500 animate-pulse'
                                     : 'bg-cyan-600 hover:bg-cyan-500 text-white shadow-[0_0_20px_rgba(6,182,212,0.55)] hover:shadow-[0_0_32px_rgba(6,182,212,0.75)] border border-cyan-500'
                                 }`}>
-                            {hasCriticalShortage ? 'BLOCKED - SHORT MATERIALS' : excess ? 'BLOCKED - TIME EXCEEDED' : !allQcPassed ? 'BLOCKED - QA FAILED' : 'EXECUTE / YUBORISH'} <ChevronRight className="w-4 h-4" />
+                            {hasCriticalShortage ? 'BLOCKED - SHORT MATERIALS' : excess ? 'CAPACITY OVERLOAD' : !allSopsAcked ? 'BLOCKED - SOP PENDING' : !allQcPassed ? 'BLOCKED - QA FAILED' : 'EXECUTE / YUBORISH'} <ChevronRight className="w-4 h-4" />
                         </Button>
                     </div>
                 </div>
