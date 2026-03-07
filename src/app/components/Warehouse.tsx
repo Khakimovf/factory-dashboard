@@ -170,6 +170,7 @@ export function Warehouse() {
   // Form State
   const [isAddMaterialOpen, setIsAddMaterialOpen] = useState(false);
   const [isReturnModalOpen, setIsReturnModalOpen] = useState(false);
+  const [returnForm, setReturnForm] = useState({ partId: '', qty: 1 });
 
   // Material Intake Station State
   const [intakeSku, setIntakeSku] = useState('');

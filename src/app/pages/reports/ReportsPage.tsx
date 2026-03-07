@@ -6,6 +6,8 @@ import { initialSuppliers } from '../suppliers/SuppliersPage';
 import { EnhancedSupplier, generateMockDeliveryHistory } from '../../services/supplierService';
 import { initialInspections } from '../qc/QualityControlPage';
 import { hrEmployees } from '../../data/hrEmployees';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { TrendingUp, TrendingDown, Activity, Settings, Coffee, Download, AlertCircle, CheckCircle2 } from 'lucide-react';
 
 type Range = 'daily' | 'weekly' | 'monthly';
 
@@ -22,14 +24,40 @@ export default function ReportsPage() {
   const { finishedGoods = [] } = useWarehouse();
   const [range, setRange] = useState<Range>('daily');
 
+  // Executive Dashboard Mock Data
+  const executiveMetrics = {
+    oee: { goal: 90, actual: 86, trend: '+2.1%' },
+    health: 'Amber', // 'Green' | 'Amber' | 'Red'
+    mttr: '42 min',
+    canteenRatio: '8.4%', // Food waste vs attendance
+  };
+
+  const chartData = [
+    { name: 'Mon', plan: 100, actualLine1: 95, actualLine2: 88, actualLine3: 102 },
+    { name: 'Tue', plan: 100, actualLine1: 98, actualLine2: 90, actualLine3: 99 },
+    { name: 'Wed', plan: 100, actualLine1: 94, actualLine2: 85, actualLine3: 105 },
+    { name: 'Thu', plan: 100, actualLine1: 89, actualLine2: 82, actualLine3: 98 },
+    { name: 'Fri', plan: 100, actualLine1: 96, actualLine2: 91, actualLine3: 100 },
+    { name: 'Sat', plan: 100, actualLine1: 102, actualLine2: 94, actualLine3: 108 },
+    { name: 'Sun', plan: 100, actualLine1: 95, actualLine2: 89, actualLine3: 101 },
+  ];
+
+  const pieData = [
+    { name: 'Mechanical', value: 45 },
+    { name: 'Electrical', value: 25 },
+    { name: 'Operator Error', value: 15 },
+    { name: 'Material Shortage', value: 15 },
+  ];
+  const COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ef4444'];
+
   // Data calculations - safe with defaults
   const totalLines = productionLines.length;
   const activeLines = productionLines.filter(l => l.status === 'active').length;
   const avgEfficiency =
     productionLines.length > 0
       ? Math.round(
-          productionLines.reduce((sum, l) => sum + l.efficiency, 0) / productionLines.length,
-        )
+        productionLines.reduce((sum, l) => sum + l.efficiency, 0) / productionLines.length,
+      )
       : 0;
 
   const finishedTotalTypes = finishedGoods.length;
@@ -50,8 +78,8 @@ export default function ReportsPage() {
         status === 'NORMAL'
           ? t('reports.maintenance.normal')
           : status === 'ISSUE_REPORTED'
-          ? t('reports.maintenance.issueReported')
-          : t('reports.maintenance.inRepair');
+            ? t('reports.maintenance.issueReported')
+            : t('reports.maintenance.inRepair');
       return {
         lineName: line.name.replace('Assembly Line ', 'Line '),
         type,
@@ -62,7 +90,7 @@ export default function ReportsPage() {
 
   const maintenanceTotalStops = maintenanceSummaryLines.reduce((sum, l) => sum + l.stops, 0);
   const maintenanceProblemLines = maintenanceSummaryLines.filter(l => l.stops > 0).length;
-  const maintenanceInRepairLines = maintenanceSummaryLines.filter(l => 
+  const maintenanceInRepairLines = maintenanceSummaryLines.filter(l =>
     l.type.includes('Ta\'mirlash') || l.type.includes('ремонт') || l.type.includes('수리')
   ).length;
 
@@ -76,9 +104,9 @@ export default function ReportsPage() {
       const lastDate =
         deliveries.length > 0
           ? deliveries
-              .map(d => d.date)
-              .sort()
-              .slice(-1)[0]
+            .map(d => d.date)
+            .sort()
+            .slice(-1)[0]
           : '-';
       return {
         name: s.name,
@@ -189,18 +217,25 @@ export default function ReportsPage() {
     <meta charSet="utf-8" />
     <title>${title}</title>
     <style>
-      body { font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 12px; color: #000; margin: 16px; }
-      h2, h3 { margin: 0 0 8px 0; font-weight: 600; }
+      body { font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 12px; color: #000; margin: 16px; background: #fff; }
+      h2, h3 { margin: 0 0 8px 0; font-weight: 600; color: #000; }
       table { width: 100%; border-collapse: collapse; margin-top: 8px; }
-      th, td { border: 1px solid #999; padding: 4px 6px; text-align: left; }
-      th { background: #f3f4f6; }
-      p { margin: 4px 0; }
+      th, td { border: 1px solid #e2e8f0; padding: 6px 8px; text-align: left; color: #0f172a !important; }
+      th { background: #f8fafc; font-weight: 600; }
+      p { margin: 4px 0; color: #475569; }
+      /* Clean up dark mode artifacts for print */
+      svg { display: inline-block; vertical-align: middle; }
+      .bg-slate-800, .bg-slate-900 { background-color: #fff !important; }
+      .text-white, .text-slate-300, .text-slate-400 { color: #0f172a !important; }
+      .border-slate-700 { border-color: #e2e8f0 !important; }
     </style>
   </head>
   <body>
     <h2>${title}</h2>
-    <p>Davr: ${periodLabel} • Sana: ${new Date().toLocaleDateString('uz-UZ')}</p>
-    ${section.innerHTML}
+    <p>Davr: ${periodLabel} • Sana: ${new Date().toLocaleDateString('uz-UZ')} • Factory Dashboard Executive Report</p>
+    <div style="margin-top: 20px;">
+      ${section.innerHTML}
+    </div>
   </body>
 </html>`;
 
@@ -208,112 +243,247 @@ export default function ReportsPage() {
     win.document.write(html);
     win.document.close();
     win.focus();
-    win.print();
+    setTimeout(() => {
+      win.print();
+    }, 250); // slight delay for rendering
   };
 
   // ALWAYS render - never return null
   return (
-    <div className="min-h-screen p-6 bg-background text-foreground">
-      <div className="w-full">
-        <div className="mb-8 flex items-start justify-between gap-6 print:flex-col">
+    <div className="min-h-screen p-6 bg-slate-900 text-slate-100">
+      <div className="w-full max-w-[1600px] mx-auto">
+        {/* Header Area */}
+        <div className="mb-8 flex items-start justify-between gap-6 print:flex-col relative">
           <div>
-            <h2 className="text-3xl font-semibold text-foreground">{t('reports.title')}</h2>
-            <p className="text-sm text-muted-foreground">
-              {periodLabel} {t('reports.subtitle')}. {t('reports.subtitleDetail')}
+            <h2 className="text-3xl font-bold text-white tracking-tight">{t('reports.title')}</h2>
+            <p className="text-sm text-slate-400 mt-1">
+              Executive Command Center • {periodLabel}
             </p>
-            <p className="mt-2 text-xs text-muted-foreground">
-              {t('reports.date')}: {new Date().toLocaleDateString('uz-UZ')} • {t('reports.period')}: {periodLabel} • {t('reports.autoGenerated')}
+            <p className="mt-2 text-xs text-slate-500">
+              {t('reports.date')}: {new Date().toLocaleDateString('uz-UZ')} • {t('reports.autoGenerated')}
             </p>
           </div>
           <div className="flex items-center gap-4 print:hidden">
-            <div className="inline-flex rounded-lg border border-border bg-card text-sm">
-              <button
-                className={`px-6 py-2.5 rounded-l-lg min-h-[46px] font-medium ${
-                  range === 'daily'
-                    ? 'bg-primary text-primary-foreground'
-                    : 'text-foreground'
-                }`}
-                onClick={() => setRange('daily')}
-              >
-                {t('reports.daily')}
-              </button>
-              <button
-                className={`px-6 py-2.5 min-h-[46px] font-medium ${
-                  range === 'weekly'
-                    ? 'bg-primary text-primary-foreground'
-                    : 'text-foreground'
-                }`}
-                onClick={() => setRange('weekly')}
-              >
-                {t('reports.weekly')}
-              </button>
-              <button
-                className={`px-6 py-2.5 rounded-r-lg min-h-[46px] font-medium ${
-                  range === 'monthly'
-                    ? 'bg-primary text-primary-foreground'
-                    : 'text-foreground'
-                }`}
-                onClick={() => setRange('monthly')}
-              >
-                {t('reports.monthly')}
-              </button>
+            <div className="inline-flex rounded-lg border border-slate-700 bg-slate-800 p-1 text-sm">
+              {(['daily', 'weekly', 'monthly'] as Range[]).map((r) => (
+                <button
+                  key={r}
+                  className={`px-4 py-2 rounded-md font-medium transition-colors ${range === r
+                    ? 'bg-indigo-500 text-white shadow-sm'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-700/50'
+                    }`}
+                  onClick={() => setRange(r)}
+                >
+                  {t(`reports.${r}`)}
+                </button>
+              ))}
             </div>
             <button
               onClick={handlePrint}
-              className="px-4 py-2.5 rounded-lg border border-border bg-card text-foreground hover:bg-muted text-sm font-medium print:hidden"
+              className="group flex items-center gap-2 px-5 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-semibold shadow-lg shadow-emerald-900/20 transition-all print:hidden"
             >
-              {t('reports.print')}
+              <Download className="w-4 h-4 group-hover:-translate-y-0.5 transition-transform" />
+              DOWNLOAD FULL BOARD REPORT (PDF)
             </button>
           </div>
         </div>
 
-        <div className="space-y-6 print:space-y-6">
+        {/* Executive Summary Tiles */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8 mt-4 print:grid-cols-2 print:break-inside-avoid">
+          {/* Tile 1: OEE */}
+          <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-5 flex flex-col relative overflow-hidden">
+            <div className="absolute top-0 right-0 p-4 opacity-10">
+              <Activity className="w-16 h-16 text-indigo-400" />
+            </div>
+            <div className="flex items-center gap-2 text-slate-400 mb-2">
+              <Activity className="w-4 h-4 text-indigo-400" />
+              <h3 className="font-medium text-sm">Overall Plant Efficiency (OEE)</h3>
+            </div>
+            <div className="flex items-end gap-3 mt-1">
+              <span className="text-4xl font-bold text-white">{executiveMetrics.oee.actual}%</span>
+              <div className="flex flex-col pb-1">
+                <span className="text-xs text-slate-500">Goal: {executiveMetrics.oee.goal}%</span>
+                <span className="text-xs font-medium text-emerald-400 flex items-center gap-0.5">
+                  <TrendingUp className="w-3 h-3" /> {executiveMetrics.oee.trend}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Tile 2: Health */}
+          <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-5 flex flex-col relative overflow-hidden">
+            <div className="absolute top-0 right-0 p-4 opacity-10">
+              <CheckCircle2 className="w-16 h-16 text-amber-400" />
+            </div>
+            <div className="flex items-center gap-2 text-slate-400 mb-2">
+              <CheckCircle2 className="w-4 h-4" style={{ color: executiveMetrics.health === 'Green' ? '#10b981' : executiveMetrics.health === 'Amber' ? '#f59e0b' : '#ef4444' }} />
+              <h3 className="font-medium text-sm">Production Health</h3>
+            </div>
+            <div className="flex items-end gap-3 mt-1">
+              <span className="text-4xl font-bold" style={{ color: executiveMetrics.health === 'Green' ? '#10b981' : executiveMetrics.health === 'Amber' ? '#f59e0b' : '#ef4444' }}>
+                {executiveMetrics.health}
+              </span>
+              <span className="text-xs text-slate-500 pb-1">Minor deviations</span>
+            </div>
+          </div>
+
+          {/* Tile 3: MTTR */}
+          <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-5 flex flex-col relative overflow-hidden">
+            <div className="absolute top-0 right-0 p-4 opacity-10">
+              <Settings className="w-16 h-16 text-slate-400" />
+            </div>
+            <div className="flex items-center gap-2 text-slate-400 mb-2">
+              <Settings className="w-4 h-4 text-slate-400" />
+              <h3 className="font-medium text-sm">Maintenance MTTR</h3>
+            </div>
+            <div className="flex items-end gap-3 mt-1">
+              <span className="text-4xl font-bold text-white">{executiveMetrics.mttr}</span>
+              <span className="text-xs text-slate-500 pb-1">Avg real-time</span>
+            </div>
+          </div>
+
+          {/* Tile 4: Canteen */}
+          <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-5 flex flex-col relative overflow-hidden">
+            <div className="absolute top-0 right-0 p-4 opacity-10">
+              <Coffee className="w-16 h-16 text-amber-600" />
+            </div>
+            <div className="flex items-center gap-2 text-slate-400 mb-2">
+              <Coffee className="w-4 h-4 text-amber-500" />
+              <h3 className="font-medium text-sm">Canteen Efficiency</h3>
+            </div>
+            <div className="flex items-end gap-3 mt-1">
+              <span className="text-4xl font-bold text-white">{executiveMetrics.canteenRatio}</span>
+              <span className="text-xs text-slate-500 pb-1">Waste vs Attend</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Interactive Data Visualizations */}
+        <div className="grid grid-cols-1 lg:grid-cols-10 gap-6 mb-8 print:hidden">
+          {/* Left Chart (60%) */}
+          <div className="lg:col-span-6 bg-slate-800/50 border border-slate-700 rounded-xl p-5 flex flex-col">
+            <h3 className="font-medium text-slate-200 mb-4 flex items-center gap-2">
+              Line Performance: Plan vs Actual (7 Days)
+            </h3>
+            <div className="flex-1 min-h-[300px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={chartData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} />
+                  <XAxis dataKey="name" stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} />
+                  <YAxis stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} />
+                  <RechartsTooltip
+                    contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', color: '#f8fafc', borderRadius: '8px' }}
+                    itemStyle={{ color: '#e2e8f0' }}
+                  />
+                  <Line type="monotone" dataKey="plan" stroke="#94a3b8" strokeWidth={2} strokeDasharray="5 5" dot={false} name="Plan (Target)" />
+                  <Line type="monotone" dataKey="actualLine1" stroke="#6366f1" strokeWidth={3} dot={{ r: 4, strokeWidth: 2 }} name="Line 1" />
+                  <Line type="monotone" dataKey="actualLine2" stroke="#10b981" strokeWidth={3} dot={{ r: 4, strokeWidth: 2 }} name="Line 2" />
+                  <Line type="monotone" dataKey="actualLine3" stroke="#f59e0b" strokeWidth={3} dot={{ r: 4, strokeWidth: 2 }} name="Line 3" />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          {/* Right Chart (40%) */}
+          <div className="lg:col-span-4 bg-slate-800/50 border border-slate-700 rounded-xl p-5 flex flex-col">
+            <h3 className="font-medium text-slate-200 mb-4 flex items-center gap-2">
+              Downtime Causes Breakdown
+            </h3>
+            <div className="flex-1 min-h-[300px] w-full flex items-center justify-center">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={pieData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={80}
+                    outerRadius={110}
+                    paddingAngle={5}
+                    dataKey="value"
+                    stroke="none"
+                  >
+                    {pieData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <RechartsTooltip
+                    contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', color: '#f8fafc', borderRadius: '8px' }}
+                    itemStyle={{ color: '#e2e8f0' }}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+            {/* Custom Legend for Pie */}
+            <div className="flex flex-wrap gap-4 mt-2 justify-center">
+              {pieData.map((entry, index) => (
+                <div key={entry.name} className="flex items-center gap-2 text-xs text-slate-300">
+                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[index % COLORS.length] }}></div>
+                  {entry.name} ({entry.value}%)
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-8 print:space-y-6">
           {/* Production Section */}
-          <section id="reports-production" className="print:break-inside-avoid p-6">
+          <section id="reports-production" className="print:break-inside-avoid bg-slate-800/50 border border-slate-700 rounded-xl p-6">
             <div className="flex items-center justify-between mb-4 print:hidden">
-              <h3 className="text-xl font-semibold text-foreground">{t('reports.production.title')}</h3>
+              <h3 className="text-xl font-semibold text-white">{t('reports.production.title')}</h3>
               <button
                 onClick={() => exportSectionToPdf('reports-production', t('reports.production.pdfTitle'))}
-                className="text-sm text-muted-foreground hover:text-foreground"
+                className="text-sm text-slate-400 hover:text-white"
               >
                 {t('reports.pdf')}
               </button>
             </div>
-            <div className="border border-border rounded-lg overflow-hidden">
-              <table className="w-full border-collapse">
+            <div className="border border-slate-700 rounded-lg overflow-hidden bg-slate-800/30">
+              <table className="w-full border-collapse text-sm">
                 <thead>
-                  <tr className="bg-muted">
-                    <th className="border border-border px-4 py-3 text-left text-foreground font-semibold">
+                  <tr className="bg-slate-800 border-b border-slate-700">
+                    <th className="px-4 py-4 text-left text-slate-300 font-medium">
                       {t('reports.production.indicator')}
                     </th>
-                    <th className="border border-border px-4 py-3 text-right text-foreground font-semibold">
+                    <th className="px-4 py-4 text-right text-slate-300 font-medium">
                       {t('reports.production.plan')}
                     </th>
-                    <th className="border border-border px-4 py-3 text-right text-foreground font-semibold">
+                    <th className="px-4 py-4 text-right text-slate-300 font-medium">
                       {t('reports.production.actual')}
                     </th>
-                    <th className="border border-border px-4 py-3 text-right text-foreground font-semibold">
+                    <th className="px-4 py-4 text-right text-slate-300 font-medium">
                       {t('reports.production.deviation')}
+                    </th>
+                    <th className="px-4 py-4 text-center text-slate-300 font-medium">
+                      Trend
                     </th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="divide-y divide-slate-700/50">
                   {productionMetrics.map((row, idx) => (
-                    <tr key={idx}>
-                      <td className="border border-border px-4 py-2 text-foreground">{row.name}</td>
-                      <td className="border border-border px-4 py-2 text-right text-foreground">{row.plan}%</td>
-                      <td className="border border-border px-4 py-2 text-right text-foreground">{row.actual}%</td>
-                      <td className="border border-border px-4 py-2 text-right" style={{
-                        color: row.deviation >= 0 ? 'var(--success)' : 'var(--destructive)'
+                    <tr key={idx} className="hover:bg-slate-700/20 transition-colors">
+                      <td className="px-4 py-3 text-white font-medium">{row.name}</td>
+                      <td className="px-4 py-3 text-right text-slate-400">{row.plan}%</td>
+                      <td className="px-4 py-3 text-right text-white font-semibold">{row.actual}%</td>
+                      <td className="px-4 py-3 text-right font-semibold" style={{
+                        color: row.deviation >= 0 ? '#10b981' : '#ef4444'
                       }}>
                         {row.deviation >= 0 ? '+' : ''}{row.deviation}%
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <div className="flex justify-center">
+                          {row.deviation >= 0 ? (
+                            <TrendingUp className="w-4 h-4 text-emerald-400" />
+                          ) : (
+                            <TrendingDown className="w-4 h-4 text-red-500" />
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
-            <div className="px-4 py-3 text-xs text-muted-foreground">
+            <div className="mt-4 text-xs text-slate-500">
               {t('reports.production.summary')
                 .replace('{total}', totalLines.toString())
                 .replace('{active}', activeLines.toString())
@@ -322,44 +492,44 @@ export default function ReportsPage() {
           </section>
 
           {/* Finished Goods Section */}
-          <section id="reports-finished" className="print:break-inside-avoid p-6">
+          <section id="reports-finished" className="print:break-inside-avoid bg-slate-800/50 border border-slate-700 rounded-xl p-6">
             <div className="flex items-center justify-between mb-4 print:hidden">
-              <h3 className="text-xl font-semibold text-foreground">{t('reports.finishedGoods.title')}</h3>
+              <h3 className="text-xl font-semibold text-white">{t('reports.finishedGoods.title')}</h3>
               <button
                 onClick={() => exportSectionToPdf('reports-finished', t('reports.finishedGoods.pdfTitle'))}
-                className="text-sm text-muted-foreground hover:text-foreground"
+                className="text-sm text-slate-400 hover:text-white"
               >
                 {t('reports.pdf')}
               </button>
             </div>
-            <div className="border border-border rounded-lg overflow-hidden">
-              <table className="w-full border-collapse">
+            <div className="border border-slate-700 rounded-lg overflow-hidden bg-slate-800/30">
+              <table className="w-full border-collapse text-sm">
                 <thead>
-                  <tr className="bg-muted">
-                    <th className="border border-border px-4 py-3 text-left text-foreground font-semibold">
+                  <tr className="bg-slate-800 border-b border-slate-700">
+                    <th className="px-4 py-4 text-left text-slate-300 font-medium">
                       {t('reports.finishedGoods.indicator')}
                     </th>
-                    <th className="border border-border px-4 py-3 text-right text-foreground font-semibold">
+                    <th className="px-4 py-4 text-right text-slate-300 font-medium">
                       {t('reports.finishedGoods.value')}
                     </th>
                   </tr>
                 </thead>
-                <tbody>
-                  <tr>
-                    <td className="border border-border px-4 py-2 text-foreground">{t('reports.finishedGoods.totalTypes')}</td>
-                    <td className="border border-border px-4 py-2 text-right text-foreground">{finishedTotalTypes}</td>
+                <tbody className="divide-y divide-slate-700/50">
+                  <tr className="hover:bg-slate-700/20 transition-colors">
+                    <td className="px-4 py-3 text-white font-medium">{t('reports.finishedGoods.totalTypes')}</td>
+                    <td className="px-4 py-3 text-right text-slate-300">{finishedTotalTypes}</td>
                   </tr>
-                  <tr>
-                    <td className="border border-border px-4 py-2 text-foreground">{t('reports.finishedGoods.totalQuantity')}</td>
-                    <td className="border border-border px-4 py-2 text-right text-foreground">{finishedTotalQty}</td>
+                  <tr className="hover:bg-slate-700/20 transition-colors">
+                    <td className="px-4 py-3 text-white font-medium">{t('reports.finishedGoods.totalQuantity')}</td>
+                    <td className="px-4 py-3 text-right text-slate-300">{finishedTotalQty}</td>
                   </tr>
-                  <tr>
-                    <td className="border border-border px-4 py-2 text-foreground">{t('reports.finishedGoods.availableForSale')}</td>
-                    <td className="border border-border px-4 py-2 text-right text-foreground">{finishedFree}</td>
+                  <tr className="hover:bg-slate-700/20 transition-colors">
+                    <td className="px-4 py-3 text-white font-medium">{t('reports.finishedGoods.availableForSale')}</td>
+                    <td className="px-4 py-3 text-right font-semibold text-emerald-400">{finishedFree}</td>
                   </tr>
-                  <tr>
-                    <td className="border border-border px-4 py-2 text-foreground">{t('reports.finishedGoods.lowStock')}</td>
-                    <td className="border border-border px-4 py-2 text-right text-foreground">{finishedLow}</td>
+                  <tr className="hover:bg-slate-700/20 transition-colors">
+                    <td className="px-4 py-3 text-white font-medium">{t('reports.finishedGoods.lowStock')}</td>
+                    <td className="px-4 py-3 text-right font-semibold text-red-500">{finishedLow}</td>
                   </tr>
                 </tbody>
               </table>
@@ -367,47 +537,71 @@ export default function ReportsPage() {
           </section>
 
           {/* Maintenance Section */}
-          <section id="reports-maintenance" className="print:break-inside-avoid p-6">
+          <section id="reports-maintenance" className="print:break-inside-avoid bg-slate-800/50 border border-slate-700 rounded-xl p-6">
             <div className="flex items-center justify-between mb-4 print:hidden">
-              <h3 className="text-xl font-semibold text-foreground">{t('reports.maintenance.title')}</h3>
+              <h3 className="text-xl font-semibold text-white">{t('reports.maintenance.title')}</h3>
               <button
                 onClick={() => exportSectionToPdf('reports-maintenance', t('reports.maintenance.title'))}
-                className="text-sm text-muted-foreground hover:text-foreground"
+                className="text-sm text-slate-400 hover:text-white"
               >
                 {t('reports.pdf')}
               </button>
             </div>
-            <div className="border border-border rounded-lg overflow-hidden">
-              <table className="w-full border-collapse">
+            <div className="border border-slate-700 rounded-lg overflow-hidden bg-slate-800/30">
+              <table className="w-full border-collapse text-sm">
                 <thead>
-                  <tr className="bg-muted">
-                    <th className="border border-border px-4 py-3 text-left text-foreground font-semibold">
+                  <tr className="bg-slate-800 border-b border-slate-700">
+                    <th className="px-4 py-4 text-left text-slate-300 font-medium">
                       {t('reports.maintenance.line')}
                     </th>
-                    <th className="border border-border px-4 py-3 text-left text-foreground font-semibold">
+                    <th className="px-4 py-4 text-left text-slate-300 font-medium">
                       {t('reports.maintenance.status')}
                     </th>
-                    <th className="border border-border px-4 py-3 text-right text-foreground font-semibold">
+                    <th className="px-4 py-4 text-center text-slate-300 font-medium">
+                      Impact on Production
+                    </th>
+                    <th className="px-4 py-4 text-right text-slate-300 font-medium">
                       {t('reports.maintenance.stops')}
                     </th>
-                    <th className="border border-border px-4 py-3 text-right text-foreground font-semibold">
+                    <th className="px-4 py-4 text-right text-slate-300 font-medium">
                       {t('reports.maintenance.time')}
                     </th>
                   </tr>
                 </thead>
-                <tbody>
-                  {maintenanceSummaryLines.map((line, idx) => (
-                    <tr key={idx}>
-                      <td className="border border-border px-4 py-2 text-foreground">{line.lineName}</td>
-                      <td className="border border-border px-4 py-2 text-foreground">{line.type}</td>
-                      <td className="border border-border px-4 py-2 text-right text-foreground">{line.stops}</td>
-                      <td className="border border-border px-4 py-2 text-right text-foreground">{line.minutes}</td>
-                    </tr>
-                  ))}
+                <tbody className="divide-y divide-slate-700/50">
+                  {maintenanceSummaryLines.map((line, idx) => {
+                    let impact = 'Low';
+                    let impactColor = 'text-emerald-400 bg-emerald-400/10 border-emerald-400/20';
+                    if (line.minutes > 60) {
+                      impact = 'High';
+                      impactColor = 'text-red-400 bg-red-400/10 border-red-400/20';
+                    } else if (line.minutes > 0) {
+                      impact = 'Medium';
+                      impactColor = 'text-amber-400 bg-amber-400/10 border-amber-400/20';
+                    }
+                    return (
+                      <tr key={idx} className="hover:bg-slate-700/20 transition-colors">
+                        <td className="px-4 py-3 text-white font-medium">{line.lineName}</td>
+                        <td className="px-4 py-3 text-slate-300">
+                          <span className="flex items-center gap-1.5">
+                            {line.stops > 0 ? <AlertCircle className="w-3.5 h-3.5 text-amber-500" /> : <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />}
+                            {line.type}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-center text-xs">
+                          <span className={`px-2 py-0.5 rounded-full border ${impactColor}`}>
+                            {impact}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-right text-slate-300">{line.stops}</td>
+                        <td className="px-4 py-3 text-right text-white font-semibold">{line.minutes} min</td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
-            <div className="px-4 py-3 text-xs text-muted-foreground">
+            <div className="mt-4 text-xs text-slate-500">
               {t('reports.maintenance.summary')
                 .replace('{total}', maintenanceTotalStops.toString())
                 .replace('{problem}', maintenanceProblemLines.toString())
@@ -416,47 +610,47 @@ export default function ReportsPage() {
           </section>
 
           {/* Suppliers Section */}
-          <section id="reports-suppliers" className="print:break-inside-avoid p-6">
+          <section id="reports-suppliers" className="print:break-inside-avoid bg-slate-800/50 border border-slate-700 rounded-xl p-6">
             <div className="flex items-center justify-between mb-4 print:hidden">
-              <h3 className="text-xl font-semibold text-foreground">{t('reports.suppliers.title')}</h3>
+              <h3 className="text-xl font-semibold text-white">{t('reports.suppliers.title')}</h3>
               <button
                 onClick={() => exportSectionToPdf('reports-suppliers', t('reports.suppliers.title'))}
-                className="text-sm text-muted-foreground hover:text-foreground"
+                className="text-sm text-slate-400 hover:text-white"
               >
                 {t('reports.pdf')}
               </button>
             </div>
-            <div className="border border-border rounded-lg overflow-hidden">
-              <table className="w-full border-collapse">
+            <div className="border border-slate-700 rounded-lg overflow-hidden bg-slate-800/30">
+              <table className="w-full border-collapse text-sm">
                 <thead>
-                  <tr className="bg-muted">
-                    <th className="border border-border px-4 py-3 text-left text-foreground font-semibold">
+                  <tr className="bg-slate-800 border-b border-slate-700">
+                    <th className="px-4 py-4 text-left text-slate-300 font-medium">
                       {t('reports.suppliers.supplier')}
                     </th>
-                    <th className="border border-border px-4 py-3 text-right text-foreground font-semibold">
+                    <th className="px-4 py-4 text-right text-slate-300 font-medium">
                       {t('reports.suppliers.deliveries')}
                     </th>
-                    <th className="border border-border px-4 py-3 text-right text-foreground font-semibold">
+                    <th className="px-4 py-4 text-right text-slate-300 font-medium">
                       {t('reports.suppliers.delayed')}
                     </th>
-                    <th className="border border-border px-4 py-3 text-left text-foreground font-semibold">
+                    <th className="px-4 py-4 text-left text-slate-300 font-medium">
                       {t('reports.suppliers.lastDelivery')}
                     </th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="divide-y divide-slate-700/50">
                   {supplierReport.map((s, idx) => (
-                    <tr key={idx}>
-                      <td className="border border-border px-4 py-2 text-foreground">{s.name}</td>
-                      <td className="border border-border px-4 py-2 text-right text-foreground">{s.deliveries}</td>
-                      <td className="border border-border px-4 py-2 text-right text-foreground">{s.delayed}</td>
-                      <td className="border border-border px-4 py-2 text-foreground">{s.lastDate}</td>
+                    <tr key={idx} className="hover:bg-slate-700/20 transition-colors">
+                      <td className="px-4 py-3 text-white font-medium">{s.name}</td>
+                      <td className="px-4 py-3 text-right text-slate-300">{s.deliveries}</td>
+                      <td className="px-4 py-3 text-right font-semibold" style={{ color: s.delayed > 0 ? '#ef4444' : '#10b981' }}>{s.delayed}</td>
+                      <td className="px-4 py-3 text-slate-400">{s.lastDate}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
-            <div className="px-4 py-3 text-xs text-muted-foreground">
+            <div className="mt-4 text-xs text-slate-500">
               {t('reports.suppliers.summary')
                 .replace('{total}', suppliersTotal.toString())
                 .replace('{active}', suppliersActive.toString())
@@ -465,47 +659,47 @@ export default function ReportsPage() {
           </section>
 
           {/* QC Section */}
-          <section id="reports-qc" className="print:break-inside-avoid p-6">
+          <section id="reports-qc" className="print:break-inside-avoid bg-slate-800/50 border border-slate-700 rounded-xl p-6">
             <div className="flex items-center justify-between mb-4 print:hidden">
-              <h3 className="text-xl font-semibold text-foreground">{t('reports.qc.title')}</h3>
+              <h3 className="text-xl font-semibold text-white">{t('reports.qc.title')}</h3>
               <button
                 onClick={() => exportSectionToPdf('reports-qc', t('reports.qc.title'))}
-                className="text-sm text-muted-foreground hover:text-foreground"
+                className="text-sm text-slate-400 hover:text-white"
               >
                 {t('reports.pdf')}
               </button>
             </div>
-            <div className="border border-border rounded-lg overflow-hidden">
-              <table className="w-full border-collapse">
+            <div className="border border-slate-700 rounded-lg overflow-hidden bg-slate-800/30">
+              <table className="w-full border-collapse text-sm">
                 <thead>
-                  <tr className="bg-muted">
-                    <th className="border border-border px-4 py-3 text-left text-foreground font-semibold">
+                  <tr className="bg-slate-800 border-b border-slate-700">
+                    <th className="px-4 py-4 text-left text-slate-300 font-medium">
                       {t('reports.qc.line')}
                     </th>
-                    <th className="border border-border px-4 py-3 text-right text-foreground font-semibold">
+                    <th className="px-4 py-4 text-right text-slate-300 font-medium">
                       {t('reports.qc.defects')}
                     </th>
-                    <th className="border border-border px-4 py-3 text-right text-foreground font-semibold">
+                    <th className="px-4 py-4 text-right text-slate-300 font-medium">
                       {t('reports.qc.rejected')}
                     </th>
-                    <th className="border border-border px-4 py-3 text-left text-foreground font-semibold">
+                    <th className="px-4 py-4 text-left text-slate-300 font-medium">
                       {t('reports.qc.note')}
                     </th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="divide-y divide-slate-700/50">
                   {qcPerLineRows.map((row, idx) => (
-                    <tr key={idx}>
-                      <td className="border border-border px-4 py-2 text-foreground">{row.line}</td>
-                      <td className="border border-border px-4 py-2 text-right text-foreground">{row.defects}</td>
-                      <td className="border border-border px-4 py-2 text-right text-foreground">{row.rejected}</td>
-                      <td className="border border-border px-4 py-2 text-foreground">{row.note}</td>
+                    <tr key={idx} className="hover:bg-slate-700/20 transition-colors">
+                      <td className="px-4 py-3 text-white font-medium">{row.line}</td>
+                      <td className="px-4 py-3 text-right text-amber-500 font-semibold">{row.defects}</td>
+                      <td className="px-4 py-3 text-right text-red-500 font-semibold">{row.rejected}</td>
+                      <td className="px-4 py-3 text-slate-400">{row.note}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
-            <div className="px-4 py-3 text-xs text-muted-foreground">
+            <div className="mt-4 text-xs text-slate-500">
               {t('reports.qc.summary')
                 .replace('{total}', qcTotalDefects.toString())
                 .replace('{rejected}', qcRejected.toString())}
@@ -513,42 +707,42 @@ export default function ReportsPage() {
           </section>
 
           {/* HR Section */}
-          <section id="reports-hr-stats" className="print:break-inside-avoid p-6">
+          <section id="reports-hr-stats" className="print:break-inside-avoid bg-slate-800/50 border border-slate-700 rounded-xl p-6">
             <div className="flex items-center justify-between mb-4 print:hidden">
-              <h3 className="text-xl font-semibold text-foreground">{t('reports.hr.title')}</h3>
+              <h3 className="text-xl font-semibold text-white">{t('reports.hr.title')}</h3>
               <button
                 onClick={() => exportSectionToPdf('reports-hr-stats', t('reports.hr.title'))}
-                className="text-sm text-muted-foreground hover:text-foreground"
+                className="text-sm text-slate-400 hover:text-white"
               >
                 {t('reports.pdf')}
               </button>
             </div>
-            <div className="border border-border rounded-lg overflow-hidden">
-              <div className="px-4 py-3 text-xs text-muted-foreground">
+            <div className="border border-slate-700 rounded-lg overflow-hidden bg-slate-800/30">
+              <div className="px-4 py-3 text-xs text-slate-400 bg-slate-800 border-b border-slate-700">
                 {t('reports.hr.summary')
                   .replace('{total}', totalEmployees.toString())
                   .replace('{active}', activeEmployees.toString())}
               </div>
-              <table className="w-full border-collapse">
+              <table className="w-full border-collapse text-sm">
                 <thead>
-                  <tr className="bg-muted">
-                    <th className="border border-border px-4 py-3 text-left text-foreground font-semibold">
+                  <tr className="bg-slate-800 border-b border-slate-700">
+                    <th className="px-4 py-4 text-left text-slate-300 font-medium">
                       {t('reports.hr.department')}
                     </th>
-                    <th className="border border-border px-4 py-3 text-right text-foreground font-semibold">
+                    <th className="px-4 py-4 text-right text-slate-300 font-medium">
                       {t('reports.hr.employees')}
                     </th>
-                    <th className="border border-border px-4 py-3 text-right text-foreground font-semibold">
+                    <th className="px-4 py-4 text-right text-slate-300 font-medium">
                       {t('reports.hr.openPositions')}
                     </th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="divide-y divide-slate-700/50">
                   {Object.entries(employeesByDepartment).map(([dept, data]) => (
-                    <tr key={dept}>
-                      <td className="border border-border px-4 py-2 text-foreground">{dept}</td>
-                      <td className="border border-border px-4 py-2 text-right text-foreground">{data.total}</td>
-                      <td className="border border-border px-4 py-2 text-right text-foreground">{data.open}</td>
+                    <tr key={dept} className="hover:bg-slate-700/20 transition-colors">
+                      <td className="px-4 py-3 text-white font-medium">{dept}</td>
+                      <td className="px-4 py-3 text-right text-slate-300">{data.total}</td>
+                      <td className="px-4 py-3 text-right font-semibold" style={{ color: data.open > 0 ? '#10b981' : '#slate-400' }}>{data.open}</td>
                     </tr>
                   ))}
                 </tbody>
