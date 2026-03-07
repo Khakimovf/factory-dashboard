@@ -19,6 +19,8 @@ import {
   XCircle,
   Eye,
   X,
+  Activity,
+  BarChart2
 } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
@@ -327,16 +329,16 @@ export function SuppliersPage() {
   );
 
   return (
-    <div className="p-8 bg-gray-50 dark:bg-gray-900">
+    <div className="p-8 bg-slate-950 text-slate-100 min-h-screen">
       <div className="mb-8 flex items-center justify-between">
         <div>
-          <h2 className="text-3xl font-semibold text-gray-900 dark:text-white flex items-center gap-3">
-            <Truck className="w-8 h-8 text-blue-600 dark:text-blue-400" />
-            {t('suppliers.title')}
+          <h2 className="text-3xl font-bold text-white flex items-center gap-3 tracking-tight">
+            <Truck className="w-8 h-8 text-indigo-500" />
+            {t('suppliers.title')} (Strategic Sourcing)
           </h2>
-          <p className="text-gray-500 dark:text-gray-400 mt-1">{t('suppliers.subtitle')}</p>
+          <p className="text-slate-400 mt-1">{t('suppliers.subtitle')}</p>
         </div>
-        <Button onClick={() => handleOpenDialog()}>
+        <Button onClick={() => handleOpenDialog()} className="bg-indigo-600 hover:bg-indigo-500 text-white font-medium">
           <Plus className="w-4 h-4 mr-2" />
           {t('suppliers.addSupplier')}
         </Button>
@@ -347,21 +349,21 @@ export function SuppliersPage() {
           const rating = supplier.rating;
           const riskLevel = supplier.riskLevel || 'low';
           const isBlocked = supplier.status === 'blocked' || supplier.status === 'blacklisted';
+          const activeOrdersCount = supplier.purchaseOrders ? supplier.purchaseOrders.filter(po => po.status === 'pending' || po.status === 'in_transit').length : 0;
 
           return (
             <div
               key={supplier.id}
               onClick={() => handleViewDetails(supplier)}
-              className={`bg-white dark:bg-gray-800 rounded-xl shadow-sm border ${
-                isBlocked
-                  ? 'border-red-200 dark:border-red-800 opacity-75'
-                  : 'border-gray-200 dark:border-gray-700'
-              } p-6 cursor-pointer hover:shadow-md transition-shadow`}
+              className={`bg-slate-900 rounded-xl shadow-lg border ${isBlocked
+                ? 'border-rose-900/50 opacity-75'
+                : 'border-slate-800 hover:border-indigo-500/50'
+                } p-6 cursor-pointer hover:shadow-indigo-500/10 transition-all`}
             >
               <div className="flex items-start justify-between mb-4">
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-2">
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                    <h3 className="text-lg font-bold text-white tracking-tight">
                       {supplier.name}
                     </h3>
                     <Badge className={getStatusColor(supplier.status)}>
@@ -373,47 +375,63 @@ export function SuppliersPage() {
                   {rating ? (
                     <div className="flex items-center gap-2 mt-2">
                       {getTrendIcon(rating.trend)}
-                      <span className={`text-sm font-medium ${getRatingColor(rating.overall)}`}>
+                      <span className={`text-sm font-semibold tracking-wide ${getRatingColor(rating.overall)}`}>
                         {t('suppliers.rating')}: {rating.overall}/100
                       </span>
                     </div>
                   ) : (
                     <div className="flex items-center gap-2 mt-2">
-                      <TrendingUp className="w-4 h-4 text-gray-400 dark:text-gray-500" />
-                      <span className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                      <TrendingUp className="w-4 h-4 text-slate-500" />
+                      <span className="text-sm font-medium text-slate-400">
                         {supplier.reliability}% {t('suppliers.reliability')}
                       </span>
                     </div>
                   )}
 
-                  {/* Risk Indicator */}
-                  {riskLevel === 'high' && (
-                    <div className="flex items-center gap-1 mt-2">
-                      <AlertTriangle className="w-4 h-4 text-red-600 dark:text-red-400" />
-                      <span className="text-xs text-red-600 dark:text-red-400 font-medium">
-                        {t('suppliers.riskHigh')} {t('suppliers.riskIndicator')}
-                      </span>
+                  {/* Supplier Intelligence: Risk & Load */}
+                  <div className="grid grid-cols-2 gap-4 mt-5 bg-slate-800/40 p-3 rounded-lg border border-slate-700/50">
+                    <div>
+                      <p className="text-[10px] text-slate-400 font-semibold tracking-wider uppercase mb-1.5 flex items-center gap-1">
+                        <Activity className="w-3 h-3" /> Risk Level
+                      </p>
+                      <div className="flex items-center gap-1.5">
+                        <div className={`w-2 h-2 rounded-full ${riskLevel === 'low' ? 'bg-emerald-500' : riskLevel === 'medium' ? 'bg-amber-500' : 'bg-rose-500'}`} />
+                        <span className={`text-sm font-bold ${riskLevel === 'low' ? 'text-emerald-400' : riskLevel === 'medium' ? 'text-amber-400' : 'text-rose-400'}`}>
+                          {riskLevel.toUpperCase()}
+                        </span>
+                      </div>
                     </div>
-                  )}
+                    <div>
+                      <p className="text-[10px] text-slate-400 font-semibold tracking-wider uppercase mb-1.5 flex items-center gap-1">
+                        <BarChart2 className="w-3 h-3" /> Current Load
+                      </p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <div className="flex-1 h-1.5 bg-slate-700/50 rounded-full overflow-hidden">
+                          <div className="h-full bg-indigo-500 rounded-full" style={{ width: `${Math.min((activeOrdersCount / 10) * 100, 100)}%` }} />
+                        </div>
+                        <span className="text-xs font-bold text-indigo-400">{activeOrdersCount}</span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
                 <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
                   <button
                     onClick={() => handleViewDetails(supplier)}
-                    className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
+                    className="p-2 text-indigo-400 hover:bg-indigo-500/20 rounded-lg transition-colors"
                     title={t('suppliers.viewDetails')}
                   >
                     <Eye className="w-4 h-4" />
                   </button>
                   <button
                     onClick={() => handleOpenDialog(supplier)}
-                    className="p-2 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                    className="p-2 text-slate-400 hover:bg-slate-800 rounded-lg transition-colors"
                     title={t('suppliers.edit')}
                   >
                     <Edit className="w-4 h-4" />
                   </button>
                   <button
                     onClick={() => handleDelete(supplier.id)}
-                    className="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                    className="p-2 text-rose-400 hover:bg-rose-500/20 rounded-lg transition-colors"
                     title={t('suppliers.delete')}
                   >
                     <Trash2 className="w-4 h-4" />
@@ -421,70 +439,70 @@ export function SuppliersPage() {
                 </div>
               </div>
 
-              <div className="space-y-3">
+              <div className="space-y-3 mt-4">
                 <div className="flex items-start gap-2 text-sm">
-                  <Phone className="w-4 h-4 text-gray-400 dark:text-gray-500 mt-0.5" />
+                  <Phone className="w-4 h-4 text-slate-500 mt-0.5 flex-shrink-0" />
                   <div>
-                    <span className="text-gray-500 dark:text-gray-400">{supplier.contactPerson}</span>
+                    <span className="text-slate-400">{supplier.contactPerson}</span>
                     <br />
-                    <span className="text-gray-700 dark:text-gray-300">{supplier.phone}</span>
+                    <span className="text-slate-300 font-medium tracking-wide">{supplier.phone}</span>
                   </div>
                 </div>
 
                 <div className="flex items-start gap-2 text-sm">
-                  <Mail className="w-4 h-4 text-gray-400 dark:text-gray-500 mt-0.5" />
-                  <span className="text-gray-700 dark:text-gray-300">{supplier.email}</span>
+                  <Mail className="w-4 h-4 text-slate-500 mt-0.5 flex-shrink-0" />
+                  <span className="text-slate-300 font-medium">{supplier.email}</span>
                 </div>
 
                 <div className="flex items-start gap-2 text-sm">
-                  <Clock className="w-4 h-4 text-gray-400 dark:text-gray-500 mt-0.5" />
-                  <span className="text-gray-700 dark:text-gray-300">
-                    {supplier.deliveryTime} {t('suppliers.days')}
+                  <Clock className="w-4 h-4 text-slate-500 mt-0.5 flex-shrink-0" />
+                  <span className="text-slate-300 font-medium tracking-wide">
+                    {supplier.deliveryTime} {t('suppliers.days')} Delivery Promise
                   </span>
                 </div>
 
                 {/* Purchase Orders Summary */}
                 {supplier.purchaseOrders && (
-                  <div className="flex items-center gap-2 text-sm pt-2 border-t border-gray-200 dark:border-gray-700">
-                    <Package className="w-4 h-4 text-gray-400 dark:text-gray-500" />
-                    <span className="text-gray-700 dark:text-gray-300">
-                      {supplier.purchaseOrders.filter(po => po.status === 'pending' || po.status === 'in_transit').length}{' '}
-                      {t('suppliers.activeOrders')} •{' '}
-                      {supplier.purchaseOrders.filter(po => po.status === 'delivered').length}{' '}
-                      {t('suppliers.completedOrders')}
-                    </span>
+                  <div className="flex items-center justify-between text-xs pt-3 mt-3 border-t border-slate-800/50">
+                    <div className="flex items-center gap-1.5 text-slate-400">
+                      <Package className="w-3.5 h-3.5" /> Active: <strong className="text-indigo-400">{activeOrdersCount}</strong>
+                    </div>
+                    <div className="flex items-center gap-1.5 text-slate-400">
+                      <CheckCircle className="w-3.5 h-3.5 text-emerald-500" /> Completed: <strong className="text-slate-300">{supplier.purchaseOrders.filter(po => po.status === 'delivered').length}</strong>
+                    </div>
                   </div>
                 )}
 
-                <div className="pt-3 border-t border-gray-200 dark:border-gray-700">
+                <div className="pt-3 mt-3 border-t border-slate-800/50">
                   <div className="flex items-center gap-2 mb-2">
-                    <Package className="w-4 h-4 text-gray-400 dark:text-gray-500" />
-                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    <Package className="w-4 h-4 text-slate-500" />
+                    <span className="text-xs font-bold text-slate-300 uppercase tracking-wider">
                       {t('suppliers.suppliedMaterials')}:
                     </span>
                   </div>
-                  <div className="space-y-1">
+                  <div className="space-y-1.5">
                     {supplier.suppliedMaterials.length > 0 ? (
                       supplier.suppliedMaterials.slice(0, 3).map(materialId => {
                         const material = materials.find(m => m.id === materialId);
                         return (
                           <div
                             key={materialId}
-                            className="text-xs text-gray-600 dark:text-gray-400 pl-6"
+                            className="text-xs text-slate-400 pl-6 flex justify-between items-center"
                           >
-                            • {material?.name || materialId} -{' '}
-                            {supplier.prices[materialId]?.toLocaleString()} {t('suppliers.currency')}/
-                            {material?.unit || 'unit'}
+                            <span className="truncate mr-2">• {material?.name || materialId}</span>
+                            <span className="font-medium text-slate-200 shrink-0">
+                              {supplier.prices[materialId]?.toLocaleString()} / {material?.unit || 'unit'}
+                            </span>
                           </div>
                         );
                       })
                     ) : (
-                      <span className="text-xs text-gray-500 dark:text-gray-400 pl-6">
+                      <span className="text-xs text-slate-500 pl-6">
                         {t('suppliers.noMaterials')}
                       </span>
                     )}
                     {supplier.suppliedMaterials.length > 3 && (
-                      <div className="text-xs text-gray-500 dark:text-gray-400 pl-6">
+                      <div className="text-xs text-indigo-400/80 font-medium pl-6 pt-1">
                         +{supplier.suppliedMaterials.length - 3} {t('suppliers.more')}
                       </div>
                     )}
