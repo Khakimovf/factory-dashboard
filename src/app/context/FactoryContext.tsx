@@ -15,11 +15,30 @@ export interface Material {
 export interface ProductionLine {
   id: string;
   name: string;
+  type: 'assembly' | 'sap_inpanel' | 'tpa_molding';
   status: 'active' | 'idle' | 'maintenance' | 'maintenance_requested';
+  qcStatus?: 'OK' | 'HOLD';
   efficiency: number;
   requiredMaterials: { materialId: string; quantity: number }[];
   output: number;
   downtimeRecord?: { accumulatedMinutes: number; currentStartTime?: number };
+  sapData?: {
+    bins: { id: string; current: number; target: number; skuId: string }[];
+    productionQueue: { skuId: string; name: string; bomStatus: 'Complete' | 'Missing' | 'Pending'; qty: number }[];
+    awaitingVerification: { batchId: string; skuId: string; timestamp: string; status: 'pending' | 'signed' }[];
+    completedBins: number;
+    activeProductBOM?: string;
+  };
+  tpaData?: {
+    machines: {
+      id: string;
+      status: 'running' | 'stopped' | 'setup';
+      cycleTime: number;
+      mold: string;
+      cavityStatus: string;
+    }[];
+    scrapRate: number;
+  };
 }
 
 export interface HRDocument {
@@ -42,6 +61,7 @@ interface FactoryContextType {
   updateDocumentStatus: (id: string, status: HRDocument['status']) => void;
   addMaterial: (material: Omit<Material, 'id' | 'createdAt' | 'createdByRole'> & { materialId: string }) => void;
   updateMaterialQuantity: (materialId: string, quantity: number) => void;
+  updateTPAMachine: (lineId: string, machineId: string, updates: any) => void;
 }
 
 const FactoryContext = createContext<FactoryContextType | undefined>(undefined);
@@ -59,7 +79,9 @@ const initialProductionLines: ProductionLine[] = [
   {
     id: '1',
     name: 'Assembly Line A',
+    type: 'assembly',
     status: 'active',
+    qcStatus: 'OK',
     efficiency: 87,
     requiredMaterials: [
       { materialId: '1', quantity: 10 },
@@ -70,7 +92,9 @@ const initialProductionLines: ProductionLine[] = [
   {
     id: '2',
     name: 'Assembly Line B',
+    type: 'assembly',
     status: 'active',
+    qcStatus: 'OK',
     efficiency: 92,
     requiredMaterials: [
       { materialId: '2', quantity: 5 },
@@ -81,12 +105,64 @@ const initialProductionLines: ProductionLine[] = [
   {
     id: '3',
     name: 'Assembly Line D',
+    type: 'assembly',
     status: 'idle',
+    qcStatus: 'OK',
     efficiency: 78,
     requiredMaterials: [
       { materialId: '4', quantity: 20 },
     ],
     output: 80,
+  },
+  {
+    id: '4',
+    name: 'SAP Inpanel Assembly',
+    type: 'sap_inpanel',
+    status: 'active',
+    qcStatus: 'OK',
+    efficiency: 94,
+    requiredMaterials: [
+      { materialId: '3', quantity: 15 },
+      { materialId: '5', quantity: 8 },
+    ],
+    output: 450,
+    sapData: {
+      bins: [
+        { id: 'BIN-01', current: 98, target: 100, skuId: 'IC-2024-V1' },
+        { id: 'BIN-02', current: 45, target: 100, skuId: 'IC-2024-V2' },
+        { id: 'BIN-03', current: 12, target: 50, skuId: 'IC-2024-X3' },
+        { id: 'BIN-04', current: 0, target: 100, skuId: 'IC-2024-V1' },
+      ],
+      productionQueue: [
+        { skuId: 'IC-2024-V1', name: 'Inpanel Control V1', bomStatus: 'Complete', qty: 500 },
+        { skuId: 'IC-2024-V2', name: 'Inpanel Control V2', bomStatus: 'Pending', qty: 200 },
+        { skuId: 'IC-2024-X3', name: 'Inpanel Sensor X3', bomStatus: 'Complete', qty: 150 },
+        { skuId: 'IC-2025-ALPHA', name: 'Inpanel Alpha Next', bomStatus: 'Missing', qty: 50 },
+      ],
+      awaitingVerification: [],
+      completedBins: 46,
+      activeProductBOM: 'BOM-SAP-2024-X1'
+    }
+  },
+  {
+    id: '5',
+    name: 'TPA Molding Workshop',
+    type: 'tpa_molding',
+    status: 'active',
+    qcStatus: 'OK',
+    efficiency: 89,
+    requiredMaterials: [
+      { materialId: '1', quantity: 50 },
+    ],
+    output: 1200,
+    tpaData: {
+      scrapRate: 1.2,
+      machines: [
+        { id: 'TPA-01', status: 'running', cycleTime: 12.5, mold: 'M-1024-PL', cavityStatus: '8/8 OK' },
+        { id: 'TPA-02', status: 'running', cycleTime: 14.2, mold: 'M-2055-HS', cavityStatus: '4/4 OK' },
+        { id: 'TPA-03', status: 'setup', cycleTime: 0, mold: 'M-3011-RG', cavityStatus: 'N/A' },
+      ]
+    }
   },
 ];
 
@@ -228,6 +304,23 @@ export function FactoryProvider({ children }: { children: ReactNode }) {
     ));
   };
 
+  const updateTPAMachine = (lineId: string, machineId: string, updates: any) => {
+    setProductionLines(lines => lines.map(line => {
+      if (line.id === lineId && line.tpaData) {
+        return {
+          ...line,
+          tpaData: {
+            ...line.tpaData,
+            machines: line.tpaData.machines.map(m =>
+              m.id === machineId ? { ...m, ...updates } : m
+            )
+          }
+        };
+      }
+      return line;
+    }));
+  };
+
   return (
     <FactoryContext.Provider
       value={{
@@ -242,6 +335,7 @@ export function FactoryProvider({ children }: { children: ReactNode }) {
         updateDocumentStatus,
         addMaterial,
         updateMaterialQuantity,
+        updateTPAMachine,
       }}
     >
       {children}

@@ -5,7 +5,8 @@ import { useLanguage } from '../context/LanguageContext';
 import { useDailyProductionPlan } from '../context/DailyProductionPlanContext';
 import {
   Factory, Plus, Activity, AlertCircle, PlayCircle, PauseCircle,
-  TrendingUp, Target, Wrench, PackageX, Clock, ShieldCheck, CheckCircle2
+  TrendingUp, Target, Wrench, PackageX, Clock, ShieldCheck, CheckCircle2,
+  Monitor, Construction, Layers
 } from 'lucide-react';
 
 // ---------------- Analytics header ----------------
@@ -96,6 +97,28 @@ export function ProductionLines() {
   const linesUnderRepair = productionLines.filter(l => l.status === 'maintenance').length;
   const maintenanceAlert = linesDown > 0 || linesUnderRepair > 0;
 
+  const getLineIcon = (type: string, status: string) => {
+    const isActive = status === 'active';
+    const baseClass = `w-6 h-6 ${isActive ? 'text-green-600 dark:text-green-400' : 'text-blue-600 dark:text-blue-400'}`;
+    const bgClass = `w-12 h-12 rounded-lg flex items-center justify-center ${isActive ? 'bg-green-50 dark:bg-green-900/20' : 'bg-blue-50 dark:bg-blue-900/20'}`;
+
+    let icon = <Factory className={baseClass} />;
+    if (type === 'sap_inpanel') icon = <Monitor className={baseClass} />;
+    if (type === 'tpa_molding') icon = <Construction className={baseClass} />;
+    if (type === 'assembly') icon = <Wrench className={baseClass} />;
+
+    return <div className={bgClass}>{icon}</div>;
+  };
+
+  const getLineTypeLabel = (type: string) => {
+    switch (type) {
+      case 'sap_inpanel': return 'SAP Inpanel';
+      case 'tpa_molding': return 'TPA Molding';
+      case 'assembly': return 'Assembly';
+      default: return 'Production';
+    }
+  };
+
   return (
     <div className="p-8 bg-gray-50 dark:bg-gray-900 min-h-screen">
       {/* Page header */}
@@ -163,11 +186,14 @@ export function ProductionLines() {
             >
               <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center gap-3">
-                  <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${line.status === 'active' ? 'bg-green-50 dark:bg-green-900/20' : 'bg-blue-50 dark:bg-blue-900/20'}`}>
-                    <Factory className={`w-6 h-6 ${line.status === 'active' ? 'text-green-600 dark:text-green-400' : 'text-blue-600 dark:text-blue-400'}`} />
-                  </div>
+                  {getLineIcon(line.type, line.status)}
                   <div>
-                    <h3 className="font-semibold text-gray-900 dark:text-white text-lg tracking-tight">{line.name}</h3>
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-semibold text-gray-900 dark:text-white text-lg tracking-tight">{line.name}</h3>
+                      <span className="px-2 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase">
+                        {getLineTypeLabel(line.type)}
+                      </span>
+                    </div>
                     <p className="text-sm font-mono text-gray-400 dark:text-gray-500">ID: {line.id}</p>
                   </div>
                 </div>
@@ -183,18 +209,54 @@ export function ProductionLines() {
                   </span>
                 </div>
 
-                {/* Real-Time OEE */}
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-sm font-medium text-gray-500 dark:text-gray-400">Real-Time OEE</span>
-                    <span className="text-sm font-bold text-gray-900 dark:text-white">{line.efficiency}%</span>
+                {/* Real-Time OEE & Specialized Metrics */}
+                <div className="space-y-3">
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-sm font-medium text-gray-500 dark:text-gray-400">Real-Time OEE</span>
+                      <span className="text-sm font-bold text-gray-900 dark:text-white">{line.efficiency}%</span>
+                    </div>
+                    <div className="w-full h-2.5 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full transition-all duration-500 ${line.efficiency >= 85 ? 'bg-green-500' : line.efficiency >= 60 ? 'bg-yellow-500' : 'bg-red-500'}`}
+                        style={{ width: `${line.efficiency}%` }}
+                      />
+                    </div>
                   </div>
-                  <div className="w-full h-2.5 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
-                    <div
-                      className={`h-full transition-all duration-500 ${line.efficiency >= 85 ? 'bg-green-500' : line.efficiency >= 60 ? 'bg-yellow-500' : 'bg-red-500'}`}
-                      style={{ width: `${line.efficiency}%` }}
-                    />
-                  </div>
+
+                  {line.type === 'sap_inpanel' && line.sapData && (
+                    <div className="bg-cyan-50 dark:bg-cyan-900/10 p-2.5 rounded-lg border border-cyan-100 dark:border-cyan-800/50">
+                      <div className="flex justify-between items-center mb-1">
+                        <span className="text-[10px] font-bold text-cyan-600 dark:text-cyan-400 uppercase tracking-wider">Multi-Bin Load</span>
+                        <span className="text-xs font-bold text-cyan-700 dark:text-cyan-300">
+                          {line.sapData.bins[0]?.current || 0} / {line.sapData.bins[0]?.target || 100}
+                        </span>
+                      </div>
+                      <div className="w-full h-1.5 bg-cyan-100 dark:bg-cyan-800/30 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-cyan-500 transition-all duration-500"
+                          style={{ width: `${((line.sapData.bins[0]?.current || 0) / (line.sapData.bins[0]?.target || 100)) * 100}%` }}
+                        />
+                      </div>
+                      <div className="mt-1 flex justify-between items-center">
+                        <span className="text-[8px] text-slate-500 font-bold uppercase">Active Buffers: {line.sapData.bins.length}</span>
+                        <span className="text-[8px] text-cyan-600 dark:text-cyan-400 font-bold uppercase">{line.sapData.completedBins} Bins Done</span>
+                      </div>
+                    </div>
+                  )}
+
+                  {line.type === 'tpa_molding' && line.tpaData && (
+                    <div className="flex items-center justify-between bg-purple-50 dark:bg-purple-900/10 p-2.5 rounded-lg border border-purple-100 dark:border-purple-800/50">
+                      <div className="flex flex-col">
+                        <span className="text-[10px] font-bold text-purple-600 dark:text-purple-400 uppercase tracking-wider">Scrap Rate</span>
+                        <span className="text-xs font-bold text-purple-700 dark:text-purple-300">{line.tpaData.scrapRate}%</span>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-[10px] font-bold text-purple-600 dark:text-purple-400 uppercase tracking-wider">Active Molds</span>
+                        <span className="text-xs font-bold text-purple-700 dark:text-purple-300">{line.tpaData.machines.filter(m => m.status === 'running').length} Machines</span>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Status & Health Bar */}
@@ -236,10 +298,20 @@ interface AddLineModalProps {
 function AddLineModal({ onClose, onAdd }: AddLineModalProps) {
   const { t } = useLanguage();
   const [name, setName] = useState('');
+  const [type, setType] = useState<'assembly' | 'sap_inpanel' | 'tpa_molding'>('assembly');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onAdd({ name, status: 'idle', efficiency: 0, requiredMaterials: [], output: 0 });
+    onAdd({
+      name,
+      type,
+      status: 'idle',
+      efficiency: 0,
+      requiredMaterials: [],
+      output: 0,
+      ...(type === 'sap_inpanel' ? { sapData: { currentBinCount: 0, binTarget: 100, completedBins: 0 } } : {}),
+      ...(type === 'tpa_molding' ? { tpaData: { machines: [], scrapRate: 0 } } : {})
+    });
   };
 
   return (
@@ -255,10 +327,34 @@ function AddLineModal({ onClose, onAdd }: AddLineModalProps) {
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent mb-4"
               placeholder={t('production.placeholderExample')}
               required
             />
+
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Line Type
+            </label>
+            <div className="grid grid-cols-3 gap-2">
+              {[
+                { id: 'assembly', label: 'Assembly', icon: <Wrench className="w-4 h-4" /> },
+                { id: 'sap_inpanel', label: 'SAP', icon: <Monitor className="w-4 h-4" /> },
+                { id: 'tpa_molding', label: 'TPA', icon: <Construction className="w-4 h-4" /> },
+              ].map((t) => (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => setType(t.id as any)}
+                  className={`flex flex-col items-center justify-center gap-1 p-3 rounded-lg border transition-all ${type === t.id
+                    ? 'bg-blue-50 dark:bg-blue-900/30 border-blue-500 text-blue-600 dark:text-blue-400'
+                    : 'border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-blue-300'
+                    }`}
+                >
+                  {t.icon}
+                  <span className="text-[10px] font-bold uppercase tracking-tighter">{t.label}</span>
+                </button>
+              ))}
+            </div>
           </div>
           <div className="flex gap-3">
             <button

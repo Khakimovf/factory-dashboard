@@ -12,7 +12,7 @@ from app.models.maintenance import (
 )
 from app.services.maintenance_service import MaintenanceService
 from app.services.file_service import FileService
-from app.core.dependencies import get_maintenance_service, get_file_service
+from app.core.dependencies import get_maintenance_service, get_file_service, allow_manager
 from app.core.exceptions import NotFoundError, FileUploadError
 
 router = APIRouter(prefix="/maintenance", tags=["maintenance"])
@@ -201,6 +201,22 @@ async def health_check():
         "status": "healthy",
         "service": "maintenance",
         "timestamp": datetime.now().isoformat()
+    }
+
+
+@router.get(
+    "/settings",
+    dependencies=[Depends(allow_manager)],
+    summary="Get maintenance settings",
+    description="Get system-wide maintenance settings (Restricted to Manager/Admin)",
+)
+async def get_maintenance_settings():
+    """Get maintenance settings."""
+    return {
+        "status": "operational",
+        "alert_threshold_celsius": 85,
+        "max_downtime_allowed_minutes": 120,
+        "notification_channels": ["telegram", "email"]
     }
 
 

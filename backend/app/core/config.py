@@ -60,6 +60,11 @@ class Settings(BaseSettings):
     LOG_LEVEL: str = "INFO"
     LOG_FORMAT: str = "json"  # json or text
     
+    # Security
+    # In production, this MUST be a strong secret key
+    SECRET_KEY: str = "729d1a3e-b4c5-d6e7-f8g9-h0i1j2k3l4m5" 
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 240  # 4 hours
+    
     # Database (for future use)
     # DATABASE_URL: Optional[str] = None
 

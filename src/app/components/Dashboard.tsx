@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useFactory } from '../context/FactoryContext';
 import { useLanguage } from '../context/LanguageContext';
 import {
@@ -11,692 +11,352 @@ import {
   XAxis,
   YAxis,
   Tooltip,
-  PieChart,
-  Pie,
   Cell,
+  ComposedChart,
 } from 'recharts';
-
-type DateRange = 'today' | 'week' | 'month';
+import {
+  Zap,
+  Activity,
+  Package,
+  CheckCircle2,
+  AlertTriangle,
+  TrendingUp,
+  Truck,
+  Utensils,
+  Wrench,
+  Clock,
+  Gauge,
+  ShieldAlert,
+  BarChart3,
+  Factory,
+  LayoutGrid
+} from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
 
 export function Dashboard() {
-  const { materials, productionLines, hrDocuments } = useFactory();
+  const { productionLines } = useFactory();
   const { t } = useLanguage();
-  const [range, setRange] = useState<DateRange>('week');
 
-  const lowStockCount = materials.filter(m => m.quantity <= m.minStock).length;
-  const activeLines = productionLines.filter(l => l.status === 'active').length;
-  const pendingDocs = hrDocuments.filter(d => d.status === 'pending').length;
-  const totalOutput = productionLines.reduce((sum, line) => sum + line.output, 0);
+  const [uptime, setUptime] = useState(99.85);
+  const [pulse, setPulse] = useState(false);
 
-  const mostEfficientLine = productionLines.reduce((prev, current) =>
-    prev.efficiency > current.efficiency ? prev : current,
-  );
-  const leastEfficientLine = productionLines.reduce((prev, current) =>
-    prev.efficiency < current.efficiency ? prev : current,
-  );
-  const avgEfficiency =
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setUptime(prev => {
+        const delta = (Math.random() - 0.5) * 0.01;
+        return parseFloat(Math.min(100, Math.max(99.8, prev + delta)).toFixed(2));
+      });
+      setPulse(p => !p);
+    }, 5000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const avgEfficiency = useMemo(() =>
     productionLines.length > 0
       ? productionLines.reduce((sum, l) => sum + l.efficiency, 0) / productionLines.length
-      : 0;
+      : 0
+    , [productionLines]);
 
-  const theoreticalPerLine = 1000;
-  const plannedToday = productionLines.length * theoreticalPerLine;
-  const productionPercent = plannedToday > 0 ? (totalOutput / plannedToday) * 100 : 0;
-  const productionDeltaPercent = productionPercent - 100;
-
-  const efficiencyDeltaPercent = avgEfficiency - 90;
-
-  const stoppedLines = productionLines.length - activeLines;
-
-  const lostUnitsToday = useMemo(
-    () => Math.max(plannedToday - totalOutput, 0),
-    [plannedToday, totalOutput],
-  );
-
-  const warehouseTotalStock = useMemo(
-    () => materials.reduce((sum, m) => sum + m.quantity, 0),
-    [materials],
-  );
-  const warehouseMinStock = useMemo(
-    () => materials.reduce((sum, m) => sum + m.minStock, 0),
-    [materials],
-  );
-  const warehouseLowStock = lowStockCount;
-  const warehouseMovement = useMemo(
-    () =>
-      materials.map(m => ({
-        name: m.name,
-        qoldiq: m.quantity,
-        kirim: Math.round(m.quantity * 0.3),
-        chiqim: Math.round(m.quantity * 0.2),
-      })),
-    [materials],
-  );
-
-  const productionChartData = productionLines.map(line => ({
-    name: line.name.replace('Assembly Line ', 'Line '),
-    reja: line.output,
-    fakt: Math.round(line.output * (line.efficiency / 100)),
-    samaradorlik: line.efficiency,
-  }));
-
-  const qcKpiTodayDefects = 24;
-  const qcKpiRejected = 3;
-  const qcDefectsByLine = [
-    { name: 'Line A', nuqsonlar: 8 },
-    { name: 'Line B', nuqsonlar: 6 },
-    { name: 'Line D', nuqsonlar: 10 },
-  ];
-  const qcDefectsByType = [
-    { name: 'Ko‘rinish', value: 10 },
-    { name: 'Funktsional', value: 8 },
-    { name: 'Struktura', value: 6 },
+  const inventoryHealth = [
+    { name: t('dashboard.metal'), val: 88, color: '#06b6d4', status: t('dashboard.statusNominal') },
+    { name: t('dashboard.polymer'), val: 42, color: '#f59e0b', status: t('dashboard.lowReserve') },
+    { name: t('dashboard.circuit'), val: 95, color: '#10b981', status: t('dashboard.statusStabilized') },
   ];
 
-  const ordersKpiNew = 4;
-  const ordersKpiInProgress = 3;
-  const ordersKpiCompleted = 5;
-  const ordersStatusPie = [
-    { name: 'Yangi', value: ordersKpiNew },
-    { name: 'Jarayonda', value: ordersKpiInProgress },
-    { name: 'Yakunlangan', value: ordersKpiCompleted },
+  const paretoData = [
+    { name: t('qc.category.cosmetic'), count: 42, percentage: 35 },
+    { name: t('qc.category.paint'), count: 28, percentage: 58 },
+    { name: t('qc.category.structural'), count: 15, percentage: 71 },
+    { name: t('qc.category.functional'), count: 10, percentage: 80 },
+    { name: t('qc.category.other'), count: 24, percentage: 100 },
   ];
-  const ordersVolume = [
-    { orderNumber: 'ORD-001', quantity: 500 },
-    { orderNumber: 'ORD-002', quantity: 1000 },
-    { orderNumber: 'ORD-003', quantity: 250 },
-    { orderNumber: 'ORD-004', quantity: 750 },
-  ];
-
-  const finishedKpiTotal = 4;
-  const finishedKpiFree = 3;
-  const finishedByType = [
-    { name: 'Vagon detallari', miqdor: 450 },
-    { name: 'Avto komponentlar', miqdor: 850 },
-    { name: 'Metall konstruksiya', miqdor: 75 },
-    { name: 'Elektron komponentlar', miqdor: 1200 },
-  ];
-
-  const maintenanceKpiTotalStops = 7;
-  const maintenanceKpiIssue = 2;
-  const maintenanceKpiInRepair = 1;
-  const maintenanceDowntimeTrend = [
-    { name: 'Du', minutes: 40 },
-    { name: 'Se', minutes: 55 },
-    { name: 'Cho', minutes: 35 },
-    { name: 'Pa', minutes: 65 },
-    { name: 'Ju', minutes: 45 },
-  ];
-  const maintenanceReasons = [
-    { name: 'Mexanik', value: 60 },
-    { name: 'Elektr', value: 25 },
-    { name: 'Reja to‘xtash', value: 15 },
-  ];
-
-  const deviationPercent = productionDeltaPercent;
-  const riskLevelRaw: 'low' | 'medium' | 'high' =
-    Math.abs(deviationPercent) >= 10 || avgEfficiency < 80
-      ? 'high'
-      : Math.abs(deviationPercent) >= 5 || avgEfficiency < 85
-        ? 'medium'
-        : 'low';
-  const riskLevel = riskLevelRaw === 'high' ? t('dashboard.riskLevelHigh') : riskLevelRaw === 'medium' ? t('dashboard.riskLevelMedium') : t('dashboard.riskLevelLow');
 
   return (
-    <div className="min-h-screen p-8 bg-background text-foreground">
-      <div className="mb-8 flex items-center justify-between">
-        <div>
-          <h2 className="text-3xl font-semibold text-foreground">
-            {t('dashboard.title')}
-          </h2>
-          <p className="text-muted-foreground mt-1">{t('dashboard.welcome')}</p>
-        </div>
-        <div className="inline-flex items-center gap-1 rounded-lg border border-border bg-background p-1 text-xs">
-          <button
-            onClick={() => setRange('today')}
-            className={`px-3 py-1 rounded-md transition-colors ${range === 'today'
-              ? 'bg-blue-600 text-white'
-              : 'text-muted-foreground hover:bg-muted'
-              }`}
-          >
-            {t('dashboard.today')}
-          </button>
-          <button
-            onClick={() => setRange('week')}
-            className={`px-3 py-1 rounded-md transition-colors ${range === 'week'
-              ? 'bg-blue-600 text-white'
-              : 'text-muted-foreground hover:bg-muted'
-              }`}
-          >
-            {t('dashboard.week')}
-          </button>
-          <button
-            onClick={() => setRange('month')}
-            className={`px-3 py-1 rounded-md transition-colors ${range === 'month'
-              ? 'bg-blue-600 text-white'
-              : 'text-muted-foreground hover:bg-muted'
-              }`}
-          >
-            {t('dashboard.month')}
-          </button>
-        </div>
-      </div>
+    <div className="h-full w-full bg-slate-950 text-slate-200 p-4 flex flex-col gap-4 overflow-hidden relative font-sans selection:bg-cyan-500/30">
 
-      <TopSummary
-        worstLine={leastEfficientLine.name.replace('Assembly Line ', 'Line ')}
-        bestLine={mostEfficientLine.name.replace('Assembly Line ', 'Line ')}
-        avgEfficiency={avgEfficiency}
-        deviationPercent={deviationPercent}
-        lostUnits={lostUnitsToday}
-        riskLevel={riskLevel}
-      />
-
-      <div className="mb-8">
-        <h3 className="text-lg font-semibold text-foreground mb-4">
-          {t('dashboard.keyIndicators')}
-        </h3>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 flex flex-col items-center justify-center relative overflow-hidden">
-            <div className="absolute top-4 left-4">
-              <h3 className="text-gray-500 dark:text-gray-400 text-sm">{t('dashboard.productionPlanVsFact')}</h3>
-              <p className="text-xs text-gray-400 mt-1">Reja vs Fakt OEE</p>
-            </div>
-
-            {/* High Density Gauge */}
-            <div className="relative mt-8 mb-4 w-40 h-40 flex items-center justify-center">
-              <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
-                <circle cx="50" cy="50" r="40" stroke="currentColor" strokeWidth="8" fill="transparent" className="text-gray-100 dark:text-gray-700" />
-                <circle cx="50" cy="50" r="40" stroke="currentColor" strokeWidth="8" fill="transparent"
-                  strokeDasharray={`${Math.min(100, Math.max(0, productionPercent)) * 2.51} 251.2`}
-                  className={`${productionPercent >= 90 ? 'text-green-500' : productionPercent >= 70 ? 'text-blue-500' : 'text-orange-500'} transition-all duration-1000 ease-in-out`} />
-              </svg>
-              <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-3xl font-bold text-gray-900 dark:text-white">{productionPercent.toFixed(1)}%</span>
-              </div>
-            </div>
-
-            <div className="w-full grid grid-cols-3 gap-2 text-center border-t border-gray-100 dark:border-gray-700 pt-4 mt-2">
-              <div>
-                <p className="text-[10px] text-gray-500 uppercase">Reja</p>
-                <p className="font-semibold text-gray-900 dark:text-white">{plannedToday}</p>
-              </div>
-              <div>
-                <p className="text-[10px] text-gray-500 uppercase">Fakt</p>
-                <p className="font-semibold text-blue-600">{totalOutput}</p>
-              </div>
-              <div>
-                <p className="text-[10px] text-gray-500 uppercase">Qoldi</p>
-                <p className="font-semibold text-orange-500">{lostUnitsToday}</p>
-              </div>
-            </div>
+      {/* GLOBAL TELEMETRY HEADER */}
+      <div className="flex items-center justify-between shrink-0 h-14">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-slate-900 border border-white/10 flex items-center justify-center shadow-lg">
+            <Factory className="w-5 h-5 text-cyan-400" />
           </div>
-          <MetricCard
-            title={t('dashboard.overallEfficiency')}
-            value={Number.isFinite(avgEfficiency) ? Number(avgEfficiency.toFixed(1)) : 0}
-            unit="%"
-            color="green"
-            delta={efficiencyDeltaPercent}
-            explanation={
-              efficiencyDeltaPercent < 0
-                ? t('dashboard.efficiencyBelowTarget').replace('{percent}', Math.abs(efficiencyDeltaPercent).toFixed(1))
-                : t('dashboard.efficiencyAboveTarget').replace('{percent}', efficiencyDeltaPercent.toFixed(1))
-            }
-          />
-          <MetricCard
-            title={t('dashboard.stoppedLines')}
-            value={stoppedLines}
-            unit={t('dashboard.line')}
-            color="orange"
-            delta={0}
-            explanation={
-              stoppedLines === 0
-                ? t('dashboard.allLinesWorking')
-                : t('dashboard.linesStopped').replace('{count}', stoppedLines.toString())
-            }
-          />
-          <MetricCard
-            title={t('dashboard.lostProduction')}
-            value={lostUnitsToday}
-            unit={t('dashboard.units')}
-            color="purple"
-            delta={0}
-            explanation={
-              lostUnitsToday > 0
-                ? t('dashboard.lostVolumeExtra').replace('{units}', lostUnitsToday.toLocaleString('uz-UZ'))
-                : t('dashboard.noLostProduction')
-            }
-          />
-        </div>
-      </div>
-
-      <LineStatus productionLines={productionLines} />
-
-      <div className="mt-10 space-y-10">
-        <section>
-          <h3 className="text-xl font-semibold text-foreground mb-4">
-            {t('dashboard.warehouseAnalysis')}
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-            <MetricCard
-              title={t('dashboard.totalBalance')}
-              value={warehouseTotalStock}
-              unit={t('dashboard.unit')}
-              color="blue"
-            />
-            <MetricCard
-              title={t('dashboard.minimalReserve')}
-              value={warehouseMinStock}
-              unit={t('dashboard.unit')}
-              color="green"
-            />
-            <MetricCard
-              title={t('dashboard.lowReserve')}
-              value={warehouseLowStock}
-              unit={t('dashboard.item')}
-              color="orange"
-            />
-          </div>
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-            <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-              {t('dashboard.warehouseMovement')}
-            </h4>
-            <ResponsiveContainer width="100%" height={260}>
-              <BarChart data={warehouseMovement}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" />
-                <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#9ca3af' }} />
-                <YAxis tick={{ fontSize: 11, fill: '#9ca3af' }} />
-                <Tooltip />
-                <Bar dataKey="qoldiq" fill="#3b82f6" name={t('dashboard.balance')} />
-                <Bar dataKey="kirim" fill="#22c55e" name={t('dashboard.input')} />
-                <Bar dataKey="chiqim" fill="#f97316" name={t('dashboard.output')} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </section>
-
-        <section>
-          <h3 className="text-xl font-semibold text-foreground mb-4">
-            {t('dashboard.productionAnalysis')}
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-            <MetricCard
-              title={t('dashboard.planDaily')}
-              value={plannedToday}
-              unit={t('dashboard.unit')}
-              color="blue"
-            />
-            <MetricCard
-              title={t('dashboard.factEstimated')}
-              value={totalOutput}
-              unit={t('dashboard.unit')}
-              color="green"
-            />
-            <MetricCard
-              title={t('dashboard.overallEfficiency')}
-              value={Number(avgEfficiency.toFixed(1))}
-              unit="%"
-              color="orange"
-            />
-          </div>
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-            <div className="bg-card border-border rounded-xl shadow-sm border p-6">
-              <h4 className="text-lg font-semibold text-card-foreground mb-4">
-                {t('dashboard.planVsFact')}
-              </h4>
-              <ResponsiveContainer width="100%" height={260}>
-                <BarChart data={productionChartData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" />
-                  <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#9ca3af' }} />
-                  <YAxis tick={{ fontSize: 11, fill: '#9ca3af' }} />
-                  <Tooltip />
-                  <Bar dataKey="reja" fill="#3b82f6" name={t('dashboard.plan')} />
-                  <Bar dataKey="fakt" fill="#22c55e" name={t('dashboard.fact')} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-            <div className="bg-card border-border rounded-xl shadow-sm border p-6">
-              <h4 className="text-lg font-semibold text-card-foreground mb-4">
-                {t('dashboard.efficiencyTrend')}
-              </h4>
-              <ResponsiveContainer width="100%" height={260}>
-                <LineChart data={productionChartData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" />
-                  <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#9ca3af' }} />
-                  <YAxis domain={[0, 100]} tick={{ fontSize: 11, fill: '#9ca3af' }} />
-                  <Tooltip />
-                  <Line type="monotone" dataKey="samaradorlik" stroke="#f97316" strokeWidth={2} dot={{ r: 3 }} />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-        </section>
-
-        <section>
-          <h3 className="text-xl font-semibold text-foreground mb-4">
-            {t('dashboard.qualityControlAnalysis')}
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-            <MetricCard
-              title={t('dashboard.defectsToday')}
-              value={qcKpiTodayDefects}
-              unit={t('dashboard.units')}
-              color="blue"
-            />
-            <MetricCard
-              title={t('dashboard.rejectedBatches')}
-              value={qcKpiRejected}
-              unit={t('dashboard.batch')}
-              color="purple"
-            />
-            <MetricCard
-              title={t('dashboard.mostDefectiveLine')}
-              value={qcDefectsByLine.reduce((max, cur) => (cur.nuqsonlar > max.nuqsonlar ? cur : max), qcDefectsByLine[0]).nuqsonlar}
-              unit={t('dashboard.defect')}
-              color="orange"
-            />
-          </div>
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-            <div className="bg-card border-border rounded-xl shadow-sm border p-6">
-              <h4 className="text-lg font-semibold text-card-foreground mb-4">
-                {t('dashboard.defectsByLine')}
-              </h4>
-              <ResponsiveContainer width="100%" height={260}>
-                <BarChart data={qcDefectsByLine}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" />
-                  <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#9ca3af' }} />
-                  <YAxis tick={{ fontSize: 11, fill: '#9ca3af' }} />
-                  <Tooltip />
-                  <Bar dataKey="nuqsonlar" fill="#ef4444" name={t('dashboard.defects')} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-            <div className="bg-card border-border rounded-xl shadow-sm border p-6">
-              <h4 className="text-lg font-semibold text-card-foreground mb-4">
-                {t('dashboard.defectTypes')}
-              </h4>
-              <ResponsiveContainer width="100%" height={260}>
-                <PieChart>
-                  <Pie
-                    data={qcDefectsByType}
-                    dataKey="value"
-                    nameKey="name"
-                    cx="50%"
-                    cy="50%"
-                    outerRadius={90}
-                    labelLine={false}
-                  >
-                    {qcDefectsByType.map((entry, index) => (
-                      <Cell
-                        key={`cell-qc-${index}`}
-                        fill={['#22c55e', '#f97316', '#ef4444'][index % 3]}
-                      />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-        </section>
-
-        <section>
-          <h3 className="text-xl font-semibold text-foreground mb-4">
-            {t('dashboard.ordersAnalysis')}
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-            <MetricCard title={t('dashboard.newOrders')} value={ordersKpiNew} unit={t('dashboard.times')} color="blue" />
-            <MetricCard title={t('dashboard.inProgress')} value={ordersKpiInProgress} unit={t('dashboard.times')} color="orange" />
-            <MetricCard title={t('dashboard.completed')} value={ordersKpiCompleted} unit={t('dashboard.times')} color="green" />
-          </div>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="bg-card border-border rounded-xl shadow-sm border p-6">
-              <h4 className="text-lg font-semibold text-card-foreground mb-4">
-                {t('dashboard.orderStatus')}
-              </h4>
-              <ResponsiveContainer width="100%" height={260}>
-                <PieChart>
-                  <Pie
-                    data={ordersStatusPie}
-                    dataKey="value"
-                    nameKey="name"
-                    cx="50%"
-                    cy="50%"
-                    outerRadius={90}
-                    labelLine={false}
-                  >
-                    {ordersStatusPie.map((entry, index) => (
-                      <Cell
-                        key={`cell-orders-${index}`}
-                        fill={['#3b82f6', '#f97316', '#22c55e'][index % 3]}
-                      />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-            <div className="bg-card border-border rounded-xl shadow-sm border p-6">
-              <h4 className="text-lg font-semibold text-card-foreground mb-4">
-                {t('dashboard.recentOrdersVolume')}
-              </h4>
-              <ResponsiveContainer width="100%" height={260}>
-                <BarChart data={ordersVolume}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" />
-                  <XAxis dataKey="orderNumber" tick={{ fontSize: 11, fill: '#9ca3af' }} />
-                  <YAxis tick={{ fontSize: 11, fill: '#9ca3af' }} />
-                  <Tooltip />
-                  <Bar dataKey="quantity" fill="#3b82f6" name={t('dashboard.quantity')} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-        </section>
-
-        <section>
-          <h3 className="text-xl font-semibold text-foreground mb-4">
-            {t('dashboard.finishedGoodsAnalysis')}
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-            <MetricCard title={t('dashboard.totalProductTypes')} value={finishedKpiTotal} unit={t('dashboard.item')} color="blue" />
-            <MetricCard title={t('dashboard.freeBalance')} value={finishedKpiFree} unit={t('dashboard.item')} color="green" />
-            <MetricCard title={t('dashboard.lowBalanceRisk')} value={1} unit={t('dashboard.item')} color="orange" />
-          </div>
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-            <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-              {t('dashboard.byProductType')}
-            </h4>
-            <ResponsiveContainer width="100%" height={260}>
-              <BarChart data={finishedByType}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" />
-                <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#9ca3af' }} />
-                <YAxis tick={{ fontSize: 11, fill: '#9ca3af' }} />
-                <Tooltip />
-                <Bar dataKey="miqdor" fill="#22c55e" name={t('dashboard.quantity')} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </section>
-
-        <section>
-          <h3 className="text-xl font-semibold text-foreground mb-4">
-            {t('dashboard.maintenanceAnalysis')}
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-            <MetricCard title={t('dashboard.totalStops')} value={maintenanceKpiTotalStops} unit={t('dashboard.times')} color="blue" />
-            <MetricCard title={t('dashboard.linesWithProblems')} value={maintenanceKpiIssue} unit={t('dashboard.line')} color="orange" />
-            <MetricCard title={t('dashboard.inRepair')} value={maintenanceKpiInRepair} unit={t('dashboard.line')} color="orange" />
-          </div>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="bg-card border-border rounded-xl shadow-sm border p-6">
-              <h4 className="text-lg font-semibold text-card-foreground mb-4">
-                {t('dashboard.downtimeByDays')}
-              </h4>
-              <ResponsiveContainer width="100%" height={220}>
-                <LineChart data={maintenanceDowntimeTrend}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" />
-                  <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#9ca3af' }} />
-                  <YAxis tick={{ fontSize: 11, fill: '#9ca3af' }} />
-                  <Tooltip />
-                  <Line type="monotone" dataKey="minutes" stroke="#f97316" strokeWidth={2} dot={{ r: 3 }} />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-            <div className="bg-card border-border rounded-xl shadow-sm border p-6">
-              <h4 className="text-lg font-semibold text-card-foreground mb-4">
-                {t('dashboard.stopsByReason')}
-              </h4>
-              <ResponsiveContainer width="100%" height={220}>
-                <BarChart data={maintenanceReasons}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" />
-                  <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#9ca3af' }} />
-                  <YAxis tick={{ fontSize: 11, fill: '#9ca3af' }} />
-                  <Tooltip />
-                  <Bar dataKey="value" fill="#ef4444" name={t('dashboard.totalStops')} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-        </section>
-      </div>
-    </div>
-  );
-}
-
-interface MetricCardProps {
-  title: string;
-  value: number;
-  unit: string;
-  color: 'blue' | 'orange' | 'green' | 'purple';
-  delta?: number;
-  explanation?: string;
-}
-
-function MetricCard({ title, value, unit, color, delta, explanation }: MetricCardProps) {
-  const colorClasses = {
-    blue: 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400',
-    orange: 'bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400',
-    green: 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400',
-    purple: 'bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400',
-  };
-
-  return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-      <h3 className="text-gray-500 dark:text-gray-400 text-sm mb-2">{title}</h3>
-      <p className="text-3xl font-semibold text-gray-900 dark:text-white">
-        {unit === '%' ? `${value.toFixed(1)}%` : unit === 'so‘m' ? value.toLocaleString('uz-UZ') : value}
-      </p>
-      {typeof delta === 'number' && (
-        <p
-          className={`text-sm font-medium mt-1 ${delta > 0
-            ? 'text-green-600 dark:text-green-400'
-            : delta < 0
-              ? 'text-red-600 dark:text-red-400'
-              : 'text-gray-500 dark:text-gray-400'
-            }`}
-        >
-          {delta > 0 ? '+' : ''}
-          {delta.toFixed(1)}%
-        </p>
-      )}
-      <p className={`text-xs uppercase tracking-wide mt-1 ${colorClasses[color]}`}>{unit}</p>
-      {explanation && (
-        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-snug">{explanation}</p>
-      )}
-    </div>
-  );
-}
-interface TopSummaryProps {
-  worstLine: string;
-  bestLine: string;
-  avgEfficiency: number;
-  deviationPercent: number;
-  lostUnits: number;
-  riskLevel: string;
-}
-
-function TopSummary({
-  worstLine,
-  bestLine,
-  avgEfficiency,
-  deviationPercent,
-  lostUnits,
-  riskLevel,
-}: TopSummaryProps) {
-  const { t } = useLanguage();
-  return (
-    <div className="mb-8">
-      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">{t('dashboard.todaySummary')}</h3>
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5 space-y-1 text-sm text-gray-600 dark:text-gray-300">
-        <p>🔴 {t('dashboard.problemLine').replace('{line}', worstLine)}</p>
-        <p>🟡 {t('dashboard.riskWarning').replace('{efficiency}', avgEfficiency.toFixed(1)).replace('{level}', riskLevel)}</p>
-        <p>🟢 {t('dashboard.goodLine').replace('{line}', bestLine)}</p>
-        <p>
-          📊 {t('dashboard.deviationLost').replace('{percent}', deviationPercent.toFixed(1)).replace('{units}', lostUnits.toLocaleString('uz-UZ'))}
-        </p>
-      </div>
-    </div>
-  );
-}
-
-interface LineStatusProps {
-  productionLines: typeof useFactory extends () => infer T ? T extends { productionLines: infer U } ? U : any : any;
-}
-
-function LineStatus({ productionLines }: LineStatusProps) {
-  const { t } = useLanguage();
-  return (
-    <div>
-      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">{t('dashboard.lineStatusSimplified')}</h3>
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5 space-y-2 text-sm text-gray-600 dark:text-gray-300">
-        {productionLines.map(line => {
-          const simpleName = line.name.replace('Assembly Line ', 'Line ').replace('Quality Control Station', 'QC');
-          const statusText =
-            line.status === 'active'
-              ? `🟢 ${t('dashboard.working')}`
-              : line.status === 'maintenance' || line.status === 'maintenance_requested'
-                ? `🔴 ${t('dashboard.problemRepair')} ${line.status === 'maintenance_requested' ? '(So\'rov yuborilgan)' : ''}`
-                : `🟡 ${t('dashboard.waitingStatus')}`;
-          return (
-            <p key={line.id}>
-              {simpleName} — {statusText}
+          <div>
+            <h1 className="text-xl font-black text-white tracking-tighter uppercase italic leading-none">{t('dashboard.nerveCenterTitle')}</h1>
+            <p className="text-[8px] font-bold text-slate-500 uppercase tracking-[0.2em] mt-0.5 flex items-center gap-1.5 font-mono">
+              <span className="w-1 h-1 rounded-full bg-emerald-500 animate-pulse" />
+              HQ-PRIME // STATUS: {t('dashboard.statusNominal')}
             </p>
-          );
-        })}
+          </div>
+        </div>
+
+        <div className="flex gap-6">
+          <TelemetryMini icon={<Activity className="w-3.5 h-3.5" />} label="OEE" value={`${avgEfficiency.toFixed(1)}%`} color="cyan" />
+          <TelemetryMini icon={<ShieldAlert className="w-3.5 h-3.5" />} label="FTQ" value="98.2%" color="rose" />
+          <TelemetryMini icon={<CheckCircle2 className="w-3.5 h-3.5" />} label="UPTIME" value={`${uptime}%`} color="emerald" />
+          <TelemetryMini icon={<Zap className="w-3.5 h-3.5" />} label="LOAD" value="4.2ms" color="indigo" />
+        </div>
       </div>
+
+      {/* BALANCED 3x2 GRID SYSTEM */}
+      <div className="flex-1 grid grid-cols-3 grid-rows-2 gap-4 min-h-0">
+
+        {/* 1. PRODUCTION COCKPIT */}
+        <Card containerClass="overflow-hidden">
+          <CardHeader icon={<Gauge className="w-4 h-4" />} title={t('dashboard.productionHub')} sub={t('dashboard.liveTelemetry')} color="cyan" />
+          <div className="flex-1 flex flex-col items-center justify-center min-h-0">
+            <div className="relative w-full aspect-square max-w-[180px] flex items-center justify-center">
+              <svg className="w-full h-full -rotate-90">
+                <circle cx="50%" cy="50%" r="42%" fill="transparent" stroke="rgba(255,255,255,0.02)" strokeWidth="24" />
+                <circle
+                  cx="50%" cy="50%" r="42%"
+                  fill="transparent"
+                  stroke="url(#oeeGradient)"
+                  strokeWidth="24"
+                  strokeDasharray="263%"
+                  strokeDashoffset={`${263 - (avgEfficiency / 100) * 263}%`}
+                  strokeLinecap="round"
+                  className="transition-all duration-1000 ease-out"
+                />
+              </svg>
+              <div className="absolute flex flex-col items-center">
+                <span className="text-4xl font-black text-white italic tracking-tighter shadow-cyan-500/10">
+                  {avgEfficiency.toFixed(0)}<span className="text-lg text-cyan-500 ml-0.5">%</span>
+                </span>
+                <span className="text-[7px] font-black text-slate-500 uppercase tracking-widest mt-0.5">{t('dashboard.efficiency')}</span>
+              </div>
+            </div>
+            <div className="w-full grid grid-cols-2 gap-2 mt-2 px-4">
+              <div className="bg-slate-950/40 p-2 rounded-xl border border-white/5 text-center">
+                <p className="text-[7px] text-slate-500 uppercase font-mono">{t('dashboard.trend')}</p>
+                <p className="text-xs font-black text-emerald-400 italic">+12.4%</p>
+              </div>
+              <div className="bg-slate-950/40 p-2 rounded-xl border border-white/5 text-center">
+                <p className="text-[7px] text-slate-500 uppercase font-mono">{t('dashboard.status')}</p>
+                <p className="text-xs font-black text-cyan-400 italic">{t('dashboard.statusActive')}</p>
+              </div>
+            </div>
+          </div>
+          <defs>
+            <linearGradient id="oeeGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#22d3ee" />
+              <stop offset="100%" stopColor="#0891b2" />
+            </linearGradient>
+          </defs>
+        </Card>
+
+        {/* 2. QUALITY PARETO */}
+        <Card>
+          <CardHeader icon={<BarChart3 className="w-4 h-4" />} title={t('dashboard.qualityLabs')} sub={t('dashboard.defectsReport')} color="rose" />
+          <div className="flex-1 min-h-0 pt-2">
+            <ResponsiveContainer width="100%" height="100%">
+              <ComposedChart data={paretoData} margin={{ top: 5, right: 5, bottom: -10, left: -25 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.03)" />
+                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#475569', fontSize: 8, fontWeight: 800 }} />
+                <YAxis yAxisId="left" axisLine={false} tickLine={false} tick={{ fill: '#334155', fontSize: 7 }} />
+                <YAxis yAxisId="right" orientation="right" axisLine={false} tickLine={false} tick={{ fill: '#334155', fontSize: 7 }} />
+                <Bar yAxisId="left" dataKey="count" fill="rgba(244, 63, 94, 0.3)" radius={[3, 3, 0, 0]} barSize={25}>
+                  {paretoData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={index < 2 ? 'rgba(244, 63, 94, 0.6)' : 'rgba(244, 63, 94, 0.2)'} />
+                  ))}
+                </Bar>
+                <Line yAxisId="right" type="monotone" dataKey="percentage" stroke="#f59e0b" strokeWidth={2} dot={{ fill: '#f59e0b', r: 3 }} />
+              </ComposedChart>
+            </ResponsiveContainer>
+          </div>
+          <div className="mt-2 p-2 bg-slate-950/40 rounded-xl border border-white/5 flex items-center justify-between mx-2">
+            <span className="text-[8px] font-bold text-slate-400 italic">{t('dashboard.rootCause')}: {t('qc.rootCause.operator')}</span>
+            <span className="text-[7px] font-black text-rose-500 uppercase font-mono italic">{t('dashboard.statusCritical')}</span>
+          </div>
+        </Card>
+
+        {/* 3. INVENTORY HEALTH */}
+        <Card>
+          <CardHeader icon={<Package className="w-4 h-4" />} title={t('dashboard.inventoryDepot')} sub={t('dashboard.stockHealthTitle')} color="emerald" />
+          <div className="flex-1 flex flex-col justify-around px-4 pb-2">
+            {inventoryHealth.map((item) => (
+              <div key={item.name} className="space-y-1.5">
+                <div className="flex justify-between items-end">
+                  <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest">{item.name}</span>
+                  <span className="text-[9px] font-black text-white font-mono">{item.val}%</span>
+                </div>
+                <div className="h-2 bg-slate-950 rounded-full border border-white/5 overflow-hidden">
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: `${item.val}%` }}
+                    className="h-full rounded-full"
+                    style={{ backgroundColor: item.color, opacity: 0.8 }}
+                  />
+                </div>
+                <div className="flex justify-between text-[6px] font-bold uppercase tracking-tighter">
+                  <span className={item.val < 50 ? 'text-amber-500' : 'text-slate-600'}>{item.status}</span>
+                  <span className="text-slate-700">{t('dashboard.buffer')}: {t('dashboard.statusActive')}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+
+        {/* 4. CANTEEN OPS */}
+        <Card>
+          <CardHeader icon={<Utensils className="w-4 h-4" />} title={t('dashboard.canteenOps')} sub={t('dashboard.mealDistribution')} color="cyan" />
+          <div className="flex-1 grid grid-cols-2 gap-4 p-4 text-center">
+            <div className="flex flex-col justify-center gap-1">
+              <p className="text-[7px] font-black text-slate-500 uppercase tracking-widest italic">{t('dashboard.meal1Status')}</p>
+              <p className="text-3xl font-black text-white italic tracking-tighter leading-tight font-mono">482</p>
+              <div className="w-full h-1 bg-slate-950 rounded-full mt-1 overflow-hidden border border-white/5">
+                <div className="h-full bg-cyan-500/60 w-[65%]" />
+              </div>
+              <p className="text-[6px] font-bold text-cyan-600 uppercase mt-1">Wave 2 {t('dashboard.statusActive')}</p>
+            </div>
+            <div className="flex flex-col justify-center gap-1 border-l border-white/5 pl-4">
+              <p className="text-[7px] font-black text-slate-500 uppercase tracking-widest italic">{t('dashboard.meal2Status')}</p>
+              <p className="text-3xl font-black text-white italic tracking-tighter leading-tight font-mono">355</p>
+              <div className="w-full h-1 bg-slate-950 rounded-full mt-1 overflow-hidden border border-white/5">
+                <div className="h-full bg-cyan-400/60 w-[45%]" />
+              </div>
+              <p className="text-[6px] font-bold text-slate-600 uppercase mt-1">{t('dashboard.preparing')}...</p>
+            </div>
+          </div>
+        </Card>
+
+        {/* 5. MAINTENANCE HUB */}
+        <Card>
+          <CardHeader icon={<Wrench className="w-4 h-4" />} title={t('dashboard.maintenanceAsset')} sub={t('dashboard.assetHealth')} color="emerald" />
+          <div className="flex-1 flex flex-col justify-center px-4 gap-4">
+            <div className="flex justify-between items-center bg-slate-950/40 p-3 rounded-2xl border border-white/5">
+              <div className="flex flex-col">
+                <span className="text-[7px] font-black text-slate-500 uppercase mb-1">{t('dashboard.inProcess')}</span>
+                <span className="text-2xl font-black text-white italic font-mono leading-none">08</span>
+              </div>
+              <div className="w-px h-8 bg-white/5" />
+              <div className="flex flex-col items-end">
+                <span className="text-[7px] font-black text-slate-500 uppercase mb-1">{t('dashboard.avgMttr')}</span>
+                <span className="text-2xl font-black text-emerald-400 italic font-mono leading-none">24<span className="text-xs ml-0.5 uppercase">m</span></span>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-500/5 border border-emerald-500/10 rounded-full">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                <span className="text-[8px] font-black text-emerald-500/80 uppercase italic">{t('dashboard.factoryUptime')}: {t('dashboard.statusStabilized')}</span>
+              </div>
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-indigo-500/5 border border-indigo-500/10 rounded-full">
+                <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 shadow-[0_0_5px_rgba(99,102,241,0.5)]" />
+                <span className="text-[8px] font-black text-indigo-400/80 uppercase italic">{t('dashboard.mtbf')}: 456.2 hours</span>
+              </div>
+            </div>
+          </div>
+        </Card>
+
+        {/* 6. LOGISTICS HUB */}
+        <Card>
+          <CardHeader icon={<Truck className="w-4 h-4" />} title={t('dashboard.logisticsVgm')} sub={t('dashboard.yardStatus')} color="amber" />
+          <div className="flex-1 flex flex-col justify-center px-4 gap-3">
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 bg-amber-500/10 rounded-2xl flex items-center justify-center border border-amber-500/20">
+                <span className="text-3xl font-black text-white italic font-mono">14</span>
+              </div>
+              <div>
+                <p className="text-lg font-black text-white italic leading-tight uppercase tracking-tighter">{t('dashboard.vehicles')}</p>
+                <p className="text-[8px] font-black text-amber-600 uppercase tracking-widest leading-none">{t('dashboard.activeYard')}</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-4 gap-2 border-t border-white/5 pt-3">
+              {['G1: 4', 'G2: 2', 'G3: 5', 'G4: 3'].map(gate => (
+                <div key={gate} className="bg-slate-950/40 p-1.5 rounded-lg border border-white/5 text-[8px] font-black text-slate-400 text-center font-mono">
+                  {gate}
+                </div>
+              ))}
+            </div>
+            <div className="flex items-center justify-between mt-1 opacity-40">
+              <span className="text-[7px] font-black text-slate-600 uppercase tracking-[0.2em] font-mono italic">SYNC: HQ-HUB-B</span>
+              <Clock className="w-3 h-3 text-slate-700" />
+            </div>
+          </div>
+        </Card>
+
+      </div>
+
+      {/* FOOTER SYNC BAR */}
+      <div className="h-6 shrink-0 flex items-center justify-between bg-slate-900/60 backdrop-blur-xl border border-white/5 rounded-full px-4 text-[7px] font-black text-slate-500 uppercase tracking-[0.2em] italic font-mono">
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-1.5">
+            <div className="w-1 h-1 rounded-full bg-cyan-500 shadow-[0_0_6px_#06b6d4]" />
+            <span>HUB ID: 0x99A2</span>
+          </div>
+          <span>{t('dashboard.systemVersion')}: Prime v4.5</span>
+        </div>
+        <div className="flex items-center gap-4">
+          <span>{t('dashboard.latency')}: 12ms</span>
+          <div className="flex items-center gap-2 text-white">
+            <LayoutGrid className="w-2.5 h-2.5 opacity-50" />
+            <DigitalClock />
+          </div>
+        </div>
+      </div>
+
     </div>
   );
 }
 
-interface ActivityItemProps {
-  text: string;
-  time: string;
-  type: 'success' | 'warning' | 'info';
+function Card({ children, containerClass = "" }: any) {
+  return (
+    <div className={`bg-slate-900/40 backdrop-blur-2xl border border-white/5 rounded-[1.5rem] flex flex-col ring-1 ring-white/5 shadow-xl hover:bg-slate-900/60 transition-all duration-300 relative ${containerClass}`}>
+      {children}
+    </div>
+  );
 }
 
-interface InsightCardProps {
-  icon: React.ReactNode;
-  title: string;
-  value: string;
-  subtitle: string;
-  color: 'green' | 'red' | 'orange';
-}
-
-function InsightCard({ icon, title, value, subtitle, color }: InsightCardProps) {
-  const colorClasses = {
-    green: 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 border-green-200 dark:border-green-800',
-    red: 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border-red-200 dark:border-red-800',
-    orange: 'bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 border-orange-200 dark:border-orange-800',
+function CardHeader({ icon, title, sub, color }: any) {
+  const colors: any = {
+    cyan: "text-cyan-400 group-hover:text-cyan-300 shadow-cyan-500/20",
+    rose: "text-rose-400 group-hover:text-rose-300 shadow-rose-500/20",
+    emerald: "text-emerald-400 group-hover:text-emerald-300 shadow-emerald-500/20",
+    amber: "text-amber-500 group-hover:text-amber-400 shadow-amber-500/20",
   };
 
   return (
-    <div className={`bg-white dark:bg-gray-800 rounded-xl shadow-sm border ${colorClasses[color]} p-6`}>
-      <div className="flex items-center gap-3 mb-3">
-        {icon}
-        <h4 className="text-sm font-medium text-gray-600 dark:text-gray-400">{title}</h4>
+    <div className="px-5 pt-4 pb-2 flex items-center justify-between shrink-0">
+      <div className="flex items-center gap-2.5">
+        <div className={`p-1.5 rounded-lg bg-slate-950/80 border border-white/5 ${colors[color].split(' ')[0]}`}>
+          {icon}
+        </div>
+        <div className="flex flex-col">
+          <h3 className="text-[10px] font-black text-white uppercase tracking-widest font-mono italic leading-none">{title}</h3>
+          <span className="text-[7px] font-bold text-slate-500 uppercase tracking-wider mt-0.5">{sub}</span>
+        </div>
       </div>
-      <p className="text-xl font-semibold text-gray-900 dark:text-white mb-1">{value}</p>
-      <p className="text-xs text-gray-500 dark:text-gray-400">{subtitle}</p>
+      <div className="w-1 h-1 rounded-full bg-white/10" />
     </div>
+  );
+}
+
+function TelemetryMini({ icon, label, value, color }: any) {
+  const colors: any = {
+    cyan: "text-cyan-400",
+    rose: "text-rose-400",
+    emerald: "text-emerald-400",
+    indigo: "text-indigo-400",
+  };
+  return (
+    <div className="flex flex-col items-end justify-center">
+      <div className="flex items-center gap-1.5 text-slate-500 mb-0.5">
+        <span className="opacity-50">{icon}</span>
+        <span className="text-[7px] font-black uppercase tracking-widest italic">{label}</span>
+      </div>
+      <span className={`text-lg font-black italic tracking-tighter ${colors[color]} leading-none font-mono`}>{value}</span>
+    </div>
+  );
+}
+
+function DigitalClock() {
+  const [time, setTime] = useState(new Date());
+  useEffect(() => {
+    const timer = setInterval(() => setTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+  return (
+    <span className="font-mono text-[9px] font-black italic tracking-tighter">
+      {time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })}
+    </span>
   );
 }

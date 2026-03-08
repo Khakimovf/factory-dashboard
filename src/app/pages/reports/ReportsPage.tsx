@@ -4,7 +4,7 @@ import { useFactory } from '../../context/FactoryContext';
 import { useWarehouse } from '../../context/WarehouseContext';
 import { initialSuppliers } from '../suppliers/SuppliersPage';
 import { EnhancedSupplier, generateMockDeliveryHistory } from '../../services/supplierService';
-import { initialInspections } from '../qc/QualityControlPage';
+import { initialInspections } from '../../context/QCContext';
 import { hrEmployees } from '../../data/hrEmployees';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { TrendingUp, TrendingDown, Activity, Settings, Coffee, Download, AlertCircle, CheckCircle2, Filter, Calendar, Users, Loader2, DollarSign, History } from 'lucide-react';
@@ -185,12 +185,12 @@ export default function ReportsPage() {
   const suppliersActive = suppliers.filter(s => s.status === 'active').length;
   const suppliersDelayed = supplierReport.reduce((sum, r) => sum + (r.delayed > 0 ? 1 : 0), 0);
 
-  const inspections = initialInspections || [];
-  const qcTotalDefects = inspections.reduce((sum, i) => sum + i.totalDefects, 0);
-  const qcRejected = inspections.filter(i => i.status === 'rejected').length;
+  const activeInspections = initialInspections || [];
+  const qcTotalDefects = activeInspections.reduce((sum, i: any) => sum + i.totalDefects, 0);
+  const qcRejected = activeInspections.filter((i: any) => i.status === 'rejected').length;
 
-  const qcByLine = inspections.reduce<Record<string, { defects: number; rejected: number }>>(
-    (acc, i) => {
+  const qcByLine = activeInspections.reduce<Record<string, { defects: number; rejected: number }>>(
+    (acc, i: any) => {
       const key = i.lineName;
       if (!acc[key]) acc[key] = { defects: 0, rejected: 0 };
       acc[key].defects += i.totalDefects;
@@ -201,15 +201,15 @@ export default function ReportsPage() {
   );
 
   const qcWorstLine = Object.entries(qcByLine).reduce(
-    (best, [line, data]) => (data.defects > best.defects ? { line, defects: data.defects } : best),
+    (best, [line, data]: [string, any]) => (data.defects > best.defects ? { line, defects: data.defects } : best),
     { line: '-', defects: -1 },
   );
 
-  const qcPerLineRows = Object.entries(qcByLine).map(([line, data]) => ({
+  const qcPerLineRows = Object.entries(qcByLine).map(([line, data]: [string, any]) => ({
     line,
     defects: data.defects,
     rejected: data.rejected,
-    note: data.defects === qcWorstLine.defects ? t('reports.qc.mainProblemLine') : '',
+    note: data.defects === qcWorstLine.defects && data.defects > 0 ? t('reports.qc.mainProblemLine') : '',
   }));
 
   const totalEmployees = hrEmployees.length;

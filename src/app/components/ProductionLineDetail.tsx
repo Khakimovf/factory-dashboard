@@ -5,7 +5,7 @@ import { useLanguage } from '../context/LanguageContext';
 import { useDailyProductionPlan } from '../context/DailyProductionPlanContext';
 import { useWarehouse } from '../context/WarehouseContext';
 import { maintenanceApi } from '../services/maintenanceApi';
-import { ArrowLeft, Package, PlayCircle, PauseCircle, Settings, Plus, Activity, Layers, BarChart3 } from 'lucide-react';
+import { ArrowLeft, Package, PlayCircle, PauseCircle, Settings, Plus, Activity, Layers, BarChart3, Monitor, Construction } from 'lucide-react';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { LinePlanModal } from './hr/LinePlanModal';
@@ -99,6 +99,24 @@ export function ProductionLineDetail() {
                 <BarChart3 className="w-4 h-4" />
                 <span className="text-sm font-medium">Liniya tahlili</span>
               </Button>
+              {line.type === 'sap_inpanel' && (
+                <Button
+                  onClick={() => navigate(`/production-lines/${line.id}/sap-cockpit`)}
+                  className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg shadow-sm"
+                >
+                  <Monitor className="w-4 h-4" />
+                  <span className="text-sm font-medium">SAP Workshop Cockpit</span>
+                </Button>
+              )}
+              {line.type === 'tpa_molding' && (
+                <Button
+                  onClick={() => navigate(`/production-lines/${line.id}/tpa-cockpit`)}
+                  className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg shadow-sm"
+                >
+                  <Construction className="w-4 h-4" />
+                  <span className="text-sm font-medium">TPA Molding Cockpit</span>
+                </Button>
+              )}
             </div>
           </div>
           <div className="flex gap-2">

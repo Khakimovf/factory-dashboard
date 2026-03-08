@@ -4,13 +4,21 @@
  */
 
 export type UserRole =
+  | 'SUPER_ADMIN'
+  | 'QC_MANAGER'
+  | 'QC_OPERATOR'
+  | 'VGM_GUARD'
+  | 'CANTEEN_MANAGER'
+  | 'ADMIN'
+  | 'WAREHOUSE_ADMIN'
+  | 'FACTORY_MANAGER'
   | 'system_owner'
+  | 'IT_SPECIALIST'
   | 'director'
   | 'hr'
   | 'warehouse'
   | 'maintenance'
   | 'line_master'
-  | 'ADMIN'
   | 'WAREHOUSE_MANAGER'
   | 'WAREHOUSE_STAFF'
   | 'EMPLOYEE'
@@ -18,14 +26,16 @@ export type UserRole =
 
 export type PermissionModule =
   | 'dashboard'
+  | 'qc'
+  | 'vgm'
+  | 'canteen'
+  | 'admin'
   | 'warehouse'
   | 'production'
   | 'hr'
-  | 'maintenance'
-  | 'audit'
-  | 'roles';
+  | 'maintenance';
 
-export type PermissionAction = 'view' | 'create' | 'edit' | 'approve';
+export type PermissionAction = 'READ' | 'WRITE' | 'ADMIN';
 
 export interface Permission {
   module: PermissionModule;
@@ -38,62 +48,97 @@ const PERMISSIONS_STORAGE_KEY = 'mock_role_permissions_v1';
 
 const ALL_MODULES: PermissionModule[] = [
   'dashboard',
+  'qc',
+  'vgm',
+  'canteen',
+  'admin',
   'warehouse',
   'production',
   'hr',
   'maintenance',
-  'audit',
-  'roles',
 ];
 
-const ALL_ACTIONS: PermissionAction[] = ['view', 'create', 'edit', 'approve'];
+const ALL_ACTIONS: PermissionAction[] = ['READ', 'WRITE', 'ADMIN'];
 
 const DEFAULT_ROLE_PERMISSIONS: RolePermissionMap = {
   system_owner: ALL_MODULES.flatMap(module =>
+    ALL_ACTIONS.map(action => ({ module, action })),
+  ),
+  IT_SPECIALIST: ALL_MODULES.flatMap(module =>
+    ALL_ACTIONS.map(action => ({ module, action })),
+  ),
+  SUPER_ADMIN: ALL_MODULES.flatMap(module =>
     ALL_ACTIONS.map(action => ({ module, action })),
   ),
   ADMIN: ALL_MODULES.flatMap(module =>
     ALL_ACTIONS.map(action => ({ module, action })),
   ),
   director: [
-    { module: 'dashboard', action: 'view' },
-    { module: 'production', action: 'view' },
-    { module: 'hr', action: 'view' },
-    { module: 'hr', action: 'approve' },
-    { module: 'audit', action: 'view' },
+    { module: 'dashboard', action: 'READ' },
+    { module: 'production', action: 'READ' },
+    { module: 'hr', action: 'READ' },
+    { module: 'hr', action: 'ADMIN' },
   ],
   hr: [
-    { module: 'hr', action: 'view' },
-    { module: 'hr', action: 'create' },
-    { module: 'hr', action: 'edit' },
+    { module: 'hr', action: 'READ' },
+    { module: 'hr', action: 'WRITE' },
+    { module: 'hr', action: 'ADMIN' },
   ],
   warehouse: [
-    { module: 'warehouse', action: 'view' },
+    { module: 'warehouse', action: 'READ' },
   ],
   maintenance: [
-    { module: 'maintenance', action: 'view' },
-    { module: 'maintenance', action: 'create' },
+    { module: 'maintenance', action: 'READ' },
+    { module: 'maintenance', action: 'WRITE' },
   ],
   line_master: [
-    { module: 'production', action: 'view' },
-    { module: 'production', action: 'create' },
+    { module: 'production', action: 'READ' },
+    { module: 'production', action: 'WRITE' },
   ],
   WAREHOUSE_MANAGER: [
-    { module: 'warehouse', action: 'view' },
-    { module: 'warehouse', action: 'create' },
-    { module: 'warehouse', action: 'edit' },
+    { module: 'warehouse', action: 'READ' },
+    { module: 'warehouse', action: 'WRITE' },
+    { module: 'warehouse', action: 'ADMIN' },
   ],
   WAREHOUSE_STAFF: [
-    { module: 'warehouse', action: 'view' },
-    { module: 'warehouse', action: 'edit' },
+    { module: 'warehouse', action: 'READ' },
+    { module: 'warehouse', action: 'WRITE' },
   ],
   EMPLOYEE: [
-    { module: 'dashboard', action: 'view' },
-    { module: 'production', action: 'view' },
+    { module: 'dashboard', action: 'READ' },
+    { module: 'production', action: 'READ' },
   ],
   canteen: [
-    { module: 'dashboard', action: 'view' },
-    // Canteen role has read-only access to canteen module (handled in component)
+    { module: 'dashboard', action: 'READ' },
+  ],
+  QC_OPERATOR: [
+    { module: 'dashboard', action: 'READ' },
+    { module: 'production', action: 'READ' },
+    { module: 'qc', action: 'WRITE' },
+  ],
+  VGM_GUARD: [
+    { module: 'dashboard', action: 'READ' },
+    { module: 'vgm', action: 'WRITE' },
+  ],
+  QC_MANAGER: [
+    { module: 'dashboard', action: 'READ' },
+    { module: 'production', action: 'READ' },
+    { module: 'qc', action: 'ADMIN' },
+  ],
+  CANTEEN_MANAGER: [
+    { module: 'dashboard', action: 'READ' },
+    { module: 'canteen', action: 'ADMIN' },
+  ],
+  WAREHOUSE_ADMIN: [
+    { module: 'warehouse', action: 'READ' },
+    { module: 'warehouse', action: 'WRITE' },
+    { module: 'warehouse', action: 'ADMIN' },
+  ],
+  FACTORY_MANAGER: [
+    { module: 'dashboard', action: 'READ' },
+    { module: 'production', action: 'READ' },
+    { module: 'hr', action: 'READ' },
+    { module: 'maintenance', action: 'READ' },
   ],
 };
 
@@ -164,7 +209,7 @@ export function isSystemOwner(): boolean {
 
 export function isAdmin(): boolean {
   const role = getCurrentUserRole();
-  return role === 'ADMIN' || role === 'system_owner';
+  return role === 'ADMIN' || role === 'system_owner' || role === 'IT_SPECIALIST';
 }
 
 /**
@@ -172,6 +217,13 @@ export function isAdmin(): boolean {
  */
 export function isEmployee(): boolean {
   return getCurrentUserRole() === 'EMPLOYEE';
+}
+
+/**
+ * Check if current user is a QC operator
+ */
+export function isQCOperator(): boolean {
+  return getCurrentUserRole() === 'QC_OPERATOR';
 }
 
 /**
@@ -185,20 +237,20 @@ export function setMockUserRole(role: UserRole): void {
  * Check if user can add materials (ADMIN or WAREHOUSE_MANAGER)
  */
 export function canAddMaterials(): boolean {
-  return hasPermission('warehouse', 'create');
+  return hasPermission('warehouse', 'WRITE');
 }
 
 /**
  * Check if user can update material quantities
  */
 export function canUpdateQuantities(): boolean {
-  return hasPermission('warehouse', 'edit');
+  return hasPermission('warehouse', 'WRITE');
 }
 
 /**
  * Check if user can delete materials (ADMIN only, future feature)
  */
 export function canDeleteMaterials(): boolean {
-  return hasPermission('warehouse', 'approve');
+  return hasPermission('warehouse', 'ADMIN');
 }
 

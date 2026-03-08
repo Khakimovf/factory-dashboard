@@ -1,5 +1,7 @@
 """Models package."""
 from .document import DocumentMetadata
+from .user import User, UserRole, UserCreate, PasswordUpdate
+from .audit import AuditLog
 from .maintenance import (
     FailureReport,
     FailureReportCreate,
@@ -9,6 +11,11 @@ from .maintenance import (
 
 __all__ = [
     "DocumentMetadata",
+    "User",
+    "UserRole",
+    "UserCreate",
+    "PasswordUpdate",
+    "AuditLog",
     "FailureReport",
     "FailureReportCreate",
     "FailureReportUpdate",
