@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Package, Factory, Users, Wrench, FileText,
   Send, UserCircle, Shield, Truck, ClipboardCheck, Box,
-  Utensils, BarChart2, ShieldCheck, Settings, LogOut
+  Utensils, BarChart2, ShieldCheck, Settings, LogOut, IdCard
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useLanguage } from '../context/LanguageContext';
@@ -27,6 +27,7 @@ const navItems: NavItem[] = [
   { path: '/logistics-gate', label: 'sidebar.logisticsGate', icon: ShieldCheck, roles: ['ADMIN', 'VGM_GUARD' as any] },
   { path: '/maintenance', label: 'sidebar.maintenance', icon: Wrench, roles: ['ADMIN', 'system_owner' as any, 'maintenance', 'FACTORY_MANAGER' as any] },
   { path: '/hr', label: 'sidebar.hr', icon: Users, roles: ['ADMIN', 'system_owner' as any, 'hr', 'FACTORY_MANAGER' as any] },
+  { path: '/worker-cabinet', label: 'sidebar.employeeCabinet', icon: IdCard },
   { path: '/canteen', label: 'sidebar.canteen', icon: Utensils, roles: ['ADMIN', 'system_owner' as any, 'canteen', 'FACTORY_MANAGER' as any] },
   { path: '/reports', label: 'sidebar.reports', icon: BarChart2, roles: ['ADMIN', 'system_owner' as any, 'FACTORY_MANAGER' as any, 'QC_MANAGER' as any] },
   { path: '/suppliers', label: 'sidebar.suppliers', icon: Truck, roles: ['ADMIN', 'system_owner' as any, 'WAREHOUSE_ADMIN' as any, 'WAREHOUSE_MANAGER'] }
@@ -38,7 +39,7 @@ export function Sidebar() {
   const navigate = useNavigate();
   const { t } = useLanguage();
   const { user, logout } = useAuth();
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const timeoutRef = useRef<any>(null);
 
   const handleLogout = () => {
     logout();

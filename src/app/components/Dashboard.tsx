@@ -32,10 +32,20 @@ import {
   LayoutGrid
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
 export function Dashboard() {
   const { productionLines } = useFactory();
   const { t } = useLanguage();
+  const { user } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (user?.role === 'EMPLOYEE') {
+      navigate('/worker-cabinet', { replace: true });
+    }
+  }, [user, navigate]);
 
   const [uptime, setUptime] = useState(99.85);
   const [pulse, setPulse] = useState(false);

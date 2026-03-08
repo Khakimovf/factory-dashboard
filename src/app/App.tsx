@@ -116,7 +116,9 @@ function AppLayout() {
             <Route path="/hr/library" element={<HRDocumentLibrary />} />
             <Route path="/hr/production-plan" element={<DailyProductionPlanForm />} />
             <Route path="/hr/line-plans" element={<DailyLinePlanEntry />} />
-            <Route path="/employee/cabinet" element={<EmployeeCabinetPage />} />
+            <Route path="/worker-cabinet" element={<EmployeeCabinetPage />} />
+            <Route path="/profile" element={<EmployeeCabinetPage />} />
+            <Route path="/employee/cabinet" element={<Navigate to="/worker-cabinet" replace />} />
             <Route path="/ess" element={<EmployeeSelfService />} />
             <Route path="/maintenance" element={<MaintenanceDashboard />} />
             <Route path="/maintenance/failure-reports" element={<FailureReportList />} />

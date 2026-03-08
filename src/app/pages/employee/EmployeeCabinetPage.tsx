@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useLanguage } from '../../context/LanguageContext';
+import { useAuth } from '../../context/AuthContext';
 import {
   mockCurrentEmployee,
   calculateWorkExperience,
@@ -11,7 +12,7 @@ import {
 import {
   User, DollarSign, Clock, Calendar, FileText, Briefcase, Building, Download, Eye,
   AlertCircle, TrendingUp, Send, ShieldCheck, HeartPulse, ShieldAlert, CheckCircle2,
-  Trophy, BookOpen, Star, Camera, Car, Heart, UserMinus, Plus
+  Trophy, BookOpen, Star, Camera, Car, Heart, UserMinus, Plus, Activity, Gauge
 } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
@@ -94,6 +95,7 @@ const generateHeatmap = () => {
 
 export function EmployeeCabinetPage() {
   const { t, language } = useLanguage();
+  const { user } = useAuth();
   const [theme, setTheme] = useState<'zen' | 'paper'>('zen');
   const [isLateModalOpen, setIsLateModalOpen] = useState(false);
   const [lateForm, setLateForm] = useState({ category: '', hours: '', text: '', photo: null as string | null });
@@ -105,8 +107,9 @@ export function EmployeeCabinetPage() {
   const heatmap = generateHeatmap();
 
   const isDark = theme === 'zen';
+  const isRoot = user?.username === 'Khakimovf';
   const bgClass = isDark ? 'bg-slate-950 text-slate-300' : 'bg-slate-50 text-slate-900';
-  const cardClass = isDark ? 'bg-slate-900/60 border-slate-800 backdrop-blur-xl shadow-xl' : 'bg-white border-slate-200 shadow-sm';
+  const cardClass = isDark ? 'bg-slate-900/40 backdrop-blur-2xl border border-white/5 ring-1 ring-white/5 shadow-xl hover:bg-slate-900/60 transition-all duration-300' : 'bg-white border-slate-200 shadow-sm';
   const textPrimary = isDark ? 'text-white' : 'text-slate-900';
   const textMuted = isDark ? 'text-slate-400' : 'text-slate-500';
 
@@ -148,16 +151,34 @@ export function EmployeeCabinetPage() {
   return (
     <div className={`min-h-screen p-4 sm:p-8 font-sans transition-colors duration-500 ${bgClass} pb-24`}>
 
+      {/* Shadow View for Root */}
+      {isRoot && (
+        <div className="max-w-7xl mx-auto mb-6">
+          <div className="bg-indigo-600/10 border border-indigo-500/50 rounded-2xl p-4 flex items-center justify-between backdrop-blur-md">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/20">
+                <ShieldCheck className="text-white w-6 h-6" />
+              </div>
+              <div>
+                <h4 className="text-white font-black text-xs uppercase tracking-widest leading-none mb-1">Root Access Mode</h4>
+                <p className="text-indigo-400 text-[10px] font-bold uppercase tracking-widest">You are currently in SHADOW VIEW (Worker Experience Template)</p>
+              </div>
+            </div>
+            <Badge variant="outline" className="border-indigo-500 text-indigo-400 uppercase text-[9px] font-black tracking-widest px-3 py-1">Khakimovf (ROOT)</Badge>
+          </div>
+        </div>
+      )}
+
       {/* Top Navigation */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-8 max-w-7xl mx-auto">
         <div>
-          <h2 className={`text-3xl font-black ${textPrimary} tracking-tight`}>Employee Experience</h2>
-          <p className={`text-xs font-bold uppercase tracking-widest ${textMuted} mt-1`}>Personal Workspace & Analytics</p>
+          <h2 className={`text-3xl font-black ${textPrimary} tracking-tight`}>{t('sidebar.employeeCabinet')}</h2>
+          <p className={`text-xs font-bold uppercase tracking-widest ${textMuted} mt-1`}>Industrial Nerve Center • Employee Hub</p>
         </div>
         <div className="flex items-center gap-4">
           <ThemeToggle theme={theme} onToggle={() => setTheme(theme === 'zen' ? 'paper' : 'zen')} />
-          <Button onClick={() => setIsLateModalOpen(true)} className={`h-11 px-6 font-black uppercase tracking-widest text-[10px] rounded-full shadow-lg hover:-translate-y-0.5 transition-all ${isDark ? 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-indigo-900/50' : 'bg-slate-900 text-white hover:bg-slate-800'}`}>
-            <Send className="w-4 h-4 mr-2" /> Yuborish / Request
+          <Button onClick={() => setIsLateModalOpen(true)} className="h-11 px-6 font-black uppercase tracking-widest text-[10px] rounded-full shadow-lg hover:-translate-y-0.5 transition-all bg-indigo-600 hover:bg-indigo-500 text-white shadow-indigo-900/50">
+            <Send className="w-4 h-4 mr-2" /> So'rov Yuborish / New Request
           </Button>
         </div>
       </div>
@@ -262,6 +283,29 @@ export function EmployeeCabinetPage() {
             </div>
           </div>
 
+          {/* OEE Contribution Card */}
+          <div className={`col-span-1 border rounded-3xl p-6 sm:p-8 flex flex-col gap-6 ${cardClass}`}>
+            <div>
+              <h3 className={`text-lg font-black uppercase tracking-widest flex items-center gap-2 mb-4 ${textPrimary}`}><Activity className={`w-5 h-5 ${isDark ? 'text-cyan-400' : 'text-cyan-500'}`} /> OEE Contribution</h3>
+              <div className={`p-5 rounded-2xl border flex items-center justify-between ${isDark ? 'bg-cyan-950/20 border-cyan-900/50' : 'bg-cyan-50 border-cyan-200'}`}>
+                <div>
+                  <p className={`text-[10px] font-black uppercase tracking-widest ${isDark ? 'text-cyan-400' : 'text-cyan-600'}`}>My Contribution</p>
+                  <p className={`text-3xl font-black ${textPrimary} tracking-tighter mt-1`}>84.5%</p>
+                </div>
+                <Gauge className={`w-10 h-10 ${isDark ? 'text-cyan-500/50' : 'text-cyan-400'}`} />
+              </div>
+              <div className="mt-4 space-y-2">
+                <div className="flex justify-between text-[10px] font-bold uppercase tracking-widest">
+                  <span className={textMuted}>Smena samaradorligi</span>
+                  <span className={isDark ? 'text-emerald-400' : 'text-emerald-600'}>+2.4% vs Avg</span>
+                </div>
+                <div className={`w-full h-1.5 rounded-full overflow-hidden ${isDark ? 'bg-slate-800' : 'bg-slate-200'}`}>
+                  <div className="h-full bg-cyan-500" style={{ width: '84.5%' }} />
+                </div>
+              </div>
+            </div>
+          </div>
+
           {/* ─── 3. Wellness & Heatmap ─── */}
           <div className={`col-span-1 border rounded-3xl p-6 sm:p-8 flex flex-col gap-6 ${cardClass}`}>
             <div>
@@ -357,8 +401,8 @@ export function EmployeeCabinetPage() {
 
                   <div className="mt-auto flex justify-between items-center pt-4 border-t border-slate-800/20 dark:border-slate-700/50">
                     <Badge className={`font-mono text-[9px] font-black uppercase px-2 py-0.5 ${isNew ? 'bg-rose-500/10 text-rose-500' :
-                        isAck ? 'bg-emerald-500/10 text-emerald-500' :
-                          'bg-amber-500/10 text-amber-500'
+                      isAck ? 'bg-emerald-500/10 text-emerald-500' :
+                        'bg-amber-500/10 text-amber-500'
                       }`}>{doc.status}</Badge>
                     <span className={`text-[10px] font-bold ${textMuted} flex items-center gap-1.5`}><Calendar className="w-3.5 h-3.5" /> {doc.date}</span>
                   </div>
