@@ -152,11 +152,19 @@ function GIPreviewStage({
                             <div id="gi-print-area" className="bg-white text-black p-10 w-[210mm] h-fit shadow-xl">
                                 {/* Header Section */}
                                 <div className="flex justify-between items-start mb-6 border-b border-black pb-4">
-                                    <div>
+                                    <div className="text-[8px] uppercase font-bold text-gray-400">Копия №1 — Экземпляр Склада</div>
+                                    <div 
+                                        style={{
+                                            display: 'flex',
+                                            flexDirection: 'column',
+                                            alignItems: 'flex-end',
+                                            textAlign: 'right',
+                                            float: 'right'
+                                        }}
+                                    >
                                         <h1 className="text-xl font-bold uppercase tracking-tight">ТОВАРНО-ТРАНСПОРТНАЯ НАКЛАДНАЯ</h1>
                                         <p className="text-sm font-black mt-1">№ {docNo} от {courier.issueDate}</p>
                                     </div>
-                                    <div className="text-right text-[8px] uppercase font-bold text-gray-400">Копия №1 — Экземпляр Склада</div>
                                 </div>
 
                                 {/* Logistics Identity Grid */}
@@ -173,11 +181,6 @@ function GIPreviewStage({
                                         <p>{contract.receiver.address}</p>
                                         <p>ИНН: {contract.receiver.inn} | Основание: Договор {contract.contractNumber}</p>
                                     </div>
-                                </div>
-
-                                {/* Power of Attorney Inline Grid */}
-                                <div className="border border-black p-2 mb-6 text-[10px] bg-gray-50 italic">
-                                    <p>По доверенности № <span className="font-bold border-b border-black px-4">{courier.doverennostNo || '________'}</span> от <span className="font-bold border-b border-black px-4">{courier.validUntil || '________'}</span> на имя <span className="font-bold border-b border-black px-6">{courier.name || '________________'}</span></p>
                                 </div>
 
                                 {/* Main Materials Ledger */}
