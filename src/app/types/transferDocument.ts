@@ -23,27 +23,47 @@ export interface TransferDocument {
   receivedAt?: string;
   receivedBy?: string;
   rejectedReason?: string;
-  warehouseLocations?: Record<string, string>; // SKU -> location (A-1, B-2, etc)
+  warehouseLocations?: Record<string, string>;
+}
+
+export interface FinishedGoodsBatch {
+  batch: string;
+  quantity: number;
+  qcDate: string;
+  sourceLine: string;
+  warehouseLocation: string;
+  receivedAt: string;
+  receivedBy: string;
+  unitPrice?: number;
+  productionDate?: string;
+  shift?: 'A' | 'B' | 'C';
+}
+
+export interface GoodsIssueEvent {
+  id: string;
+  soId: string;
+  sku: string;
+  batchId: string;
+  quantity: number;
+  binLocation: string;
+  timestamp: string;
+  actor: string;
+  role: string;
 }
 
 export interface FinishedGoodsRecord {
   id: string;
   sku: string;
   productName: string;
+  unitPrice?: number;
   totalQuantity: number;
   reservedQuantity: number;
   availableQuantity: number;
-  batches: {
-    batch: string;
-    quantity: number;
-    qcDate: string;
-    sourceLine: string;
-    warehouseLocation: string;
-    receivedAt: string;
-    receivedBy: string;
-  }[];
+  blockedQuantity: number;
+  lowStockThreshold?: number;
+  batches: FinishedGoodsBatch[];
   warehouseLocations: string[];
   sourceLines: string[];
-  status: 'AVAILABLE_FOR_SALE' | 'RESERVED' | 'SHIPPED';
+  status: 'AVAILABLE_FOR_SALE' | 'RESERVED' | 'SHIPPED' | 'LOW_STOCK' | 'OUT_OF_STOCK';
   lastUpdated: string;
 }

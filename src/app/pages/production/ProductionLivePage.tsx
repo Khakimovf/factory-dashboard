@@ -1,5 +1,5 @@
-import { useState, useEffect, useMemo } from 'react';
-import { Activity, ArrowLeft, Camera, AlertTriangle, ListTree, Clock, User, Users, AlertCircle, ShieldCheck, Printer, QrCode } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { Activity, ArrowLeft, Camera, AlertTriangle, ListTree, Clock, User, Users, AlertCircle, ShieldCheck, Printer, QrCode, CheckCircle, X } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useLanguage } from '../../context/LanguageContext';
 import { useFactory } from '../../context/FactoryContext';
@@ -7,7 +7,7 @@ import { useWarehouse } from '../../context/WarehouseContext';
 import { useDailyProductionPlan } from '../../context/DailyProductionPlanContext';
 import { toast } from 'sonner';
 import { getCurrentShiftInfo, getShiftLabel, hasShiftEnded, getTimeUntilShiftEnd, type ShiftType } from '../../utils/shiftUtils';
-import { hrEmployees, type Employee } from '../../data/hrEmployees';
+import { hrEmployees } from '../../data/hrEmployees';
 
 // Line Master interface
 interface LineMaster {
@@ -53,6 +53,25 @@ export function ProductionLivePage() {
   const [workersCount, setWorkersCount] = useState(14);
   const maxWorkers = 16;
 
+  // Andon modal state
+  const [showAndonModal, setShowAndonModal] = useState(false);
+  const [andonReason, setAndonReason] = useState<string>('');
+
+  // Live Shift Event Log
+  interface ShiftEvent {
+    time: string;
+    type: 'output' | 'stop' | 'resume' | 'info' | 'andon';
+    message: string;
+  }
+  const [shiftEvents, setShiftEvents] = useState<ShiftEvent[]>([
+    { time: new Date().toLocaleTimeString('uz-UZ', { hour: '2-digit', minute: '2-digit' }), type: 'info', message: 'Smena boshlandi. Live ishlab chiqarish rejimi faol.' }
+  ]);
+
+  const addEvent = useCallback((type: ShiftEvent['type'], message: string) => {
+    const time = new Date().toLocaleTimeString('uz-UZ', { hour: '2-digit', minute: '2-digit' });
+    setShiftEvents(prev => [{ time, type, message }, ...prev].slice(0, 30)); // keep last 30
+  }, []);
+
   const handleBrigadirLogout = () => setActiveBrigadir(null);
   const handleInspectorLogout = () => {
     setActiveInspector(null);
@@ -75,8 +94,10 @@ export function ProductionLivePage() {
   const remainingQuantity = Math.max(0, plannedQuantity - producedQuantity);
   const PROGRESS = plannedQuantity > 0 ? Math.max(0, Math.min(100, Math.round((producedQuantity / plannedQuantity) * 100))) : 0;
 
+  type DoorTrimVariant = 'FRT LH' | 'FRT RH' | 'RR LH' | 'RR RH';
+  const variants: DoorTrimVariant[] = ['FRT LH', 'FRT RH', 'RR LH', 'RR RH'];
   const [productionStatus, setProductionStatus] = useState<'active' | 'paused' | 'stopped'>('active');
-  const [currentOption, setCurrentOption] = useState<'Option A' | 'Option B'>('Option A');
+  const [currentOption, setCurrentOption] = useState<DoorTrimVariant>('FRT LH');
 
   // Drift Analytics
   const taktTime = plannedQuantity > 0 ? Math.round(28800 / plannedQuantity) : 60; // 8 hours in seconds
@@ -120,49 +141,6 @@ export function ProductionLivePage() {
     return () => clearInterval(interval);
   }, [producedQuantity, plannedQuantity]);
 
-  // Simulate production counting (mock camera events)
-  useEffect(() => {
-    // Stop counter if maintenance is requested or missing staff auth
-    if (line?.status === 'maintenance_requested' || !activeBrigadir || !activeInspector) {
-      return;
-    }
-
-    if (productionStatus === 'active' && !hasShiftEnded()) {
-      const interval = setInterval(() => {
-        setProducedQuantity(prev => {
-          const nextCount = prev + 1;
-          return nextCount;
-        });
-
-        // Toggle Option for Digital Twin demo (Option A -> Option B randomly)
-        const newOption = Math.random() > 0.5 ? 'Option B' : 'Option A';
-        setCurrentOption(newOption);
-
-        // Generate Unique Unit Label
-        const optChar = newOption === 'Option A' ? 'A' : 'B';
-        const unitId = `DT-${optChar}-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 9999)).padStart(4, '0')}`;
-        const newLabel = {
-          id: unitId,
-          timestamp: new Date().toLocaleTimeString(),
-          option: newOption,
-          brigadir: activeBrigadir.fullName,
-          inspector: activeInspector.fullName
-        };
-        setLastPrintedLabel(newLabel);
-
-        toast.success(`Label issued for ${unitId}. Sent to Printer...`, { icon: '🖨️' });
-
-        // Trigger BOM deduction and FG addition
-        if (line) {
-          consumeMaterials(line.id, 1);
-          produceFinishedGood(line.id, newOption);
-        }
-      }, 5000); // Increment every 5 seconds (mock)
-
-      return () => clearInterval(interval);
-    }
-  }, [productionStatus, line?.status, line?.id, consumeMaterials, hasShiftEnded, activeBrigadir, activeInspector]);
-
   // Automated Kanban Drop Effect
   useEffect(() => {
     if (!line || productionStatus !== 'active') return;
@@ -195,11 +173,31 @@ export function ProductionLivePage() {
   }, [materials, line, productionStatus, requests, addMaterialRequest]);
 
   const handlePause = () => {
-    setProductionStatus(prev => (prev === 'paused' ? 'active' : 'paused'));
+    const isPaused = productionStatus === 'paused';
+    setProductionStatus(isPaused ? 'active' : 'paused');
+    if (isPaused) {
+      addEvent('resume', `Ishlab chiqarish davom ettirildi | Brigadir: ${activeBrigadir?.fullName ?? '—'}`);
+      toast.success('Ishlab chiqarish davom ettirildi', { icon: '▶️' });
+    } else {
+      addEvent('stop', `Ishlab chiqarish to'xtatildi (Pause) | Brigadir: ${activeBrigadir?.fullName ?? '—'}`);
+      toast.warning("Ishlab chiqarish to'xtatildi", { icon: '⏸️' });
+    }
   };
 
   const handleStop = () => {
+    setShowAndonModal(true);
+  };
+
+  const handleAndonConfirm = () => {
+    if (!andonReason) {
+      toast.error('Iltimos, to\'xtash sababini tanlang!', { icon: '⚠️' });
+      return;
+    }
     setProductionStatus('stopped');
+    setShowAndonModal(false);
+    addEvent('andon', `🚨 ANDON: Liniya to\'xtatildi — Sabab: ${andonReason} | Brigadir: ${activeBrigadir?.fullName ?? '—'}`);
+    toast.error(`Andon faollashtirildi: ${andonReason}`, { icon: '🚨', duration: 6000 });
+    setAndonReason('');
   };
 
   const getCameraStatusBadge = () => {
@@ -238,6 +236,57 @@ export function ProductionLivePage() {
 
   return (
     <div className="p-8 bg-gray-50 dark:bg-gray-900 min-h-full">
+
+      {/* ── ANDON MODAL ──────────────────────────────────────────────────── */}
+      {showAndonModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border-2 border-red-500 w-full max-w-md mx-4 p-6 animate-pulse-once">
+            <div className="flex items-center gap-3 mb-4">
+              <AlertTriangle className="w-6 h-6 text-red-600 shrink-0" />
+              <h2 className="text-lg font-bold text-red-700 dark:text-red-400">🚨 ANDON — Liniyani to'xtatish</h2>
+              <button onClick={() => setShowAndonModal(false)} className="ml-auto text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
+            </div>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-5">Liniyani to'xtatish sababini tanlang. Bu ma'lumot hisobot uchun saqlanadi.</p>
+            <div className="space-y-2 mb-6">
+              {[
+                'Xom ashyo yetishmovchiligi',
+                'Mashina nosozligi',
+                'Operator yo\'qligi',
+                'Sifat muammosi (Defekt)',
+                'Texnik xizmat (Rejalanmagan)',
+                'Shift almashinuvi'
+              ].map(reason => (
+                <button
+                  key={reason}
+                  onClick={() => setAndonReason(reason)}
+                  className={`w-full text-left px-4 py-2.5 rounded-lg border text-sm font-medium transition-colors ${andonReason === reason
+                    ? 'bg-red-600 text-white border-red-600'
+                    : 'border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-red-50 dark:hover:bg-red-900/20'
+                    }`}
+                >
+                  {reason}
+                </button>
+              ))}
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowAndonModal(false)}
+                className="flex-1 px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
+              >
+                Bekor qilish
+              </button>
+              <button
+                onClick={handleAndonConfirm}
+                disabled={!andonReason}
+                className="flex-1 px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-semibold hover:bg-red-700 disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                ⛔ Liniyani To'xtat
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="mb-8 flex items-center justify-between">
         <div className="flex items-center gap-4">
@@ -517,54 +566,54 @@ export function ProductionLivePage() {
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2">
                   <Activity className="w-4 h-4 text-purple-500" />
-                  Digital Twin (Option)
+                  Digital Twin (Door Trim)
                 </h3>
                 <span className="text-[10px] uppercase tracking-wide px-2 py-0.5 rounded-full bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300">
-                  LIVE
+                  LIVE CONVEYOR
                 </span>
               </div>
               <div className="mb-4">
-                <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Hozirgi yig'ilayotgan opsiyalash:</p>
-                <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm border border-gray-200 dark:border-gray-600">
-                  {currentOption}
+                <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Kameradan hozir o'tayotgan tayyor detal:</p>
+                <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-black shadow-sm border ${currentOption.includes('FRT')
+                  ? 'bg-blue-100 text-blue-800 border-blue-300 dark:bg-blue-900/40 dark:text-blue-300'
+                  : 'bg-indigo-100 text-indigo-800 border-indigo-300 dark:bg-indigo-900/40 dark:text-indigo-300'
+                  }`}>
+                  {currentOption} {currentOption.includes('LH') ? '(Left System)' : '(Right System)'}
                 </span>
               </div>
               <div className="space-y-3 pt-4 border-t border-gray-100 dark:border-gray-700">
-                <p className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2">Digital Assembly Instructions</p>
-                <div className={`p-3 rounded-lg border-2 transition-all ${currentOption === 'Option A' ? 'border-green-500 bg-green-50 dark:bg-green-900/10' : 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800'}`}>
+                <p className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2">Automotive Components Check</p>
+
+                <div className={`p-3 rounded-lg border-2 transition-all ${currentOption.includes('FRT') ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/10' : 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800'}`}>
                   <div className="flex items-center justify-between mb-2">
-                    <span className={`font-semibold text-xs ${currentOption === 'Option A' ? 'text-green-700 dark:text-green-400' : 'text-gray-500'}`}>Option A Components</span>
-                    {currentOption === 'Option A' && <span className="flex h-2 w-2 relative"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span><span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span></span>}
+                    <span className={`font-semibold text-xs ${currentOption.includes('FRT') ? 'text-blue-700 dark:text-blue-400' : 'text-gray-500'}`}>FRT (Front Door) Check</span>
+                    {currentOption.includes('FRT') && <span className="flex h-2 w-2 relative"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span><span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span></span>}
                   </div>
                   <div className="space-y-1.5">
                     <div className="flex items-center gap-2 text-[11px] text-gray-600 dark:text-gray-400">
-                      <div className={`w-1.5 h-1.5 rounded-full ${currentOption === 'Option A' ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'}`}></div>
-                      Standard Bezel (Black)
+                      <div className={`w-1.5 h-1.5 rounded-full ${currentOption.includes('FRT') ? 'bg-blue-500' : 'bg-gray-300 dark:bg-gray-600'}`}></div>
+                      Power Window Switch Module
                     </div>
                     <div className="flex items-center gap-2 text-[11px] text-gray-600 dark:text-gray-400">
-                      <div className={`w-1.5 h-1.5 rounded-full ${currentOption === 'Option A' ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'}`}></div>
-                      Fabric Armrest
+                      <div className={`w-1.5 h-1.5 rounded-full ${currentOption.includes('FRT') ? 'bg-blue-500' : 'bg-gray-300 dark:bg-gray-600'}`}></div>
+                      Premium Speaker Grill
                     </div>
                   </div>
                 </div>
 
-                <div className={`p-3 rounded-lg border-2 transition-all ${currentOption === 'Option B' ? 'border-green-500 bg-green-50 dark:bg-green-900/10' : 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800'}`}>
+                <div className={`p-3 rounded-lg border-2 transition-all ${currentOption.includes('RR') ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/10' : 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800'}`}>
                   <div className="flex items-center justify-between mb-2">
-                    <span className={`font-semibold text-xs ${currentOption === 'Option B' ? 'text-green-700 dark:text-green-400' : 'text-gray-500'}`}>Option B (Premium) Components</span>
-                    {currentOption === 'Option B' && <span className="flex h-2 w-2 relative"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span><span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span></span>}
+                    <span className={`font-semibold text-xs ${currentOption.includes('RR') ? 'text-indigo-700 dark:text-indigo-400' : 'text-gray-500'}`}>RR (Rear Door) Check</span>
+                    {currentOption.includes('RR') && <span className="flex h-2 w-2 relative"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span><span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-500"></span></span>}
                   </div>
                   <div className="space-y-1.5">
                     <div className="flex items-center gap-2 text-[11px] text-gray-600 dark:text-gray-400">
-                      <div className={`w-1.5 h-1.5 rounded-full ${currentOption === 'Option B' ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'}`}></div>
-                      Chrome Trim Bezel
+                      <div className={`w-1.5 h-1.5 rounded-full ${currentOption.includes('RR') ? 'bg-indigo-500' : 'bg-gray-300 dark:bg-gray-600'}`}></div>
+                      Manual Window Crank Hole Cover
                     </div>
                     <div className="flex items-center gap-2 text-[11px] text-gray-600 dark:text-gray-400">
-                      <div className={`w-1.5 h-1.5 rounded-full ${currentOption === 'Option B' ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'}`}></div>
-                      Leather Armrest
-                    </div>
-                    <div className="flex items-center gap-2 text-[11px] text-gray-600 dark:text-gray-400">
-                      <div className={`w-1.5 h-1.5 rounded-full ${currentOption === 'Option B' ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'}`}></div>
-                      Ambient Lighting Strip
+                      <div className={`w-1.5 h-1.5 rounded-full ${currentOption.includes('RR') ? 'bg-indigo-500' : 'bg-gray-300 dark:bg-gray-600'}`}></div>
+                      Child Lock Indicator Hole
                     </div>
                   </div>
                 </div>
@@ -632,36 +681,33 @@ export function ProductionLivePage() {
               </div>
             </div>
 
-            {/* Event Log */}
+            {/* Live Shift Event Log */}
             <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2">
                   <ListTree className="w-4 h-4 text-blue-500" />
-                  {t('productionDetail.eventLog')}
+                  Smena hodisalari
                 </h3>
-                <span className="text-[10px] uppercase tracking-wide text-gray-400 dark:text-gray-500">
-                  MOCK
+                <span className="text-[10px] uppercase tracking-wide px-2 py-0.5 rounded-full bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400">
+                  LIVE
                 </span>
               </div>
-              <div className="space-y-2">
-                <div className="flex items-start justify-between text-xs">
-                  <span className="text-gray-500 dark:text-gray-400">14:30</span>
-                  <span className="ml-3 flex-1 text-gray-900 dark:text-gray-100">
-                    Live production started
-                  </span>
-                </div>
-                <div className="flex items-start justify-between text-xs">
-                  <span className="text-gray-500 dark:text-gray-400">14:10</span>
-                  <span className="ml-3 flex-1 text-gray-900 dark:text-gray-100">
-                    Camera connected and counting parts
-                  </span>
-                </div>
-                <div className="flex items-start justify-between text-xs">
-                  <span className="text-gray-500 dark:text-gray-400">13:55</span>
-                  <span className="ml-3 flex-1 text-gray-900 dark:text-gray-100">
-                    Daily production plan loaded
-                  </span>
-                </div>
+              <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                {shiftEvents.length === 0 ? (
+                  <p className="text-xs text-gray-400 italic">Hech qanday hodisa yo'q</p>
+                ) : (
+                  shiftEvents.map((ev, i) => (
+                    <div key={i} className="flex items-start gap-2 text-xs border-b border-gray-100 dark:border-gray-700/50 pb-1.5 last:border-0">
+                      <span className="text-gray-400 dark:text-gray-500 shrink-0 font-mono">{ev.time}</span>
+                      <span className={`flex-1 ${ev.type === 'andon' ? 'text-red-600 dark:text-red-400 font-semibold' :
+                        ev.type === 'output' ? 'text-green-700 dark:text-green-400' :
+                          ev.type === 'stop' ? 'text-yellow-700 dark:text-yellow-400' :
+                            ev.type === 'resume' ? 'text-blue-700 dark:text-blue-400' :
+                              'text-gray-600 dark:text-gray-300'
+                        }`}>{ev.message}</span>
+                    </div>
+                  ))
+                )}
               </div>
             </div>
           </div>

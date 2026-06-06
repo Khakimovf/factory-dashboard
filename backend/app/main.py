@@ -7,7 +7,14 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from app.core.config import settings
 from app.core.logging import setup_logging, get_logger
 from app.core.exceptions import BaseAPIException
-from app.api.routes import documents, maintenance, warehouse, production, admin
+logger = get_logger(__name__)
+import sys
+# sys.setrecursionlimit(2000) - Removed as circular dependency is fixed
+
+
+from app.api.routes import documents, maintenance, warehouse, production, admin, wms, imports, procurement, finance
+
+
 from app.api.exceptions import (
     api_exception_handler,
     http_exception_handler,
@@ -48,7 +55,13 @@ app.include_router(documents.router, prefix=settings.API_PREFIX)
 app.include_router(maintenance.router, prefix=settings.API_PREFIX)
 app.include_router(warehouse.router, prefix=settings.API_PREFIX)
 app.include_router(production.router, prefix=settings.API_PREFIX)
+app.include_router(wms.router, prefix=settings.API_PREFIX)
+app.include_router(imports.router, prefix=settings.API_PREFIX)
+
+
 app.include_router(admin.router, prefix=settings.API_PREFIX)
+app.include_router(procurement.router, prefix=settings.API_PREFIX)
+app.include_router(finance.router, prefix=settings.API_PREFIX)
 
 
 @app.middleware("http")
@@ -112,6 +125,7 @@ async def security_and_audit_middleware(request: Request, call_next):
 
 
 @app.get("/", tags=["root"])
+
 async def root():
     """Root endpoint."""
     return {

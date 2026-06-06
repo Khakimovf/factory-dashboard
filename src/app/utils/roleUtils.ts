@@ -33,9 +33,11 @@ export type PermissionModule =
   | 'warehouse'
   | 'production'
   | 'hr'
-  | 'maintenance';
+  | 'maintenance'
+  | 'audit'
+  | 'roles';
 
-export type PermissionAction = 'READ' | 'WRITE' | 'ADMIN';
+export type PermissionAction = 'READ' | 'WRITE' | 'ADMIN' | 'view' | 'create' | 'edit' | 'approve';
 
 export interface Permission {
   module: PermissionModule;
@@ -56,6 +58,8 @@ const ALL_MODULES: PermissionModule[] = [
   'production',
   'hr',
   'maintenance',
+  'audit',
+  'roles',
 ];
 
 const ALL_ACTIONS: PermissionAction[] = ['READ', 'WRITE', 'ADMIN'];
@@ -209,7 +213,7 @@ export function isSystemOwner(): boolean {
 
 export function isAdmin(): boolean {
   const role = getCurrentUserRole();
-  return role === 'ADMIN' || role === 'system_owner' || role === 'IT_SPECIALIST';
+  return role === 'ADMIN' || role === 'SUPER_ADMIN' || role === 'system_owner' || role === 'IT_SPECIALIST';
 }
 
 /**

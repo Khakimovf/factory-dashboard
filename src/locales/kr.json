@@ -25,7 +25,9 @@
     "orders": "주문",
     "finishedGoods": "완제품",
     "canteen": "구내식당",
-    "logisticsGate": "물류 게이트"
+    "logisticsGate": "물류 게이트",
+    "containerLogistics": "컨테이너 물류",
+    "inventoryReconciliation": "👉 재고 실사 & 밸런스"
   },
   "dashboard": {
     "title": "대시보드",

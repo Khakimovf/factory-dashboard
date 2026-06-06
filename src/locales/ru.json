@@ -24,7 +24,9 @@
     "qc": "Контроль качества (QC)",
     "orders": "Заказы",
     "finishedGoods": "Готовая продукция",
-    "logisticsGate": "Логистический пост"
+    "logisticsGate": "Логистический пост",
+    "containerLogistics": "Контейнерная логистика",
+    "inventoryReconciliation": "👉 ИНВЕНТАРИЗАЦИЯ & БАЛАНС"
   },
   "dashboard": {
     "title": "Панель управления",

@@ -1,11 +1,15 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { useLanguage } from '../../context/LanguageContext';
 import { useWarehouse } from '../../context/WarehouseContext';
+import { useSales } from '../../context/SalesContext';
+import { useFinanceStore } from '../../store/financeStore';
+import { mockContracts } from '../../data/contracts';
 import {
   Package, Search, MapPin, Download, Factory,
   Calendar, CheckCircle, XCircle, Filter, ChevronRight,
   Truck, ShieldAlert, AlertTriangle, FileText, CheckCircle2,
-  ArrowRight, QrCode, LogIn, Boxes, ScanLine, Clock, Layers
+  ArrowRight, QrCode, LogIn, Boxes, ScanLine, Clock, Layers,
+  ClipboardList, Check, ShoppingBag, Eye
 } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
@@ -14,20 +18,22 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { toast } from 'sonner';
 import { Checkbox } from '../../components/ui/checkbox';
 
-type TabMode = 'receipt' | 'inventory' | 'shipping';
+type TabMode = 'receipt' | 'inventory' | 'so-picking' | 'shipping';
 
 export function FinishedGoodsPage() {
   const { t } = useLanguage();
-  // We'll mock some dispatch interactions locally since we are heavily customizing the UI above the context
-  const { finishedGoods: initialGoods } = useWarehouse();
+  const { finishedGoods: initialGoods, setFinishedGoods: setContextGoods } = useWarehouse();
+  const { salesOrders, startPicking, confirmPick, executeGoodsIssue } = useSales();
+  const { ocrContracts } = useFinanceStore();
 
   // Local state for the complex modular dashboard
   const [activeTab, setActiveTab] = useState<TabMode>('inventory');
   const [finishedGoods, setFinishedGoods] = useState(initialGoods);
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
 
   // 1. Dispatch/Shipping State
-  const [shippingQueue, setShippingQueue] = useState<{ productId: string, batchId: string, qty: number, productName: string }[]>([]);
+  const [shippingQueue, setShippingQueue] = useState<{ productId: string, batchId: string, qty: number, productName: string, binLocation?: string }[]>([]);
   const [qualityHolds, setQualityHolds] = useState<Set<string>>(new Set());
   const [shippedBatches, setShippedBatches] = useState<Set<string>>(new Set());
 
@@ -46,7 +52,7 @@ export function FinishedGoodsPage() {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Ignore if typing in an input field (unless it's the specific scanner input which we handle directly)
+      // Ignore if typing in an input field
       const target = e.target as HTMLElement;
       if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return;
 
@@ -73,32 +79,139 @@ export function FinishedGoodsPage() {
   }, [activeTab, finishedGoods, qualityHolds, shippedBatches, shippingQueue]);
 
   const handleQRScan = (code: string) => {
-    // Mock QR Code parsing: assume format "BATCH_ID" or "SKU-QTY"
     const scannedBatch = code.trim().toUpperCase();
 
     if (activeTab === 'receipt') {
       receiveBatch(scannedBatch);
     } else if (activeTab === 'shipping') {
-      // Find batch and add to queue
       scanToDispatch(scannedBatch);
     } else {
       toast.info(`Scanned: ${scannedBatch}`, { description: 'Switch to Receipt or Shipping tab for automated actions.' });
     }
   };
 
+  // State Synchronizer
+  const updateFinishedGoodsState = (updater: (prev: typeof finishedGoods) => typeof finishedGoods) => {
+    setFinishedGoods(prev => {
+      const next = updater(prev);
+      setContextGoods(next);
+      return next;
+    });
+  };
+
+  // UzAuto Motors SKU Portfolio
+  const validSkus = useMemo(() => {
+    const ocrSkus = ocrContracts
+      .filter(c => c.party === "UzAuto Motors JSC" && c.type === "SALES (SOTUV)")
+      .flatMap(c => c.allocatedItems.map(item => item.sku));
+    const mockSkus = mockContracts
+      .filter(c => c.receiver.name === "UzAuto Motors JSC")
+      .flatMap(c => c.materials.map(item => item.sku));
+    return Array.from(new Set([...ocrSkus, ...mockSkus]));
+  }, [ocrContracts]);
+
+  const isSkuValid = useMemo(() => {
+    if (!receiptScannerInput.trim()) return true;
+    const cleanInput = receiptScannerInput.trim();
+    return validSkus.some(
+      s => cleanInput === s || cleanInput.startsWith(s + '-') || cleanInput.startsWith(s + '_')
+    );
+  }, [receiptScannerInput, validSkus]);
+
+  const validateAndToast = (sku: string) => {
+    if (!sku.trim()) return;
+    const cleanSku = sku.trim();
+    const isValid = validSkus.some(
+      s => cleanSku === s || cleanSku.startsWith(s + '-') || cleanSku.startsWith(s + '_')
+    );
+    if (!isValid) {
+      toast.error("Xatolik: Ushbu detal faol shartnomalarda mavjud emas! (SKU not linked to active contracts)", {
+        style: {
+          backgroundColor: '#7f1d1d',
+          color: '#fca5a5',
+          borderColor: '#b91c1c'
+        }
+      });
+    }
+  };
+
   const receiveBatch = (code: string) => {
-    // For demo: create a dummy batch assigned to a random bin layout
+    const cleanCode = code.trim();
+    const isValid = validSkus.some(
+      s => cleanCode === s || cleanCode.startsWith(s + '-') || cleanCode.startsWith(s + '_')
+    );
+    if (!isValid) {
+      validateAndToast(cleanCode);
+      return;
+    }
+
+    const newBatchId = `BATCH-${new Date().toISOString().slice(2, 10).replace(/-/g, '')}-${Math.floor(100 + Math.random() * 900)}`;
     const bins = ['A-10', 'B-14', 'C-05', 'D-22'];
     const assignedBin = bins[Math.floor(Math.random() * bins.length)];
+    const qty = 500;
+
+    updateFinishedGoodsState(prev => {
+      const existing = prev.find(fg => fg.sku === cleanCode || cleanCode.startsWith(fg.sku));
+      if (existing) {
+        return prev.map(fg => (fg.sku === cleanCode || cleanCode.startsWith(fg.sku)) ? {
+          ...fg,
+          totalQuantity: fg.totalQuantity + qty,
+          availableQuantity: fg.availableQuantity + qty,
+          batches: [
+            ...fg.batches,
+            {
+              batch: newBatchId,
+              quantity: qty,
+              qcDate: new Date().toISOString().split('T')[0],
+              sourceLine: fg.sourceLines[0] || 'Assembly Line A',
+              warehouseLocation: assignedBin,
+              receivedAt: new Date().toISOString(),
+              receivedBy: 'Operator',
+              productionDate: new Date().toISOString().split('T')[0],
+              shift: 'A' as const
+            }
+          ],
+          warehouseLocations: fg.warehouseLocations.includes(assignedBin) ? fg.warehouseLocations : [...fg.warehouseLocations, assignedBin]
+        } : fg);
+      } else {
+        const newRecord = {
+          id: `FG-${Date.now()}-${cleanCode}`,
+          sku: cleanCode,
+          productName: cleanCode === '26211286' ? 'Door Trim FL' : cleanCode === '26211284' ? 'Door Trim FR' : 'B2B Auto Part',
+          unitPrice: 45000,
+          totalQuantity: qty,
+          reservedQuantity: 0,
+          availableQuantity: qty,
+          blockedQuantity: 0,
+          lowStockThreshold: 500,
+          batches: [{
+            batch: newBatchId,
+            quantity: qty,
+            qcDate: new Date().toISOString().split('T')[0],
+            sourceLine: 'Assembly Line A',
+            warehouseLocation: assignedBin,
+            receivedAt: new Date().toISOString(),
+            receivedBy: 'Operator',
+            productionDate: new Date().toISOString().split('T')[0],
+            shift: 'A' as const
+          }],
+          warehouseLocations: [assignedBin],
+          sourceLines: ['Assembly Line A'],
+          status: 'AVAILABLE_FOR_SALE' as const,
+          lastUpdated: new Date().toISOString()
+        };
+        return [...prev, newRecord];
+      }
+    });
+
     toast.success('Goods Receipt Successful', {
-      description: `Scanned ${code}. Storage Bin Assignment: ${assignedBin}`,
+      description: `Scanned ${cleanCode}. Storage Bin Assignment: ${assignedBin}`,
       icon: <CheckCircle2 className="text-emerald-400 w-5 h-5" />
     });
     setReceiptScannerInput('');
   };
 
   const scanToDispatch = (batchId: string) => {
-    // Find item by batch
     for (const item of finishedGoods) {
       const b = item.batches.find(x => x.batch.toUpperCase() === batchId.toUpperCase());
       if (b) {
@@ -108,7 +221,6 @@ export function FinishedGoodsPage() {
     }
     toast.error('Dispatch Failed', { description: `Batch ${batchId} not found in inventory.` });
   };
-
 
   // -- Computed Analytics --
   const summary = useMemo(() => {
@@ -130,7 +242,9 @@ export function FinishedGoodsPage() {
   const readinessPercent = summary.availableQuantity + summary.reservedQuantity > 0
     ? Math.round((summary.availableQuantity / (summary.availableQuantity + summary.reservedQuantity)) * 100) : 0;
 
-  let totalShippedToday = Array.from(shippedBatches).length * 850; // mocking avg size for visual
+  const shippedQtySum = Array.from(shippedBatches).length * 850;
+  const stagedQtySum = shippingQueue.reduce((a, c) => a + c.qty, 0);
+  const totalShippedToday = shippedQtySum + stagedQtySum;
   const actualDispatchProgress = Math.min(Math.round((totalShippedToday / dailyTarget) * 100), 100);
 
   // Helper arrays
@@ -151,7 +265,6 @@ export function FinishedGoodsPage() {
   }, [finishedGoods, shippedBatches, qualityHolds, shippingQueue]);
 
   // -- Actions --
-
   const toggleQualityHold = (batchId: string) => {
     setQualityHolds(prev => {
       const newSet = new Set(prev);
@@ -176,7 +289,6 @@ export function FinishedGoodsPage() {
     if (validBatches.length > 0) {
       const oldestBatch = validBatches[0];
       if (oldestBatch.batch !== batchId) {
-        // Double check if oldest is already queued
         const oldestQueued = shippingQueue.some(q => q.batchId === oldestBatch.batch);
         if (!oldestQueued) {
           return oldestBatch.batch;
@@ -198,9 +310,12 @@ export function FinishedGoodsPage() {
       return false;
     }
 
+    const batchInfo = itemBatches.find(b => b.batch === batchId);
+    const binLocation = batchInfo ? batchInfo.warehouseLocation : 'Unknown';
+
     setShippingQueue(prev => {
       if (prev.some(q => q.batchId === batchId)) return prev;
-      return [...prev, { productId, batchId, qty: maxQty, productName }];
+      return [...prev, { productId, batchId, qty: maxQty, productName, binLocation }];
     });
     return true;
   };
@@ -213,10 +328,44 @@ export function FinishedGoodsPage() {
     if (shippingQueue.length === 0) return;
     toast.success('Shipment Executed', { description: 'PDF Manifest Generated & Stock marked "In Transit"' });
     const newShipped = new Set(shippedBatches);
+    
+    const skuQtyMap: Record<string, number> = {};
     shippingQueue.forEach(q => {
-      newShipped.add(q.batchId);
+      const item = finishedGoods.find(fg => fg.id === q.productId);
+      if (item) {
+        const batchInfo = item.batches.find(b => b.batch === q.batchId);
+        if (batchInfo && batchInfo.quantity <= q.qty) {
+          newShipped.add(q.batchId);
+        }
+        skuQtyMap[item.sku] = (skuQtyMap[item.sku] || 0) + q.qty;
+      }
       setSelectedBatches(s => { const ns = new Set(s); ns.delete(q.batchId); return ns; });
     });
+
+    updateFinishedGoodsState(prev => {
+      return prev.map(fg => {
+        const shippedQty = skuQtyMap[fg.sku];
+        if (shippedQty) {
+          const updatedBatches = fg.batches.map(b => {
+            const queueItem = shippingQueue.find(q => q.batchId === b.batch);
+            if (queueItem) {
+              return { ...b, quantity: Math.max(0, b.quantity - queueItem.qty) };
+            }
+            return b;
+          }).filter(b => b.quantity > 0);
+
+          return {
+            ...fg,
+            totalQuantity: Math.max(0, fg.totalQuantity - shippedQty),
+            availableQuantity: Math.max(0, fg.availableQuantity - shippedQty),
+            batches: updatedBatches,
+            lastUpdated: new Date().toISOString()
+          };
+        }
+        return fg;
+      });
+    });
+
     setShippedBatches(newShipped);
     setShippingQueue([]);
   };
@@ -234,7 +383,7 @@ export function FinishedGoodsPage() {
   const selectAll = (checked: boolean) => {
     if (checked) {
       const add = new Set(selectedBatches);
-      allBatches.slice(0, 50).forEach(b => add.add(b.batch)); // limit for performance
+      allBatches.slice(0, 50).forEach(b => add.add(b.batch));
       setSelectedBatches(add);
     } else {
       setSelectedBatches(new Set());
@@ -246,7 +395,6 @@ export function FinishedGoodsPage() {
     Array.from(selectedBatches).forEach(batchId => {
       const batchData = allBatches.find(b => b.batch === batchId);
       if (batchData) {
-        // Add passing true for silent FIFO override for bulk or let it error individually:
         const success = addToQueue(batchData.productId, batchData.batch, batchData.quantity, batchData.productName, batchData.parentBatches, false);
         if (success) queuesAdded++;
       }
@@ -262,9 +410,7 @@ export function FinishedGoodsPage() {
     setSelectedBatches(new Set());
   };
 
-
   // --- Render Tabs ---
-
   const renderReceiptTab = () => (
     <div className="flex flex-col items-center justify-center p-12 bg-slate-900 border border-slate-800 rounded-2xl min-h-[500px] shadow-2xl relative overflow-hidden">
       <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1586528116311-ad8ed7c83a7f?q=80&w=1000')] bg-cover bg-center opacity-5 mix-blend-luminosity" />
@@ -280,13 +426,38 @@ export function FinishedGoodsPage() {
           <Input
             value={receiptScannerInput}
             onChange={e => setReceiptScannerInput(e.target.value)}
-            onKeyDown={e => { if (e.key === 'Enter') receiveBatch(receiptScannerInput); }}
+            onKeyDown={e => {
+              if (e.key === 'Enter') {
+                const sku = receiptScannerInput.trim();
+                const isValid = validSkus.some(s => sku === s || sku.startsWith(s + '-') || sku.startsWith(s + '_'));
+                if (isValid) {
+                  receiveBatch(sku);
+                } else {
+                  validateAndToast(sku);
+                }
+              }
+            }}
+            onBlur={() => {
+              const sku = receiptScannerInput.trim();
+              if (sku) {
+                const isValid = validSkus.some(s => sku === s || sku.startsWith(s + '-') || sku.startsWith(s + '_'));
+                if (!isValid) {
+                  validateAndToast(sku);
+                }
+              }
+            }}
             placeholder="Awaiting Scanner Input..."
             autoFocus
-            className="w-full text-xl h-20 pl-16 pr-6 bg-slate-950/80 border-2 border-slate-700 focus-visible:ring-cyan-500 focus-visible:border-cyan-500 rounded-2xl text-center font-mono font-black text-white placeholder:text-slate-600 shadow-inner"
+            className={`w-full text-xl h-20 pl-16 pr-6 bg-slate-950/80 border-2 rounded-2xl text-center font-mono font-black placeholder:text-slate-600 shadow-inner ${
+              !isSkuValid ? 'border-red-500 text-red-400 focus-visible:ring-red-500 focus-visible:border-red-500' : 'border-slate-700 text-white focus-visible:ring-cyan-500 focus-visible:border-cyan-500'
+            }`}
           />
         </div>
-        <Button onClick={() => receiveBatch(receiptScannerInput)} disabled={!receiptScannerInput} className="mt-8 h-12 px-10 bg-cyan-600 hover:bg-cyan-500 text-white font-black uppercase tracking-widest rounded-xl">
+        <Button 
+          onClick={() => receiveBatch(receiptScannerInput)} 
+          disabled={!receiptScannerInput.trim() || !isSkuValid} 
+          className="mt-8 h-12 px-10 bg-cyan-600 hover:bg-cyan-500 text-white font-black uppercase tracking-widest rounded-xl disabled:bg-slate-800 disabled:text-slate-600 disabled:cursor-not-allowed"
+        >
           Register Manually
         </Button>
       </div>
@@ -374,7 +545,16 @@ export function FinishedGoodsPage() {
                 {batch.isQueued ? (
                   <Badge variant="outline" className="h-8 justify-center min-w-[80px] bg-cyan-500/10 text-cyan-400 border-cyan-500/30 text-[10px] font-black uppercase">Queued</Badge>
                 ) : (
-                  <Button size="sm" disabled={batch.isHeld} onClick={() => addToQueue(batch.productId, batch.batch, batch.quantity, batch.productName, batch.parentBatches)} variant="outline" className="h-8 min-w-[80px] border-slate-700 bg-slate-950 text-slate-300 hover:text-white hover:border-cyan-500 text-[10px] font-black uppercase tracking-widest">
+                  <Button size="sm" disabled={batch.isHeld} onClick={() => {
+                    const input = window.prompt(`Enter Quantity to Stage (Max: ${batch.quantity})`, batch.quantity.toString());
+                    if (input === null) return;
+                    const parsedQty = parseInt(input, 10);
+                    if (isNaN(parsedQty) || parsedQty <= 0 || parsedQty > batch.quantity) {
+                      toast.error("Invalid Quantity", { description: `Please enter a value between 1 and ${batch.quantity}.` });
+                      return;
+                    }
+                    addToQueue(batch.productId, batch.batch, parsedQty, batch.productName, batch.parentBatches);
+                  }} variant="outline" className="h-8 min-w-[80px] border-slate-700 bg-slate-950 text-slate-300 hover:text-white hover:border-cyan-500 text-[10px] font-black uppercase tracking-widest">
                     To Ship
                   </Button>
                 )}
@@ -385,6 +565,238 @@ export function FinishedGoodsPage() {
       </div>
     </div>
   );
+
+  const renderSOPickingTab = () => {
+    const activeOrders = salesOrders.filter(o => 
+      ['CONFIRMED', 'PICKING_PENDING', 'PICKING', 'PACKING', 'GOODS_ISSUED', 'SHIPPED'].includes(o.status)
+    );
+    const selectedOrder = salesOrders.find(o => o.id === selectedOrderId);
+
+    return (
+      <div className="flex flex-col xl:flex-row gap-6 items-start">
+        {/* Left Sidebar: Pending Pick Orders */}
+        <div className="w-full xl:w-[320px] shrink-0 border border-slate-800 bg-slate-900 rounded-3xl p-4 shadow-xl space-y-4">
+          <div className="border-b border-slate-800 pb-3">
+            <h3 className="text-sm font-black text-slate-300 uppercase tracking-widest flex items-center gap-2">
+              <ClipboardList className="w-4 h-4 text-violet-400" /> Pending Pick Orders
+            </h3>
+          </div>
+          <div className="space-y-2 max-h-[500px] overflow-y-auto pr-1">
+            {activeOrders.length === 0 ? (
+              <p className="text-xs text-slate-500 font-bold uppercase tracking-widest text-center py-8">No active orders</p>
+            ) : (
+              activeOrders.map(order => {
+                const isSelected = order.id === selectedOrderId;
+                const totalItems = order.lines.reduce((s, l) => s + l.quantity, 0);
+                
+                const uniqueBins = Array.from(new Set(
+                  order.pickList?.map(p => p.binLocation).filter(Boolean) || []
+                ));
+
+                return (
+                  <button
+                    key={order.id}
+                    onClick={() => setSelectedOrderId(order.id)}
+                    className={`w-full text-left p-3.5 rounded-2xl border transition-all flex flex-col gap-2 ${
+                      isSelected 
+                        ? 'bg-violet-950/20 border-violet-500/40 shadow-[0_0_15px_rgba(139,92,246,0.1)]' 
+                        : 'bg-slate-950/40 border-slate-800/80 hover:bg-slate-800/50'
+                    }`}
+                  >
+                    <div className="flex justify-between items-center w-full">
+                      <span className="font-mono text-xs font-black text-violet-400">{order.id}</span>
+                      <Badge className={`text-[8px] font-black uppercase tracking-widest px-2 py-0.5 ${
+                        order.status === 'CONFIRMED' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' :
+                        order.status === 'PICKING_PENDING' ? 'bg-violet-500/10 text-violet-400 border border-violet-500/20' :
+                        order.status === 'PACKING' ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' :
+                        'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                      }`}>
+                        {order.status === 'PICKING_PENDING' ? 'Pick Pending' : order.status}
+                      </Badge>
+                    </div>
+                    <div className="flex justify-between items-baseline w-full">
+                      <span className="text-sm font-bold text-slate-200 truncate max-w-[150px]">{order.customer}</span>
+                      <span className="text-[10px] text-slate-400 font-mono font-black shrink-0">{totalItems.toLocaleString()} PCS</span>
+                    </div>
+
+                    {/* Coordinates list in sidebar */}
+                    <div className="flex flex-wrap gap-1.5 mt-1 border-t border-slate-800/80 pt-2 w-full">
+                      {uniqueBins.length > 0 ? (
+                        uniqueBins.map(bin => (
+                          <span key={bin} className="text-[8px] font-mono font-black bg-slate-900 border border-slate-800 text-slate-400 px-1.5 py-0.5 rounded">
+                            Bin: {bin}
+                          </span>
+                        ))
+                      ) : (
+                        <span className="text-[8px] font-bold text-slate-500 uppercase">Bin: Pending list gen</span>
+                      )}
+                    </div>
+                  </button>
+                );
+              })
+            )}
+          </div>
+        </div>
+
+        {/* Right Detail Panel */}
+        <div className="flex-1 w-full border border-slate-800 bg-slate-900 rounded-3xl p-6 shadow-xl min-h-[450px]">
+          {selectedOrder ? (
+            <div className="space-y-6">
+              {/* Detail Header */}
+              <div className="flex justify-between items-start border-b border-slate-800 pb-4 flex-wrap gap-4">
+                <div>
+                  <div className="flex items-center gap-3">
+                    <span className="text-2xl font-black text-white tracking-tight">{selectedOrder.id}</span>
+                    <Badge variant="outline" className="bg-slate-950 text-slate-400 border-slate-700 font-mono font-bold text-xs uppercase px-2">{selectedOrder.status}</Badge>
+                  </div>
+                  <p className="text-slate-400 text-sm font-bold mt-1 uppercase tracking-wider">{selectedOrder.customer}</p>
+                </div>
+                <div className="flex gap-2">
+                  {(selectedOrder.status === 'CONFIRMED' || (selectedOrder.status === 'PICKING_PENDING' && (!selectedOrder.pickList || selectedOrder.pickList.length === 0))) && (
+                    <Button 
+                      onClick={() => {
+                        startPicking(selectedOrder.id);
+                        toast.success('FIFO picking list generated successfully!');
+                      }}
+                      className="bg-violet-600 hover:bg-violet-500 text-white font-black uppercase tracking-widest text-xs h-10 px-4 rounded-xl"
+                    >
+                      Generate FIFO Pick List
+                    </Button>
+                  )}
+                  {selectedOrder.status === 'PICKING_PENDING' && selectedOrder.pickList && selectedOrder.pickList.length > 0 && (
+                    <Button 
+                      disabled={!selectedOrder.pickList.every(p => p.confirmed)}
+                      onClick={() => {
+                        confirmPick(selectedOrder.id, selectedOrder.pickList);
+                        toast.success('Pick list confirmed. Order is now in PACKING stage!');
+                      }}
+                      className="bg-blue-600 hover:bg-blue-500 text-white disabled:bg-slate-800 disabled:text-slate-600 disabled:cursor-not-allowed font-black uppercase tracking-widest text-xs h-10 px-4 rounded-xl shadow-lg"
+                    >
+                      Execute Pick Confirmation
+                    </Button>
+                  )}
+                  {selectedOrder.status === 'PACKING' && (
+                    <Button 
+                      onClick={() => {
+                        executeGoodsIssue(selectedOrder.id);
+                        toast.success('Goods Issue executed successfully! IDoc Generated.');
+                      }}
+                      className="bg-emerald-600 hover:bg-emerald-500 text-white font-black uppercase tracking-widest text-xs h-10 px-4 rounded-xl shadow-lg"
+                    >
+                      Execute Goods Issue (GI)
+                    </Button>
+                  )}
+                </div>
+              </div>
+
+              {/* Order Lines or Pick List Table */}
+              {selectedOrder.status === 'CONFIRMED' || (selectedOrder.status === 'PICKING_PENDING' && (!selectedOrder.pickList || selectedOrder.pickList.length === 0)) ? (
+                <div className="space-y-4">
+                  <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest">Order Items</h4>
+                  <div className="border border-slate-800 bg-slate-950/50 rounded-2xl overflow-hidden">
+                    <div className="grid grid-cols-[1fr_100px_100px] gap-4 px-5 py-3 bg-slate-950 border-b border-slate-800 text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                      <span>Product & SKU</span>
+                      <span className="text-right">Qty (PCS)</span>
+                      <span className="text-right">Price</span>
+                    </div>
+                    <div className="divide-y divide-slate-800/50">
+                      {selectedOrder.lines.map(l => (
+                        <div key={l.sku} className="grid grid-cols-[1fr_100px_100px] gap-4 px-5 py-3.5 items-center">
+                          <div>
+                            <p className="text-sm font-bold text-slate-200">{l.productName}</p>
+                            <p className="text-[10px] text-slate-500 font-mono mt-0.5">{l.sku}</p>
+                          </div>
+                          <span className="text-sm font-black text-white text-right">{l.quantity.toLocaleString()}</span>
+                          <span className="text-sm font-bold text-slate-400 text-right">{(l.unitPrice / 1000).toFixed(0)}k UZS</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              ) : selectedOrder.status === 'PICKING_PENDING' ? (
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center flex-wrap gap-2">
+                    <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest">FIFO Picking Map (EWM Coordinates)</h4>
+                    <span className="text-[10px] font-black text-violet-400 uppercase tracking-widest bg-violet-500/10 border border-violet-500/20 px-2 py-0.5 rounded-full">
+                      {selectedOrder.pickList.filter(p => p.confirmed).length} / {selectedOrder.pickList.length} Picked
+                    </span>
+                  </div>
+                  <div className="border border-slate-800 bg-slate-950/50 rounded-2xl overflow-hidden shadow-2xl">
+                    <div className="grid grid-cols-[1fr_120px_100px_100px_120px] gap-4 px-5 py-3 bg-slate-950 border-b border-slate-800 text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                      <span>Product & SKU</span>
+                      <span>Batch ID</span>
+                      <span>Bin Location</span>
+                      <span className="text-right">Qty (PCS)</span>
+                      <span className="text-right">Action</span>
+                    </div>
+                    <div className="divide-y divide-slate-800/50">
+                      {selectedOrder.pickList.map((p, idx) => (
+                        <div key={idx} className={`grid grid-cols-[1fr_120px_100px_100px_120px] gap-4 px-5 py-4 items-center transition-colors ${p.confirmed ? 'bg-emerald-950/10' : 'hover:bg-slate-800/30'}`}>
+                          <div>
+                            <p className="text-sm font-bold text-slate-200">{p.productName}</p>
+                            <p className="text-[10px] text-slate-500 font-mono mt-0.5">{p.sku}</p>
+                          </div>
+                          <span className="text-xs font-black font-mono text-cyan-400">{p.batchId}</span>
+                          <div>
+                            <Badge className="bg-slate-900 border-slate-700 text-slate-300 font-mono text-[10px] px-2 py-0.5 border">
+                              Bin: {p.binLocation}
+                            </Badge>
+                          </div>
+                          <span className="text-sm font-black text-white text-right">{p.quantityRequired.toLocaleString()}</span>
+                          <div className="text-right">
+                            {p.confirmed ? (
+                              <Badge className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[9px] font-black uppercase px-2 py-1">Confirmed</Badge>
+                            ) : (
+                              <Button
+                                size="sm"
+                                onClick={() => {
+                                  const updated = selectedOrder.pickList.map((item, i) => 
+                                    i === idx ? { ...item, confirmed: true, quantityPicked: item.quantityRequired } : item
+                                  );
+                                  selectedOrder.pickList = updated;
+                                  setSelectedOrderId(prev => prev); // trigger state update by resetting to same ID
+                                  toast.success(`Picked Batch ${p.batchId} from Bin ${p.binLocation}`);
+                                }}
+                                className="h-8 bg-slate-900 border border-slate-700 hover:border-violet-500 text-slate-300 hover:text-white text-[10px] font-black uppercase tracking-widest px-3 rounded-lg"
+                              >
+                                Confirm Pick
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest">Order Process Completed</h4>
+                  <div className="bg-slate-950 border border-slate-800 p-6 rounded-2xl flex flex-col items-center justify-center text-center space-y-3">
+                    <CheckCircle2 className="w-12 h-12 text-emerald-400" />
+                    <h5 className="text-white font-bold text-base">All Pick Tasks Verified & Dispatched</h5>
+                    <p className="text-xs text-slate-400 max-w-md">The shipment plan for {selectedOrder.id} has been fully picked and verified. SAP IDoc payload is updated and logged.</p>
+                    {selectedOrder.goodsIssuedAt && (
+                      <Badge variant="outline" className="bg-emerald-950/20 border-emerald-500/30 text-emerald-400 text-[10px] font-mono">
+                        GOODS ISSUE COMPLETED @ {new Date(selectedOrder.goodsIssuedAt).toLocaleString()}
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="h-full flex flex-col items-center justify-center text-center space-y-4 text-slate-500 py-16">
+              <ClipboardList className="w-16 h-16 opacity-30 animate-pulse text-slate-600" />
+              <div>
+                <h4 className="text-white font-bold text-base">EWM Order Dispatch Workspace</h4>
+                <p className="text-xs max-w-sm mt-1">Select an active Sales Order from the pending orders sidebar to allocate storage slots, run ATP checks, and execute FIFO picking lists.</p>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
 
   const renderShippingTab = () => (
     <div className="flex flex-col xl:flex-row gap-6 items-start">
@@ -448,7 +860,10 @@ export function FinishedGoodsPage() {
                 {shippingQueue.map((q, i) => (
                   <div key={i} className="p-4 border border-cyan-500/30 bg-cyan-950/30 rounded-2xl group relative backdrop-blur-sm">
                     <button onClick={() => removeFromQueue(q.batchId)} className="absolute top-3 right-3 text-slate-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity bg-slate-900 rounded-full p-1"><XCircle className="w-4 h-4" /></button>
-                    <h4 className="text-sm font-bold text-slate-200 truncate pr-8 leading-tight mb-2">{q.productName}</h4>
+                    <h4 className="text-sm font-bold text-slate-200 pr-8 leading-tight mb-2 flex items-center justify-between">
+                      <span className="truncate">{q.productName}</span>
+                      <Badge variant="outline" className="bg-slate-950 text-slate-400 border-slate-700 font-mono text-[9px] px-1.5 ml-2 shrink-0">Bin: {q.binLocation || 'Unknown'}</Badge>
+                    </h4>
                     <div className="flex justify-between items-center">
                       <Badge variant="outline" className="bg-slate-900 text-cyan-400 font-mono text-[10px] border-cyan-900">{q.batchId}</Badge>
                       <span className="text-white font-black font-mono text-base">{q.qty.toLocaleString()} <span className="text-[10px] text-slate-500 font-sans">PCS</span></span>
@@ -488,12 +903,28 @@ export function FinishedGoodsPage() {
 
       {/* Intelligent Global Analytics Header */}
       <div className="mb-6 grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="col-span-1 border border-slate-800 bg-slate-900 rounded-3xl p-6 shadow-2xl relative overflow-hidden flex flex-col justify-center">
+        <div className="col-span-1 border border-slate-800 bg-slate-900 rounded-3xl p-6 shadow-2xl relative overflow-hidden flex flex-col justify-between min-h-[120px]">
           <div className="absolute -top-10 -right-10 w-40 h-40 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none" />
-          <h2 className="text-3xl font-black text-white flex items-center gap-3 mb-1 tracking-tight">
-            <Factory className="w-8 h-8 text-cyan-400" /> Distribution Center
-          </h2>
-          <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">SAP High-Volume Hub</p>
+          <div className="flex justify-between items-center mb-2 z-10">
+            <h2 className="text-xs font-black text-white uppercase tracking-widest flex items-center gap-2">
+              <Factory className="w-4 h-4 text-cyan-400" /> WAREHOUSE TELEMETRY
+            </h2>
+            <Badge variant="outline" className="text-[9px] font-mono text-cyan-400 border-cyan-500/30">LIVE</Badge>
+          </div>
+          <div className="grid grid-cols-3 gap-2 mt-2 z-10 border-t border-slate-800/80 pt-3">
+            <div>
+              <p className="text-[8px] font-black text-slate-500 uppercase tracking-wider">TOTAL FG (PCS)</p>
+              <p className="text-lg font-black text-white font-mono mt-0.5">{finishedGoods.reduce((s, f) => s + f.totalQuantity, 0).toLocaleString()}</p>
+            </div>
+            <div className="border-l border-slate-800 pl-2">
+              <p className="text-[8px] font-black text-slate-500 uppercase tracking-wider">AVAILABLE</p>
+              <p className="text-lg font-black text-emerald-400 font-mono mt-0.5">{summary.availableQuantity.toLocaleString()}</p>
+            </div>
+            <div className="border-l border-slate-800 pl-2">
+              <p className="text-[8px] font-black text-slate-500 uppercase tracking-wider">SHIPPED TODAY</p>
+              <p className="text-lg font-black text-cyan-400 font-mono mt-0.5">{totalShippedToday.toLocaleString()}</p>
+            </div>
+          </div>
         </div>
 
         <div className="col-span-2 border border-slate-800 rounded-3xl p-6 bg-slate-900 shadow-lg flex gap-8 items-center">
@@ -505,7 +936,6 @@ export function FinishedGoodsPage() {
             <div className="h-2 bg-slate-950 rounded-full overflow-hidden border border-slate-800 shadow-inner">
               <div className="h-full bg-emerald-500 rounded-full transition-all duration-1000" style={{ width: `${readinessPercent}%` }} />
             </div>
-            {/* 4. Intelligence & Risk Prediction */}
             <p className="text-[10px] font-bold text-amber-500 mt-2 flex items-center gap-1"><AlertTriangle className="w-3 h-3" /> Stock will be depleted in 48 hours based on demand.</p>
           </div>
 
@@ -532,6 +962,7 @@ export function FinishedGoodsPage() {
         {[
           { id: 'receipt', icon: LogIn, label: 'Goods Receipt', sub: 'Qabul qilish' },
           { id: 'inventory', icon: Boxes, label: 'Inventory & Bin Map', sub: 'Zaxira va Xarita' },
+          { id: 'so-picking', icon: ClipboardList, label: 'SO Picking', sub: 'Zayavka yig\'ish', badge: salesOrders.filter(o => o.status === 'CONFIRMED' || o.status === 'PICKING_PENDING').length || null },
           { id: 'shipping', icon: Truck, label: 'Shipping & Dispatch', sub: "Jo'natish", badge: shippingQueue.length > 0 ? shippingQueue.length : null }
         ].map(tab => {
           const Icon = tab.icon;
@@ -543,7 +974,7 @@ export function FinishedGoodsPage() {
                 <p className="text-xs font-black uppercase tracking-widest leading-none mb-1 shadow-sm">{tab.label}</p>
                 <p className="text-[9px] font-bold text-slate-500 uppercase">{tab.sub}</p>
               </div>
-              {tab.badge && <Badge variant="secondary" className="absolute top-3 right-3 bg-cyan-500 text-slate-950 font-black text-[9px] px-1.5 h-4 min-w-[16px] flex items-center justify-center rounded-full animate-bounce">{tab.badge}</Badge>}
+              {tab.badge && <Badge variant="secondary" className="absolute top-3 right-3 bg-cyan-500 text-slate-950 font-black text-[9px] px-1.5 h-4 min-w-[16px] flex items-center justify-center rounded-full">{tab.badge}</Badge>}
               {isActive && <div className="absolute bottom-0 left-0 w-full h-[2px] bg-cyan-500 translate-y-px" />}
             </button>
           );
@@ -554,6 +985,7 @@ export function FinishedGoodsPage() {
       <div className="animate-in fade-in slide-in-from-right-4 duration-300">
         {activeTab === 'receipt' && renderReceiptTab()}
         {activeTab === 'inventory' && renderInventoryTab()}
+        {activeTab === 'so-picking' && renderSOPickingTab()}
         {activeTab === 'shipping' && renderShippingTab()}
       </div>
 

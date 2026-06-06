@@ -1,5 +1,7 @@
 import { useMemo, useState, useEffect } from 'react';
 import { useFactory } from '../context/FactoryContext';
+import { useSales } from '../context/SalesContext';
+import { useWarehouse } from '../context/WarehouseContext';
 import { useLanguage } from '../context/LanguageContext';
 import {
   ResponsiveContainer,
@@ -37,6 +39,8 @@ import { useAuth } from '../context/AuthContext';
 
 export function Dashboard() {
   const { productionLines } = useFactory();
+  const { salesStats, salesOrders } = useSales();
+  const { finishedGoods } = useWarehouse() as any;
   const { t } = useLanguage();
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -257,28 +261,35 @@ export function Dashboard() {
           </div>
         </Card>
 
-        {/* 6. LOGISTICS HUB */}
+        {/* 6. FG WAREHOUSE & SALES */}
         <Card>
-          <CardHeader icon={<Truck className="w-4 h-4" />} title={t('dashboard.logisticsVgm')} sub={t('dashboard.yardStatus')} color="amber" />
+          <CardHeader icon={<Truck className="w-4 h-4" />} title={'FG WAREHOUSE'} sub={'SAP SD METRICS'} color="violet" />
           <div className="flex-1 flex flex-col justify-center px-4 gap-3">
             <div className="flex items-center gap-4">
-              <div className="w-14 h-14 bg-amber-500/10 rounded-2xl flex items-center justify-center border border-amber-500/20">
-                <span className="text-3xl font-black text-white italic font-mono">14</span>
+              <div className="w-14 h-14 bg-violet-500/10 rounded-2xl flex items-center justify-center border border-violet-500/20">
+                <span className="text-xl font-black text-white italic font-mono">{salesStats.dailyShippedQty.toLocaleString()}</span>
               </div>
               <div>
-                <p className="text-lg font-black text-white italic leading-tight uppercase tracking-tighter">{t('dashboard.vehicles')}</p>
-                <p className="text-[8px] font-black text-amber-600 uppercase tracking-widest leading-none">{t('dashboard.activeYard')}</p>
+                <p className="text-lg font-black text-white italic leading-tight uppercase tracking-tighter">Shipped Today</p>
+                <p className="text-[8px] font-black text-violet-400 uppercase tracking-widest leading-none">Pieces (PCS)</p>
               </div>
             </div>
-            <div className="grid grid-cols-4 gap-2 border-t border-white/5 pt-3">
-              {['G1: 4', 'G2: 2', 'G3: 5', 'G4: 3'].map(gate => (
-                <div key={gate} className="bg-slate-950/40 p-1.5 rounded-lg border border-white/5 text-[8px] font-black text-slate-400 text-center font-mono">
-                  {gate}
-                </div>
-              ))}
+            <div className="grid grid-cols-3 gap-2 border-t border-white/5 pt-3">
+              <div className="bg-slate-950/40 p-1.5 rounded-lg border border-white/5 text-center flex flex-col">
+                <span className="text-[7px] font-black text-slate-500 uppercase">Open SOs</span>
+                <span className="font-mono text-xs font-black text-white">{salesStats.pendingOrderCount}</span>
+              </div>
+              <div className="bg-slate-950/40 p-1.5 rounded-lg border border-white/5 text-center flex flex-col">
+                <span className="text-[7px] font-black text-slate-500 uppercase">Total FG</span>
+                <span className="font-mono text-xs font-black text-white">{finishedGoods.reduce((s: number, f: any) => s + f.totalQuantity, 0).toLocaleString()}</span>
+              </div>
+              <div className="bg-slate-950/40 p-1.5 rounded-lg border border-white/5 text-center flex flex-col">
+                <span className="text-[7px] font-black text-slate-500 uppercase">Avail FG</span>
+                <span className="font-mono text-xs font-black text-emerald-400">{finishedGoods.reduce((s: number, f: any) => s + f.availableQuantity, 0).toLocaleString()}</span>
+              </div>
             </div>
             <div className="flex items-center justify-between mt-1 opacity-40">
-              <span className="text-[7px] font-black text-slate-600 uppercase tracking-[0.2em] font-mono italic">SYNC: HQ-HUB-B</span>
+              <span className="text-[7px] font-black text-slate-600 uppercase tracking-[0.2em] font-mono italic">SYNC: SAP-SD-MOD</span>
               <Clock className="w-3 h-3 text-slate-700" />
             </div>
           </div>
@@ -322,6 +333,7 @@ function CardHeader({ icon, title, sub, color }: any) {
     rose: "text-rose-400 group-hover:text-rose-300 shadow-rose-500/20",
     emerald: "text-emerald-400 group-hover:text-emerald-300 shadow-emerald-500/20",
     amber: "text-amber-500 group-hover:text-amber-400 shadow-amber-500/20",
+    violet: "text-violet-400 group-hover:text-violet-300 shadow-violet-500/20",
   };
 
   return (

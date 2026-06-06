@@ -1,5 +1,5 @@
 import { defineConfig } from 'vite'
-import path from 'path'
+import { fileURLToPath, URL } from 'node:url'
 import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
 
@@ -11,7 +11,7 @@ export default defineConfig({
   ],
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, './src'),
+      '@': fileURLToPath(new URL('./src', import.meta.url)),
     },
   },
   server: {
@@ -19,7 +19,7 @@ export default defineConfig({
       ignored: ['**/node_modules/**', '**/backend/**', '**/.git/**'],
     },
     fs: {
-      allow: [path.resolve(__dirname)],
+      allow: [fileURLToPath(new URL('.', import.meta.url))],
     },
   },
   optimizeDeps: {

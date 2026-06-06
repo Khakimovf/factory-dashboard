@@ -2,12 +2,12 @@ import { useState, useMemo, useEffect } from 'react';
 import { useLanguage } from '../../context/LanguageContext';
 import { useFactory } from '../../context/FactoryContext';
 import { useWarehouse } from '../../context/WarehouseContext';
+import { useSales } from '../../context/SalesContext';
 import { initialSuppliers } from '../suppliers/SuppliersPage';
 import { EnhancedSupplier, generateMockDeliveryHistory } from '../../services/supplierService';
 import { initialInspections } from '../../context/QCContext';
 import { hrEmployees } from '../../data/hrEmployees';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { TrendingUp, TrendingDown, Activity, Settings, Coffee, Download, AlertCircle, CheckCircle2, Filter, Calendar, Users, Loader2, DollarSign, History } from 'lucide-react';
+import { TrendingUp, TrendingDown, Activity, Settings, Coffee, Download, AlertCircle, CheckCircle2, Filter, Calendar, Users, Loader2, DollarSign, History, FileText } from 'lucide-react';
 import { format, subDays, startOfMonth, startOfDay, differenceInDays, isBefore, parseISO, endOfDay } from 'date-fns';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../../components/ui/dialog';
 import { Badge } from '../../components/ui/badge';
@@ -25,7 +25,14 @@ export default function ReportsPage() {
   const { t } = useLanguage();
   const { productionLines = [] } = useFactory();
   const { finishedGoods = [] } = useWarehouse();
+  const { salesOrders = [] } = useSales();
 
+  const todayRevenue = useMemo(() => {
+    const today = new Date().toISOString().split('T')[0];
+    return salesOrders
+      .filter(o => ['DELIVERED', 'SHIPPED', 'GOODS_ISSUED'].includes(o.status) && o.createdAt.startsWith(today))
+      .reduce((sum, o) => sum + o.totalAmount, 0);
+  }, [salesOrders]);
   // Advanced Filter State
   const [globalDateRange, setGlobalDateRange] = useState<'Today' | 'Last 7 Days' | 'This Month' | 'Custom Range'>('Last 7 Days');
   const [customDate, setCustomDate] = useState({ start: format(subDays(new Date(), 30), 'yyyy-MM-dd'), end: format(new Date(), 'yyyy-MM-dd') });
@@ -35,8 +42,6 @@ export default function ReportsPage() {
   // UI Loading & Fetch State
   const [isFetchingData, setIsFetchingData] = useState(false);
   const [isReportLoading, setIsReportLoading] = useState(false);
-  const [drillDownCategory, setDrillDownCategory] = useState<string | null>(null);
-
   // Smart Date Logic
   const activeDateRange = useMemo(() => {
     const now = new Date();
@@ -72,47 +77,7 @@ export default function ReportsPage() {
     canteenRatio: '8.4%', // Food waste vs attendance
   };
 
-  const chartData = useMemo(() => {
-    // Generate dynamic mock history based on days
-    let data = [];
-    for (let i = 0; i < Math.min(daysDiff, 30); i++) {
-      const d = new Date(activeDateRange.start);
-      d.setDate(d.getDate() + i);
-      data.push({
-        name: format(d, 'MMM dd'),
-        plan: 100,
-        actualLine1: 85 + Math.random() * 20,
-        actualLine2: 80 + Math.random() * 20,
-        actualLine3: 90 + Math.random() * 15,
-        prevLine1: 80 + Math.random() * 15,
-        prevLine2: 75 + Math.random() * 20,
-        prevLine3: 85 + Math.random() * 20,
-      });
-    }
-    return data;
-  }, [activeDateRange, daysDiff]);
 
-  const pieData = useMemo(() => {
-    // React to Department Filter loosely (mock behavior)
-    let ratio = selectedDepartments.length / 5;
-    return [
-      { name: 'Mechanical Breakdown', value: Math.round(45 * ratio) },
-      { name: 'Electrical Fault', value: Math.round(25 * ratio) },
-      { name: 'Operator Error', value: Math.round(15 * ratio) },
-      { name: 'Material Shortage', value: Math.round(15 * ratio) },
-    ].filter(item => item.value > 0);
-  }, [selectedDepartments]);
-
-  const COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ef4444'];
-
-  const mockIncidents = [
-    { id: 'MNT-1092', category: 'Mechanical Breakdown', line: 'Line 2', time: '08:45 AM', duration: '45m', operator: 'A. Ivanov' },
-    { id: 'MNT-1095', category: 'Mechanical Breakdown', line: 'Line 1', time: '11:20 AM', duration: '12m', operator: 'S. Karimova' },
-    { id: 'MNT-1088', category: 'Electrical Fault', line: 'Line 3', time: '02:15 PM', duration: '25m', operator: 'R. Rustamov' },
-    { id: 'MNT-1091', category: 'Operator Error', line: 'Line 1', time: '04:00 PM', duration: '8m', operator: 'F. Qosimov' },
-    { id: 'MNT-1099', category: 'Material Shortage', line: 'Line 2', time: '09:30 AM', duration: '15m', operator: 'O. Jabborov' },
-    { id: 'MNT-1102', category: 'Mechanical Breakdown', line: 'Line 1', time: '05:45 PM', duration: '75m', operator: 'A. Ivanov' },
-  ];
 
   // Data calculations - safe with defaults
   const totalLines = productionLines.length;
@@ -309,17 +274,52 @@ export default function ReportsPage() {
     win.document.close();
     win.focus();
 
-    setIsReportLoading(true);
     setTimeout(() => {
       setIsReportLoading(false);
       win.print();
     }, 800); // simulated complex generation delay
   };
 
+  const exportTableToCsv = (sectionId: string, filename: string) => {
+    const section = document.getElementById(sectionId);
+    if (!section) return;
+    const table = section.querySelector('table');
+    if (!table) return;
+
+    let csv = [];
+    const rows = table.querySelectorAll('tr');
+
+    for (let i = 0; i < rows.length; i++) {
+      let row = [], cols = rows[i].querySelectorAll('td, th');
+      for (let j = 0; j < cols.length; j++) {
+        // Retrieve text content and clean up
+        let data = cols[j].textContent?.replace(/(\\r\\n|\\n|\\r)/gm, '').trim() || '';
+        // Escape double quotes
+        data = data.replace(/"/g, '""');
+        // Check if parsing needed for thousands separator (Optional)
+        row.push('"' + data + '"');
+      }
+      csv.push(row.join(','));
+    }
+
+    const csvString = csv.join('\\n');
+    const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+
+    link.setAttribute('href', url);
+    link.setAttribute('download', filename + '.csv');
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+
   // ALWAYS render - never return null
   return (
-    <div className="min-h-screen p-6 bg-slate-900 text-slate-100">
-      <div className="w-full max-w-[1600px] mx-auto">
+    <div className="min-h-full p-6 bg-slate-900 text-slate-100">
+      <div className="w-full mx-auto">
         {/* Header Area */}
         <div className="mb-8 flex items-start justify-between gap-6 print:flex-col relative">
           <div>
@@ -355,62 +355,118 @@ export default function ReportsPage() {
         </div>
 
         {/* Global Filter Bar (SAC Style) */}
-        <div className="mb-8 p-3 bg-slate-800/80 border border-slate-700/50 rounded-xl flex flex-wrap items-center gap-4 shadow-sm backdrop-blur-md">
-          <div className="flex items-center gap-2 px-2 border-r border-slate-700 pr-4">
-            <Filter className="w-4 h-4 text-slate-400" />
-            <span className="text-xs font-bold text-slate-400 tracking-wider">GLOBAL FILTERS</span>
-          </div>
+        {/* Simplified Global Filter Bar for Executives */}
+        <div className="mb-8 p-6 bg-slate-800 border border-slate-700 rounded-xl shadow-lg flex flex-col xl:flex-row gap-6 items-start xl:items-center">
 
-          {/* Date Range Picker */}
-          <div className="flex items-center bg-slate-900/50 border border-slate-700 rounded-md p-0.5">
-            <div className="px-3 py-1.5 flex items-center justify-center text-xs font-medium text-slate-400 border-r border-slate-700/50"><Calendar className="w-3.5 h-3.5 mr-2" /> Date</div>
-            {(['Today', 'Last 7 Days', 'This Month', 'Custom Range'] as const).map(preset => (
-              <button
-                key={preset}
-                onClick={() => setGlobalDateRange(preset)}
-                className={`px-4 py-1.5 text-xs font-medium rounded transition-colors ${globalDateRange === preset ? 'bg-indigo-500/20 text-indigo-400 shadow-sm border border-indigo-500/30' : 'text-slate-400 hover:text-slate-200'}`}
-              >
-                {preset}
-              </button>
-            ))}
-          </div>
+          {/* Date Selection */}
+          <div className="flex-1 w-full">
+            <label className="block text-sm font-bold text-slate-300 mb-3 uppercase tracking-wider">🗓️ Sana Oralig'ini Tanlash (Hisobot Davri)</label>
+            <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
 
-          {/* Custom Date Inputs (only visible if Custom Range selected) */}
-          {globalDateRange === 'Custom Range' && (
-            <div className="flex items-center gap-2 bg-slate-900/50 border border-slate-700 rounded-md p-1 px-2">
-              <input type="date" value={customDate.start} onChange={(e) => setCustomDate({ ...customDate, start: e.target.value })} className="bg-transparent text-slate-300 text-xs outline-none" />
-              <span className="text-slate-500">-</span>
-              <input type="date" value={customDate.end} onChange={(e) => setCustomDate({ ...customDate, end: e.target.value })} className="bg-transparent text-slate-300 text-xs outline-none" />
+              <div className="flex bg-slate-900 border border-slate-700 rounded-lg p-1">
+                {(['Bugun', 'Oxirgi 7 kun', 'Shu Oy'] as const).map((preset) => {
+                  const enPreset = preset === 'Bugun' ? 'Today' : preset === 'Oxirgi 7 kun' ? 'Last 7 Days' : 'This Month';
+                  const active = globalDateRange === enPreset;
+                  return (
+                    <button
+                      key={preset}
+                      onClick={() => setGlobalDateRange(enPreset)}
+                      className={`px-5 py-2.5 text-sm font-bold rounded-md transition-colors ${active ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-slate-200'}`}
+                    >
+                      {preset}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="flex items-center gap-3 bg-slate-900 border border-slate-700 rounded-lg p-2 w-full sm:w-auto">
+                <div className="flex flex-col">
+                  <span className="text-[10px] text-slate-500 uppercase px-1">Dan (Boshlanish)</span>
+                  <input
+                    type="date"
+                    value={globalDateRange === 'Custom Range' ? customDate.start : format(activeDateRange.start, 'yyyy-MM-dd')}
+                    onChange={(e) => {
+                      setGlobalDateRange('Custom Range');
+                      setCustomDate(prev => ({ ...prev, start: e.target.value }));
+                    }}
+                    className="bg-transparent text-white font-medium outline-none px-2 py-1 w-full sm:w-auto [color-scheme:dark]"
+                  />
+                </div>
+                <span className="text-slate-500 font-bold">-</span>
+                <div className="flex flex-col">
+                  <span className="text-[10px] text-slate-500 uppercase px-1">Gacha (Tugash)</span>
+                  <input
+                    type="date"
+                    value={globalDateRange === 'Custom Range' ? customDate.end : format(activeDateRange.end, 'yyyy-MM-dd')}
+                    onChange={(e) => {
+                      setGlobalDateRange('Custom Range');
+                      setCustomDate(prev => ({ ...prev, end: e.target.value }));
+                    }}
+                    className="bg-transparent text-white font-medium outline-none px-2 py-1 w-full sm:w-auto [color-scheme:dark]"
+                  />
+                </div>
+              </div>
             </div>
-          )}
-
-          {/* Department Select */}
-          <div className="flex items-center bg-slate-900/50 border border-slate-700 rounded-md p-0.5">
-            <div className="px-3 py-1.5 flex items-center justify-center text-xs font-medium text-slate-400 border-r border-slate-700/50"><Users className="w-3.5 h-3.5 mr-2" /> Dept</div>
-            {['Assembly A', 'Assembly B', 'Warehouse', 'Canteen', 'Maintenance'].map(dept => (
-              <button
-                key={dept}
-                onClick={() => toggleDept(dept)}
-                className={`px-3 py-1.5 text-xs font-medium rounded transition-colors ${selectedDepartments.includes(dept) ? 'bg-slate-700 text-white shadow-sm' : 'text-slate-500 hover:text-slate-300'}`}
-              >
-                {dept}
-              </button>
-            ))}
           </div>
 
-          <div className="ml-auto">
-            <button
-              onClick={() => setIsComparisonMode(!isComparisonMode)}
-              className={`flex items-center gap-2 px-4 py-2 text-xs font-bold rounded-lg border transition-all ${isComparisonMode ? 'bg-indigo-500 text-white border-indigo-400 shadow-[0_0_15px_rgba(99,102,241,0.3)]' : 'bg-slate-900/50 border-slate-700 text-slate-400 hover:bg-slate-800 hover:text-white'}`}
-            >
-              <Activity className="w-3.5 h-3.5" />
-              COMPARISON MODE {isComparisonMode ? 'ON' : 'OFF'}
-            </button>
+          {/* Department Selection */}
+          <div className="w-full xl:w-auto border-t xl:border-t-0 xl:border-l border-slate-700 pt-6 xl:pt-0 xl:pl-6">
+            <label className="block text-sm font-bold text-slate-300 mb-3 uppercase tracking-wider">🏢 Filtrlash (Bo'limlar va Holat)</label>
+            <div className="flex flex-col sm:flex-row gap-4 items-center">
+
+              <div className="relative w-full sm:w-auto">
+                <select
+                  className="appearance-none bg-slate-900 border border-slate-700 text-white text-sm font-semibold rounded-lg px-4 py-3.5 pr-10 w-full outline-none focus:border-indigo-500 cursor-pointer shadow-sm"
+                  onChange={(e) => {
+                    if (e.target.value === 'ALL') {
+                      setSelectedDepartments(['Assembly A', 'Assembly B', 'Warehouse', 'Canteen', 'Maintenance']);
+                    } else {
+                      setSelectedDepartments([e.target.value]);
+                    }
+                  }}
+                >
+                  <option value="ALL">Barcha Bo'limlar</option>
+                  <option value="Assembly A">Yig'ish Liniyasi A</option>
+                  <option value="Assembly B">Yig'ish Liniyasi B</option>
+                  <option value="Warehouse">Omborxona</option>
+                  <option value="Maintenance">Ta'mirlash</option>
+                </select>
+                <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                  <Filter className="w-4 h-4" />
+                </div>
+              </div>
+
+              <label className="flex items-center gap-3 cursor-pointer bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 w-full sm:w-auto hover:bg-slate-800 transition-colors">
+                <input
+                  type="checkbox"
+                  checked={isComparisonMode}
+                  onChange={(e) => setIsComparisonMode(e.target.checked)}
+                  className="w-5 h-5 rounded border-slate-500 text-indigo-600 focus:ring-indigo-500 bg-slate-800"
+                />
+                <span className="text-sm font-semibold text-slate-300">O'tgan davr bilan yondoshish</span>
+              </label>
+
+            </div>
           </div>
         </div>
 
         {/* Executive Summary Tiles */}
-        <div id="reports-full" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8 mt-4 print:grid-cols-2 print:break-inside-avoid">
+        <div id="reports-full" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-6 mb-8 mt-4 print:grid-cols-3 print:break-inside-avoid">
+          {/* NEW TILE: Daily Sales Revenue */}
+          <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-5 flex flex-col relative overflow-hidden shadow-[inset_0_2px_15px_rgba(16,185,129,0.05)]">
+            <div className="absolute top-0 right-0 p-4 opacity-[0.05]">
+              <DollarSign className="w-20 h-20 text-emerald-500" />
+            </div>
+            <div className="flex items-center gap-2 text-slate-400 mb-2">
+              <span className="bg-emerald-500/20 text-emerald-500 rounded p-1"><DollarSign className="w-3.5 h-3.5" /></span>
+              <h3 className="font-medium text-sm text-emerald-400/90 tracking-widest uppercase">Bugungi Sotuv</h3>
+            </div>
+            <div className="flex flex-col mt-1 z-10">
+              <span className="text-3xl font-black text-white tracking-tight">{(todayRevenue / 1000000).toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}M UZS</span>
+              <p className="text-[10px] text-slate-400 leading-tight mt-1 max-w-[90%]">Direct contract dispatches today.</p>
+            </div>
+          </div>
+
           {/* Tile 1: OEE */}
           <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-5 flex flex-col relative overflow-hidden">
             <div className="absolute top-0 right-0 p-4 opacity-10">
@@ -494,94 +550,7 @@ export default function ReportsPage() {
           </div>
         </div>
 
-        {/* Interactive Data Visualizations */}
-        <div className="grid grid-cols-1 lg:grid-cols-10 gap-6 mb-8 print:hidden">
-          {/* Left Chart (60%) */}
-          <div className="lg:col-span-6 bg-slate-800/50 border border-slate-700 rounded-xl p-5 flex flex-col">
-            <h3 className="font-medium text-slate-200 mb-4 flex items-center gap-2">
-              Line Performance: Plan vs Actual (7 Days)
-            </h3>
-            <div className="flex-1 min-h-[300px] w-full relative">
-              {isFetchingData && (
-                <div className="absolute inset-0 z-10 bg-slate-800/80 backdrop-blur-sm flex items-center justify-center rounded-lg animate-pulse">
-                  <Loader2 className="w-8 h-8 text-indigo-500 animate-spin" />
-                </div>
-              )}
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={chartData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} />
-                  <XAxis dataKey="name" stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} />
-                  <YAxis stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} />
-                  <RechartsTooltip
-                    contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', color: '#f8fafc', borderRadius: '8px' }}
-                    itemStyle={{ color: '#e2e8f0' }}
-                  />
-                  <Line type="monotone" dataKey="plan" stroke="#94a3b8" strokeWidth={2} strokeDasharray="5 5" dot={false} name="Plan (Target)" />
-                  {selectedDepartments.includes('Assembly A') && <Line type="monotone" dataKey="actualLine1" stroke="#6366f1" strokeWidth={3} dot={{ r: 4, strokeWidth: 2 }} name="Line 1" />}
-                  {selectedDepartments.includes('Assembly A') && <Line type="monotone" dataKey="actualLine2" stroke="#10b981" strokeWidth={3} dot={{ r: 4, strokeWidth: 2 }} name="Line 2" />}
-                  {selectedDepartments.includes('Assembly B') && <Line type="monotone" dataKey="actualLine3" stroke="#f59e0b" strokeWidth={3} dot={{ r: 4, strokeWidth: 2 }} name="Line 3" />}
-                  {isComparisonMode && (
-                    <>
-                      {selectedDepartments.includes('Assembly A') && <Line type="monotone" dataKey="prevLine1" stroke="#6366f1" strokeWidth={2} strokeDasharray="4 4" dot={false} strokeOpacity={0.4} name="Line 1 (Prev)" />}
-                      {selectedDepartments.includes('Assembly A') && <Line type="monotone" dataKey="prevLine2" stroke="#10b981" strokeWidth={2} strokeDasharray="4 4" dot={false} strokeOpacity={0.4} name="Line 2 (Prev)" />}
-                      {selectedDepartments.includes('Assembly B') && <Line type="monotone" dataKey="prevLine3" stroke="#f59e0b" strokeWidth={2} strokeDasharray="4 4" dot={false} strokeOpacity={0.4} name="Line 3 (Prev)" />}
-                    </>
-                  )}
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
 
-          {/* Right Chart (40%) */}
-          <div className="lg:col-span-4 bg-slate-800/50 border border-slate-700 rounded-xl p-5 flex flex-col">
-            <h3 className="font-medium text-slate-200 mb-4 flex items-center gap-2">
-              Downtime Causes Breakdown
-            </h3>
-            <div className="flex-1 min-h-[300px] w-full flex items-center justify-center relative">
-              {isFetchingData && (
-                <div className="absolute inset-0 z-10 bg-slate-800/80 backdrop-blur-sm flex items-center justify-center rounded-lg animate-pulse">
-                  <Loader2 className="w-8 h-8 text-indigo-500 animate-spin" />
-                </div>
-              )}
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={pieData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={80}
-                    outerRadius={110}
-                    paddingAngle={5}
-                    dataKey="value"
-                    stroke="none"
-                  >
-                    {pieData.map((entry, index) => (
-                      <Cell
-                        key={`cell-${index}`}
-                        fill={COLORS[index % COLORS.length]}
-                        className="cursor-pointer hover:opacity-80 transition-opacity"
-                        onClick={() => setDrillDownCategory(entry.name)}
-                      />
-                    ))}
-                  </Pie>
-                  <RechartsTooltip
-                    contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', color: '#f8fafc', borderRadius: '8px' }}
-                    itemStyle={{ color: '#e2e8f0' }}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-            {/* Custom Legend for Pie */}
-            <div className="flex flex-wrap gap-4 mt-2 justify-center">
-              {pieData.map((entry, index) => (
-                <div key={entry.name} className="flex items-center gap-2 text-xs text-slate-300">
-                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[index % COLORS.length] }}></div>
-                  {entry.name} ({entry.value}%)
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
 
         {/* Interactive Data Visualizations */}
         <div className={`space-y-8 print:space-y-6 ${isFetchingData ? 'opacity-50 pointer-events-none transition-opacity' : 'transition-opacity duration-300'}`}>
@@ -589,12 +558,20 @@ export default function ReportsPage() {
           <section id="reports-production" className="print:break-inside-avoid bg-slate-800/50 border border-slate-700 rounded-xl p-6">
             <div className="flex items-center justify-between mb-4 print:hidden">
               <h3 className="text-xl font-semibold text-white">{t('reports.production.title')}</h3>
-              <button
-                onClick={() => exportSectionToPdf('reports-production', t('reports.production.pdfTitle'))}
-                className="text-sm text-slate-400 hover:text-white"
-              >
-                {t('reports.pdf')}
-              </button>
+              <div className="flex items-center gap-4">
+                <button
+                  onClick={() => exportTableToCsv('reports-production', t('reports.production.title'))}
+                  className="flex items-center gap-1.5 text-sm font-medium text-slate-400 hover:text-emerald-400 transition-colors"
+                >
+                  <FileText className="w-4 h-4" /> Excel / CSV
+                </button>
+                <button
+                  onClick={() => exportSectionToPdf('reports-production', t('reports.production.pdfTitle'))}
+                  className="flex items-center gap-1.5 text-sm text-slate-400 hover:text-white"
+                >
+                  {t('reports.pdf')}
+                </button>
+              </div>
             </div>
             <div className="border border-slate-700 rounded-lg overflow-hidden bg-slate-800/30">
               <table className="w-full border-collapse text-sm">
@@ -654,12 +631,20 @@ export default function ReportsPage() {
           <section id="reports-finished" className="print:break-inside-avoid bg-slate-800/50 border border-slate-700 rounded-xl p-6">
             <div className="flex items-center justify-between mb-4 print:hidden">
               <h3 className="text-xl font-semibold text-white">{t('reports.finishedGoods.title')}</h3>
-              <button
-                onClick={() => exportSectionToPdf('reports-finished', t('reports.finishedGoods.pdfTitle'))}
-                className="text-sm text-slate-400 hover:text-white"
-              >
-                {t('reports.pdf')}
-              </button>
+              <div className="flex items-center gap-4">
+                <button
+                  onClick={() => exportTableToCsv('reports-finished', t('reports.finishedGoods.pdfTitle'))}
+                  className="flex items-center gap-1.5 text-sm font-medium text-slate-400 hover:text-emerald-400 transition-colors"
+                >
+                  <FileText className="w-4 h-4" /> Excel / CSV
+                </button>
+                <button
+                  onClick={() => exportSectionToPdf('reports-finished', t('reports.finishedGoods.pdfTitle'))}
+                  className="flex items-center gap-1.5 text-sm text-slate-400 hover:text-white"
+                >
+                  {t('reports.pdf')}
+                </button>
+              </div>
             </div>
             <div className="border border-slate-700 rounded-lg overflow-hidden bg-slate-800/30">
               <table className="w-full border-collapse text-sm">
@@ -699,12 +684,20 @@ export default function ReportsPage() {
           <section id="reports-maintenance" className="print:break-inside-avoid bg-slate-800/50 border border-slate-700 rounded-xl p-6">
             <div className="flex items-center justify-between mb-4 print:hidden">
               <h3 className="text-xl font-semibold text-white">{t('reports.maintenance.title')}</h3>
-              <button
-                onClick={() => exportSectionToPdf('reports-maintenance', t('reports.maintenance.title'))}
-                className="text-sm text-slate-400 hover:text-white"
-              >
-                {t('reports.pdf')}
-              </button>
+              <div className="flex items-center gap-4">
+                <button
+                  onClick={() => exportTableToCsv('reports-maintenance', t('reports.maintenance.title'))}
+                  className="flex items-center gap-1.5 text-sm font-medium text-slate-400 hover:text-emerald-400 transition-colors"
+                >
+                  <FileText className="w-4 h-4" /> Excel / CSV
+                </button>
+                <button
+                  onClick={() => exportSectionToPdf('reports-maintenance', t('reports.maintenance.title'))}
+                  className="flex items-center gap-1.5 text-sm text-slate-400 hover:text-white"
+                >
+                  {t('reports.pdf')}
+                </button>
+              </div>
             </div>
             <div className="border border-slate-700 rounded-lg overflow-hidden bg-slate-800/30">
               <table className="w-full border-collapse text-sm">
@@ -772,12 +765,20 @@ export default function ReportsPage() {
           <section id="reports-suppliers" className="print:break-inside-avoid bg-slate-800/50 border border-slate-700 rounded-xl p-6">
             <div className="flex items-center justify-between mb-4 print:hidden">
               <h3 className="text-xl font-semibold text-white">{t('reports.suppliers.title')}</h3>
-              <button
-                onClick={() => exportSectionToPdf('reports-suppliers', t('reports.suppliers.title'))}
-                className="text-sm text-slate-400 hover:text-white"
-              >
-                {t('reports.pdf')}
-              </button>
+              <div className="flex items-center gap-4">
+                <button
+                  onClick={() => exportTableToCsv('reports-suppliers', t('reports.suppliers.title'))}
+                  className="flex items-center gap-1.5 text-sm font-medium text-slate-400 hover:text-emerald-400 transition-colors"
+                >
+                  <FileText className="w-4 h-4" /> Excel / CSV
+                </button>
+                <button
+                  onClick={() => exportSectionToPdf('reports-suppliers', t('reports.suppliers.title'))}
+                  className="flex items-center gap-1.5 text-sm text-slate-400 hover:text-white"
+                >
+                  {t('reports.pdf')}
+                </button>
+              </div>
             </div>
             <div className="border border-slate-700 rounded-lg overflow-hidden bg-slate-800/30">
               <table className="w-full border-collapse text-sm">
@@ -821,12 +822,20 @@ export default function ReportsPage() {
           <section id="reports-qc" className="print:break-inside-avoid bg-slate-800/50 border border-slate-700 rounded-xl p-6">
             <div className="flex items-center justify-between mb-4 print:hidden">
               <h3 className="text-xl font-semibold text-white">{t('reports.qc.title')}</h3>
-              <button
-                onClick={() => exportSectionToPdf('reports-qc', t('reports.qc.title'))}
-                className="text-sm text-slate-400 hover:text-white"
-              >
-                {t('reports.pdf')}
-              </button>
+              <div className="flex items-center gap-4">
+                <button
+                  onClick={() => exportTableToCsv('reports-qc', t('reports.qc.title'))}
+                  className="flex items-center gap-1.5 text-sm font-medium text-slate-400 hover:text-emerald-400 transition-colors"
+                >
+                  <FileText className="w-4 h-4" /> Excel / CSV
+                </button>
+                <button
+                  onClick={() => exportSectionToPdf('reports-qc', t('reports.qc.title'))}
+                  className="flex items-center gap-1.5 text-sm text-slate-400 hover:text-white"
+                >
+                  {t('reports.pdf')}
+                </button>
+              </div>
             </div>
             <div className="border border-slate-700 rounded-lg overflow-hidden bg-slate-800/30">
               <table className="w-full border-collapse text-sm">
@@ -869,12 +878,20 @@ export default function ReportsPage() {
           <section id="reports-hr-stats" className="print:break-inside-avoid bg-slate-800/50 border border-slate-700 rounded-xl p-6">
             <div className="flex items-center justify-between mb-4 print:hidden">
               <h3 className="text-xl font-semibold text-white">{t('reports.hr.title')}</h3>
-              <button
-                onClick={() => exportSectionToPdf('reports-hr-stats', t('reports.hr.title'))}
-                className="text-sm text-slate-400 hover:text-white"
-              >
-                {t('reports.pdf')}
-              </button>
+              <div className="flex items-center gap-4">
+                <button
+                  onClick={() => exportTableToCsv('reports-hr-stats', t('reports.hr.title'))}
+                  className="flex items-center gap-1.5 text-sm font-medium text-slate-400 hover:text-emerald-400 transition-colors"
+                >
+                  <FileText className="w-4 h-4" /> Excel / CSV
+                </button>
+                <button
+                  onClick={() => exportSectionToPdf('reports-hr-stats', t('reports.hr.title'))}
+                  className="flex items-center gap-1.5 text-sm text-slate-400 hover:text-white"
+                >
+                  {t('reports.pdf')}
+                </button>
+              </div>
             </div>
             <div className="border border-slate-700 rounded-lg overflow-hidden bg-slate-800/30">
               <div className="px-4 py-3 text-xs text-slate-400 bg-slate-800 border-b border-slate-700">
@@ -911,57 +928,6 @@ export default function ReportsPage() {
         </div>
       </div>
 
-      {/* Side Panel Dialog for Data Drill-Down */}
-      <Dialog open={!!drillDownCategory} onOpenChange={(open) => !open && setDrillDownCategory(null)}>
-        <DialogContent className="sm:max-w-[600px] border-slate-700 bg-slate-900 shadow-2xl overflow-hidden p-0 text-slate-200">
-          <div className="p-5 border-b border-slate-800 bg-slate-800/50">
-            <DialogHeader>
-              <DialogTitle className="text-lg font-bold text-white flex items-center gap-2">
-                <Filter className="w-5 h-5 text-indigo-400" /> Insight Drill-Down: {drillDownCategory}
-              </DialogTitle>
-              <DialogDescription className="text-slate-400">
-                Showing specific maintenance incident records matching the selected downtime category.
-              </DialogDescription>
-            </DialogHeader>
-          </div>
-
-          <div className="p-0 bg-slate-900/50 max-h-[60vh] overflow-y-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-slate-800/80 sticky top-0 border-b border-slate-700/50">
-                <tr>
-                  <th className="px-4 py-3 text-left font-semibold text-slate-300">Ticket ID</th>
-                  <th className="px-4 py-3 text-left font-semibold text-slate-300">Line</th>
-                  <th className="px-4 py-3 text-left font-semibold text-slate-300">Time</th>
-                  <th className="px-4 py-3 text-left font-semibold text-slate-300">Operator</th>
-                  <th className="px-4 py-3 text-right font-semibold text-slate-300">Duration</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-800">
-                {mockIncidents.filter(i => drillDownCategory ? i.category.includes(drillDownCategory) : true).map((inc, i) => (
-                  <tr key={i} className="hover:bg-slate-800/30 transition-colors">
-                    <td className="px-4 py-3 font-mono text-xs font-semibold text-indigo-400">{inc.id}</td>
-                    <td className="px-4 py-3 text-white">{inc.line}</td>
-                    <td className="px-4 py-3 text-slate-400">{inc.time}</td>
-                    <td className="px-4 py-3 text-slate-300">{inc.operator}</td>
-                    <td className="px-4 py-3 text-right text-rose-400 font-bold">{inc.duration}</td>
-                  </tr>
-                ))}
-                {mockIncidents.filter(i => drillDownCategory ? i.category.includes(drillDownCategory) : true).length === 0 && (
-                  <tr>
-                    <td colSpan={5} className="py-8 text-center text-slate-500">No specific records found for this slice in the current time window.</td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-
-          <div className="p-4 border-t border-slate-800 bg-slate-900 flex justify-end">
-            <button onClick={() => setDrillDownCategory(null)} className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-md text-sm font-semibold transition-colors">
-              Close View
-            </button>
-          </div>
-        </DialogContent>
-      </Dialog>
 
     </div>
   );

@@ -49,7 +49,7 @@ export function OperatorDailyLinePlan() {
   const timeStr = now.toLocaleTimeString('uz-UZ', { hour: '2-digit', minute: '2-digit' });
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-300">
+    <div className="min-h-full bg-slate-950 text-slate-300">
       {/* ── Header ── */}
       <div className="px-6 md:px-10 py-8 border-b border-slate-800/60 bg-slate-900/40 backdrop-blur-xl">
         <div className="flex items-center justify-between flex-wrap gap-4">

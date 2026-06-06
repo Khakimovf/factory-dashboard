@@ -239,7 +239,7 @@ export function FactoryProvider({ children }: { children: ReactNode }) {
       });
 
       if (stockCriticallyLow) {
-        toast.error(`Diqqat! ${line.name} uchun kerakli materiallar zaxirasi tugadi.`, { duration: 5000 });
+        toast.error(`Diqqat! Asosiy omborda material tugadi. ${line.name} Liniya zaxirasidan (Line Buffer) foydalanmoqda...`, { duration: 5000, icon: '🔄' });
       }
 
       return updatedMaterials;

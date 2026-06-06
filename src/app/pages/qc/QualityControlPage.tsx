@@ -309,7 +309,7 @@ export function QualityControlPage() {
   }, [location.state]);
 
   return (
-    <div className="min-h-screen p-8 bg-slate-50 dark:bg-slate-950 font-sans selection:bg-rose-500/30">
+    <div className="min-h-full p-8 bg-slate-50 dark:bg-slate-950 font-sans selection:bg-rose-500/30">
       {/* Header with Persistent Floating Scan */}
       <div className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-6 relative">
         <div className="flex items-center gap-4">
@@ -351,7 +351,7 @@ export function QualityControlPage() {
       </button>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-1">
+        <TabsList className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-1 w-full justify-start overflow-x-auto flex-nowrap">
           <TabsTrigger value="overview" className="flex items-center gap-2 data-[state=active]:bg-rose-500 data-[state=active]:text-white">
             <Activity className="w-4 h-4" />
             Line Monitor

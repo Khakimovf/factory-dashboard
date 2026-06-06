@@ -111,7 +111,7 @@ export default function AuditLogPage() {
     };
 
     return (
-        <div className="min-h-screen bg-slate-950 p-8 space-y-8 font-sans">
+        <div className="min-h-full bg-slate-950 p-8 space-y-8 font-sans">
             {/* Header section */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                 <div className="flex items-center gap-4">

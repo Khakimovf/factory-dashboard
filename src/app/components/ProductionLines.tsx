@@ -5,9 +5,13 @@ import { useLanguage } from '../context/LanguageContext';
 import { useDailyProductionPlan } from '../context/DailyProductionPlanContext';
 import {
   Factory, Plus, Activity, AlertCircle, PlayCircle, PauseCircle,
-  TrendingUp, Target, Wrench, PackageX, Clock, ShieldCheck, CheckCircle2,
-  Monitor, Construction, Layers
+  Wrench, Clock, ShieldCheck,
+  Monitor, Construction, ArrowRight, TrendingUp, Gauge, Target, Percent
 } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from './ui/card';
+import { Badge } from './ui/badge';
+import { Progress } from './ui/progress';
+import { Button } from './ui/button';
 
 // ---------------- Analytics header ----------------
 
@@ -22,25 +26,37 @@ interface AnalyticCardProps {
 }
 
 function AnalyticCard({ icon, iconBg, label, value, sub, accent = 'blue', pulse }: AnalyticCardProps) {
-  const accentText: Record<string, string> = {
-    green: 'text-green-400',
-    blue: 'text-blue-400',
-    red: 'text-red-400',
-    yellow: 'text-yellow-400',
+  const accentColors: Record<string, string> = {
+    green: 'from-emerald-500/10 to-emerald-500/5 text-emerald-500 border-emerald-500/20',
+    blue: 'from-blue-500/10 to-blue-500/5 text-blue-500 border-blue-500/20',
+    red: 'from-rose-500/10 to-rose-500/5 text-rose-500 border-rose-500/20',
+    yellow: 'from-amber-500/10 to-amber-500/5 text-amber-500 border-amber-500/20',
   };
+
+  const accentText: Record<string, string> = {
+    green: 'text-emerald-600 dark:text-emerald-400',
+    blue: 'text-blue-600 dark:text-blue-400',
+    red: 'text-rose-600 dark:text-rose-400',
+    yellow: 'text-amber-600 dark:text-amber-400',
+  };
+
   return (
-    <div className="relative bg-gray-900 dark:bg-gray-900 border border-gray-700/60 rounded-xl p-5 overflow-hidden flex flex-col gap-3 shadow-lg">
-      {/* Subtle glow */}
-      <div className={`absolute inset-0 opacity-[0.04] ${iconBg} rounded-xl`} />
-      <div className="flex items-center justify-between relative">
-        <span className="text-[11px] font-semibold uppercase tracking-widest text-gray-400">{label}</span>
-        <span className={`p-2 rounded-lg ${iconBg} bg-opacity-20`}>{icon}</span>
-      </div>
-      <div className="relative">
-        <p className={`text-2xl font-bold tracking-tight ${accentText[accent]} ${pulse ? 'animate-pulse' : ''}`}>{value}</p>
-        {sub && <p className="text-xs text-gray-500 mt-0.5">{sub}</p>}
-      </div>
-    </div>
+    <Card className={`overflow-hidden border bg-gradient-to-br ${accentColors[accent]} transition-all hover:shadow-md group`}>
+      <CardContent className="p-5">
+        <div className="flex items-center justify-between mb-3">
+          <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground group-hover:text-foreground transition-colors">{label}</p>
+          <div className={`p-2 rounded-lg ${iconBg} bg-opacity-20 transition-transform group-hover:scale-110 duration-300`}>
+            {icon}
+          </div>
+        </div>
+        <div>
+          <h3 className={`text-2xl font-bold tracking-tight ${accentText[accent]} ${pulse ? 'animate-pulse' : ''}`}>
+            {value}
+          </h3>
+          {sub && <p className="text-xs text-muted-foreground mt-1 font-medium">{sub}</p>}
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -65,7 +81,6 @@ export function ProductionLines() {
     const riskCount = materials.filter(m =>
       m.minStock > 0 && m.quantity < m.minStock * THIRTY_MIN_THRESHOLD_RATIO
     ).length;
-    // Mock SAP readiness heuristic: subtract 5% per critical part risk
     const readiness = Math.max(0, 100 - (riskCount * 5));
 
     // 3. Downtime Impact (Hours lost)
@@ -77,30 +92,26 @@ export function ProductionLines() {
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'active': return <PlayCircle className="w-5 h-5 text-green-600 dark:text-green-400" />;
-      case 'idle': return <PauseCircle className="w-5 h-5 text-yellow-600 dark:text-yellow-400" />;
-      case 'maintenance': return <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400" />;
+      case 'active': return <PlayCircle className="w-5 h-5 text-emerald-500" />;
+      case 'idle': return <PauseCircle className="w-5 h-5 text-amber-500" />;
+      case 'maintenance': return <AlertCircle className="w-5 h-5 text-rose-500" />;
       default: return null;
     }
   };
 
-  const getStatusColor = (status: string) => {
+  const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'active': return 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400';
-      case 'idle': return 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400';
-      case 'maintenance': return 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400';
-      default: return 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300';
+      case 'active': return <Badge variant="outline" className="bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800 uppercase text-[10px] font-bold tracking-wider">Active</Badge>;
+      case 'idle': return <Badge variant="outline" className="bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800 uppercase text-[10px] font-bold tracking-wider">Idle</Badge>;
+      case 'maintenance': return <Badge variant="outline" className="bg-rose-50 dark:bg-rose-950/30 text-rose-700 dark:text-rose-400 border-rose-200 dark:border-rose-800 uppercase text-[10px] font-bold tracking-wider">Maintenance</Badge>;
+      default: return <Badge variant="outline" className="uppercase text-[10px] font-bold tracking-wider">{status}</Badge>;
     }
   };
 
-  const linesDown = productionLines.filter(l => l.status === 'maintenance_requested').length;
-  const linesUnderRepair = productionLines.filter(l => l.status === 'maintenance').length;
-  const maintenanceAlert = linesDown > 0 || linesUnderRepair > 0;
-
   const getLineIcon = (type: string, status: string) => {
     const isActive = status === 'active';
-    const baseClass = `w-6 h-6 ${isActive ? 'text-green-600 dark:text-green-400' : 'text-blue-600 dark:text-blue-400'}`;
-    const bgClass = `w-12 h-12 rounded-lg flex items-center justify-center ${isActive ? 'bg-green-50 dark:bg-green-900/20' : 'bg-blue-50 dark:bg-blue-900/20'}`;
+    const baseClass = `w-6 h-6 ${isActive ? 'text-emerald-500' : 'text-blue-500'}`;
+    const bgClass = `w-12 h-12 rounded-xl flex items-center justify-center transition-colors ${isActive ? 'bg-emerald-500/10 shadow-inner' : 'bg-blue-500/10 shadow-inner'}`;
 
     let icon = <Factory className={baseClass} />;
     if (type === 'sap_inpanel') icon = <Monitor className={baseClass} />;
@@ -120,38 +131,41 @@ export function ProductionLines() {
   };
 
   return (
-    <div className="p-8 bg-gray-50 dark:bg-gray-900 min-h-screen">
+    <div className="p-8 bg-gray-50 dark:bg-gray-950 min-h-full">
       {/* Page header */}
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h2 className="text-3xl font-semibold text-gray-900 dark:text-white">{t('production.title')}</h2>
-          <p className="text-gray-500 dark:text-gray-400 mt-1">{t('production.subtitle')}</p>
+          <h2 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-3 tracking-tight">
+            <TrendingUp className="w-8 h-8 text-blue-600" />
+            {t('production.title')}
+          </h2>
+          <p className="text-muted-foreground mt-1 font-medium">{t('production.subtitle')}</p>
         </div>
-        <button
-          onClick={() => setShowAddModal(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-        >
-          <Plus className="w-5 h-5" />
-          {t('production.addLine')}
-        </button>
+        <div className="flex items-center gap-3">
+          <Button
+            onClick={() => setShowAddModal(true)}
+            className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl px-5 h-11 shadow-lg shadow-blue-500/20 transition-all active:scale-95"
+          >
+            <Plus className="w-5 h-5 mr-2" />
+            {t('production.addLine')}
+          </Button>
+        </div>
       </div>
 
       {/* ── SAP KPI Header ── */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        {/* 1. Factory Capacity */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
         <AnalyticCard
-          icon={<Factory className="w-6 h-6 text-blue-400" />}
-          iconBg="bg-blue-600"
+          icon={<Gauge className="w-6 h-6 text-blue-500" />}
+          iconBg="bg-blue-500"
           label="Factory Capacity"
           value={`${analytics.capacity}%`}
           sub="Overall lines utilized"
           accent={analytics.capacity >= 80 ? 'green' : analytics.capacity >= 50 ? 'yellow' : 'red'}
         />
 
-        {/* 2. Material Readiness */}
         <AnalyticCard
-          icon={<ShieldCheck className="w-6 h-6 text-green-400" />}
-          iconBg="bg-green-600"
+          icon={<ShieldCheck className="w-6 h-6 text-emerald-500" />}
+          iconBg="bg-emerald-500"
           label="Material Readiness"
           value={`${analytics.readiness}%`}
           sub={analytics.riskCount === 0 ? 'All plans sufficiently covered' : `${analytics.riskCount} parts in critical shortage`}
@@ -159,10 +173,9 @@ export function ProductionLines() {
           pulse={analytics.readiness < 90}
         />
 
-        {/* 3. Downtime Impact */}
         <AnalyticCard
-          icon={<Clock className="w-6 h-6 text-red-400" />}
-          iconBg="bg-red-600"
+          icon={<Clock className="w-6 h-6 text-rose-500" />}
+          iconBg="bg-rose-500"
           label="Downtime Impact"
           value={`${analytics.downtimeHours} hr`}
           sub="Cumulative operational time lost"
@@ -178,101 +191,122 @@ export function ProductionLines() {
           const activeShift = todayPlan?.shift || 'No active plan';
           const onTrack = line.efficiency >= 85;
 
+          // Mock SAP Progress data
+          const progressPercent = Math.min(100, Math.round((line.output / 1000) * 100)) || 0;
+          const targetOutput = 1000;
+
           return (
-            <div
+            <Card
               key={line.id}
               onClick={() => navigate(`/production-lines/${line.id}`)}
-              className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 hover:shadow-md transition-all cursor-pointer flex flex-col"
+              className="bg-white dark:bg-gray-900 border-border hover:border-blue-500/50 hover:shadow-xl transition-all duration-300 cursor-pointer group rounded-2xl overflow-hidden flex flex-col"
             >
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex items-center gap-3">
-                  {getLineIcon(line.type, line.status)}
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h3 className="font-semibold text-gray-900 dark:text-white text-lg tracking-tight">{line.name}</h3>
-                      <span className="px-2 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase">
-                        {getLineTypeLabel(line.type)}
+              <CardHeader className="p-6 pb-4">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-4">
+                    {getLineIcon(line.type, line.status)}
+                    <div>
+                      <div className="flex items-center gap-2 mb-0.5">
+                        <CardTitle className="text-xl font-bold tracking-tight text-gray-900 dark:text-white group-hover:text-blue-600 transition-colors">
+                          {line.name}
+                        </CardTitle>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="secondary" className="bg-muted text-[9px] uppercase tracking-wider font-bold h-5">
+                          {getLineTypeLabel(line.type)}
+                        </Badge>
+                        <span className="text-[10px] font-mono text-muted-foreground font-bold">ID-{line.id}</span>
+                      </div>
+                    </div>
+                  </div>
+                  {getStatusIcon(line.status)}
+                </div>
+              </CardHeader>
+
+              <CardContent className="p-6 pt-0 flex-1 space-y-6">
+                {/* Active Plan Info */}
+                <div className="grid grid-cols-2 gap-4 py-3 border-y border-border/50 bg-muted/30 px-3 rounded-xl">
+                  <div className="flex flex-col gap-1">
+                    <span className="text-[10px] font-bold text-muted-foreground uppercase flex items-center gap-1">
+                      <Target className="w-3 h-3" /> Target
+                    </span>
+                    <span className="text-sm font-bold text-gray-900 dark:text-white">{targetOutput} Pcs</span>
+                  </div>
+                  <div className="flex flex-col gap-1 text-right">
+                    <span className="text-[10px] font-bold text-muted-foreground uppercase flex items-center gap-1 justify-end">
+                      <Percent className="w-3 h-3" /> Efficiency
+                    </span>
+                    <span className={`text-sm font-bold ${onTrack ? 'text-emerald-500' : 'text-amber-500'}`}>{line.efficiency}%</span>
+                  </div>
+                </div>
+
+                {/* Main Progress (Plan vs Fact) */}
+                <div className="space-y-2">
+                  <div className="flex justify-between items-end">
+                    <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Production Volume</span>
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-lg font-bold text-gray-900 dark:text-white">{line.output}</span>
+                      <span className="text-[10px] font-bold text-muted-foreground uppercase">/ {targetOutput}</span>
+                    </div>
+                  </div>
+                  <div className="relative h-3 w-full bg-muted dark:bg-gray-800 rounded-full overflow-hidden border border-border/50">
+                    <div
+                      className={`h-full transition-all duration-1000 rounded-full ${onTrack ? 'bg-gradient-to-r from-emerald-500 to-emerald-400' : 'bg-gradient-to-r from-amber-500 to-amber-400'}`}
+                      style={{ width: `${progressPercent}%` }}
+                    />
+                  </div>
+                </div>
+
+                {/* Specialized Module Views */}
+                {line.type === 'sap_inpanel' && line.sapData && (
+                  <div className="bg-indigo-50/50 dark:bg-indigo-950/20 p-3 rounded-xl border border-indigo-100 dark:border-indigo-900/50 space-y-2">
+                    <div className="flex justify-between items-center">
+                      <span className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider flex items-center gap-1">
+                        <Monitor className="w-3 h-3" /> SAP Multi-Bin System
+                      </span>
+                      <span className="text-[10px] font-bold text-indigo-700 dark:text-indigo-300">
+                        {line.sapData.completedBins} / {line.sapData.completedBins + (line.sapData.bins?.length || 0)} Bins
                       </span>
                     </div>
-                    <p className="text-sm font-mono text-gray-400 dark:text-gray-500">ID: {line.id}</p>
+                    <Progress value={(line.sapData.completedBins / (line.sapData.completedBins + (line.sapData.bins?.length || 1))) * 100} className="h-1 bg-indigo-200/50 dark:bg-indigo-900/30" />
                   </div>
-                </div>
-                {getStatusIcon(line.status)}
-              </div>
+                )}
 
-              <div className="flex-1 space-y-4">
-                {/* Active Shift */}
-                <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-700/50 pb-2">
-                  <span className="text-sm font-medium text-gray-500 dark:text-gray-400">Current Shift</span>
-                  <span className={`text-sm font-bold ${activeShift !== 'No active plan' ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400 dark:text-gray-500'}`}>
-                    {activeShift}
-                  </span>
-                </div>
-
-                {/* Real-Time OEE & Specialized Metrics */}
-                <div className="space-y-3">
-                  <div>
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-sm font-medium text-gray-500 dark:text-gray-400">Real-Time OEE</span>
-                      <span className="text-sm font-bold text-gray-900 dark:text-white">{line.efficiency}%</span>
+                {line.type === 'tpa_molding' && line.tpaData && (
+                  <div className="bg-purple-50/50 dark:bg-purple-950/20 p-3 rounded-xl border border-purple-100 dark:border-purple-900/50 flex justify-between items-center">
+                    <div className="space-y-1">
+                      <span className="text-[10px] font-bold text-purple-600 dark:text-purple-400 uppercase tracking-wider flex items-center gap-1">
+                        <Construction className="w-3 h-3" /> Scrap Rate
+                      </span>
+                      <p className="text-sm font-bold text-purple-700 dark:text-purple-300">{line.tpaData.scrapRate}%</p>
                     </div>
-                    <div className="w-full h-2.5 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
-                      <div
-                        className={`h-full transition-all duration-500 ${line.efficiency >= 85 ? 'bg-green-500' : line.efficiency >= 60 ? 'bg-yellow-500' : 'bg-red-500'}`}
-                        style={{ width: `${line.efficiency}%` }}
-                      />
+                    <div className="text-right space-y-1">
+                      <span className="text-[10px] font-bold text-purple-600 dark:text-purple-400 uppercase tracking-wider">Active Molds</span>
+                      <p className="text-sm font-bold text-purple-700 dark:text-purple-300">{line.tpaData.machines.filter(m => m.status === 'running').length} / {line.tpaData.machines.length}</p>
                     </div>
                   </div>
+                )}
 
-                  {line.type === 'sap_inpanel' && line.sapData && (
-                    <div className="bg-cyan-50 dark:bg-cyan-900/10 p-2.5 rounded-lg border border-cyan-100 dark:border-cyan-800/50">
-                      <div className="flex justify-between items-center mb-1">
-                        <span className="text-[10px] font-bold text-cyan-600 dark:text-cyan-400 uppercase tracking-wider">Multi-Bin Load</span>
-                        <span className="text-xs font-bold text-cyan-700 dark:text-cyan-300">
-                          {line.sapData.bins[0]?.current || 0} / {line.sapData.bins[0]?.target || 100}
-                        </span>
-                      </div>
-                      <div className="w-full h-1.5 bg-cyan-100 dark:bg-cyan-800/30 rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-cyan-500 transition-all duration-500"
-                          style={{ width: `${((line.sapData.bins[0]?.current || 0) / (line.sapData.bins[0]?.target || 100)) * 100}%` }}
-                        />
-                      </div>
-                      <div className="mt-1 flex justify-between items-center">
-                        <span className="text-[8px] text-slate-500 font-bold uppercase">Active Buffers: {line.sapData.bins.length}</span>
-                        <span className="text-[8px] text-cyan-600 dark:text-cyan-400 font-bold uppercase">{line.sapData.completedBins} Bins Done</span>
-                      </div>
+                {/* Footer Section */}
+                <div className="flex items-center justify-between border-t border-border/50 pt-4 mt-auto">
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-[10px] font-bold text-muted-foreground uppercase">Status</span>
+                    <div className="flex items-center gap-2">
+                      <span className={`w-2 h-2 rounded-full ${onTrack ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-amber-500 animate-pulse shadow-[0_0_8px_rgba(245,158,11,0.5)]'}`} />
+                      <span className={`text-xs font-bold uppercase tracking-wide ${onTrack ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'}`}>
+                        {onTrack ? 'Healthy' : 'Action Required'}
+                      </span>
                     </div>
-                  )}
-
-                  {line.type === 'tpa_molding' && line.tpaData && (
-                    <div className="flex items-center justify-between bg-purple-50 dark:bg-purple-900/10 p-2.5 rounded-lg border border-purple-100 dark:border-purple-800/50">
-                      <div className="flex flex-col">
-                        <span className="text-[10px] font-bold text-purple-600 dark:text-purple-400 uppercase tracking-wider">Scrap Rate</span>
-                        <span className="text-xs font-bold text-purple-700 dark:text-purple-300">{line.tpaData.scrapRate}%</span>
-                      </div>
-                      <div className="text-right">
-                        <span className="text-[10px] font-bold text-purple-600 dark:text-purple-400 uppercase tracking-wider">Active Molds</span>
-                        <span className="text-xs font-bold text-purple-700 dark:text-purple-300">{line.tpaData.machines.filter(m => m.status === 'running').length} Machines</span>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Status & Health Bar */}
-                <div className="flex items-center justify-between border-t border-gray-100 dark:border-gray-700/50 pt-2">
+                  </div>
                   <div className="flex items-center gap-2">
-                    <span className={`w-2 h-2 rounded-full ${onTrack ? 'bg-green-500' : 'bg-red-500 animate-pulse'}`} />
-                    <span className={`text-sm font-semibold tracking-wide ${onTrack ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                      {onTrack ? 'ON TRACK' : 'DELAYED'}
-                    </span>
+                    {getStatusBadge(line.status)}
+                    <div className="p-2 rounded-lg bg-blue-50 dark:bg-blue-900/20 text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-all">
+                      <ArrowRight className="w-4 h-4" />
+                    </div>
                   </div>
-                  <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold uppercase ${getStatusColor(line.status)}`}>
-                    {t(`production.${line.status}`)}
-                  </span>
                 </div>
-              </div>
-            </div>
+              </CardContent>
+            </Card>
           );
         })}
       </div>
@@ -309,70 +343,81 @@ function AddLineModal({ onClose, onAdd }: AddLineModalProps) {
       efficiency: 0,
       requiredMaterials: [],
       output: 0,
-      ...(type === 'sap_inpanel' ? { sapData: { currentBinCount: 0, binTarget: 100, completedBins: 0 } } : {}),
+      ...(type === 'sap_inpanel' ? { sapData: { currentBinCount: 0, binTarget: 100, completedBins: 0, bins: [] } } : {}),
       ...(type === 'tpa_molding' ? { tpaData: { machines: [], scrapRate: 0 } } : {})
     });
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-md w-full p-6">
-        <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">{t('production.addLineTitle')}</h3>
-        <form onSubmit={handleSubmit}>
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              {t('production.lineName')}
-            </label>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent mb-4"
-              placeholder={t('production.placeholderExample')}
-              required
-            />
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+      <Card className="max-w-md w-full border-border shadow-2xl shadow-black/20 animate-in zoom-in-95">
+        <CardHeader>
+          <CardTitle className="text-2xl font-bold">{t('production.addLineTitle')}</CardTitle>
+          <CardDescription>Configure a new production line unit.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-sm font-bold text-muted-foreground uppercase tracking-wider">
+                  {t('production.lineName')}
+                </label>
+                <input
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="w-full px-4 h-11 border border-border bg-background rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none"
+                  placeholder={t('production.placeholderExample')}
+                  required
+                />
+              </div>
 
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Line Type
-            </label>
-            <div className="grid grid-cols-3 gap-2">
-              {[
-                { id: 'assembly', label: 'Assembly', icon: <Wrench className="w-4 h-4" /> },
-                { id: 'sap_inpanel', label: 'SAP', icon: <Monitor className="w-4 h-4" /> },
-                { id: 'tpa_molding', label: 'TPA', icon: <Construction className="w-4 h-4" /> },
-              ].map((t) => (
-                <button
-                  key={t.id}
-                  type="button"
-                  onClick={() => setType(t.id as any)}
-                  className={`flex flex-col items-center justify-center gap-1 p-3 rounded-lg border transition-all ${type === t.id
-                    ? 'bg-blue-50 dark:bg-blue-900/30 border-blue-500 text-blue-600 dark:text-blue-400'
-                    : 'border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-blue-300'
-                    }`}
-                >
-                  {t.icon}
-                  <span className="text-[10px] font-bold uppercase tracking-tighter">{t.label}</span>
-                </button>
-              ))}
+              <div className="space-y-2">
+                <label className="text-sm font-bold text-muted-foreground uppercase tracking-wider">
+                  System Architecture
+                </label>
+                <div className="grid grid-cols-3 gap-3">
+                  {[
+                    { id: 'assembly', label: 'Assembly', icon: <Wrench className="w-5 h-5" /> },
+                    { id: 'sap_inpanel', label: 'SAP I/O', icon: <Monitor className="w-5 h-5" /> },
+                    { id: 'tpa_molding', label: 'Molding', icon: <Construction className="w-5 h-5" /> },
+                  ].map((t) => (
+                    <button
+                      key={t.id}
+                      type="button"
+                      onClick={() => setType(t.id as any)}
+                      className={`flex flex-col items-center justify-center gap-2 p-4 rounded-xl border transition-all ${type === t.id
+                        ? 'bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-500/20'
+                        : 'border-border bg-muted/30 text-muted-foreground hover:bg-muted hover:border-muted-foreground/30'
+                        }`}
+                    >
+                      {t.icon}
+                      <span className="text-[9px] font-black uppercase tracking-tighter">{t.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
-          </div>
-          <div className="flex gap-3">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-            >
-              {t('production.cancel')}
-            </button>
-            <button
-              type="submit"
-              className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              {t('production.addLine')}
-            </button>
-          </div>
-        </form>
-      </div>
+
+            <div className="flex gap-3 pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={onClose}
+                className="flex-1 h-11 rounded-xl border-border hover:bg-muted font-bold uppercase text-[10px] tracking-widest transition-all"
+              >
+                {t('production.cancel')}
+              </Button>
+              <Button
+                type="submit"
+                className="flex-1 h-11 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold uppercase text-[10px] tracking-widest shadow-lg shadow-blue-500/20 transition-all active:scale-95"
+              >
+                {t('production.addLine')}
+              </Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
     </div>
   );
 }

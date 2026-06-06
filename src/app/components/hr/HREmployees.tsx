@@ -2,7 +2,8 @@ import { useMemo, useState } from 'react';
 import { useLanguage } from '../../context/LanguageContext';
 import { HRSubNav } from './HRSubNav';
 import { hrEmployees, Employee, EmployeeStatus } from '../../data/hrEmployees';
-import { Download, FileText, Eye, Edit2, X, Search } from 'lucide-react';
+import { Download, FileText, Eye, Edit2, X, Search, Upload } from 'lucide-react';
+import { BulkImportModal } from '../BulkImportModal';
 
 export function HREmployees() {
   const { t } = useLanguage();
@@ -14,6 +15,7 @@ export function HREmployees() {
   const [departmentFilter, setDepartmentFilter] = useState<string>('all');
   const [positionFilter, setPositionFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<'all' | EmployeeStatus>('all');
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
 
   const handleDelete = (employeeId: string) => {
     if (confirm(t('hr.employees.confirmDelete'))) {
@@ -66,19 +68,27 @@ export function HREmployees() {
   return (
     <div className="p-8">
       <div className="mb-6">
-          <h2 className="text-3xl font-semibold text-gray-900 dark:text-white">
-            {t('hr.title')}
-          </h2>
-          <p className="text-gray-500 dark:text-gray-400 mt-2">
-            {t('hr.subtitle')}
-          </p>
-          <HRSubNav />
-        </div>
+        <h2 className="text-3xl font-semibold text-gray-900 dark:text-white">
+          {t('hr.title')}
+        </h2>
+        <p className="text-gray-500 dark:text-gray-400 mt-2">
+          {t('hr.subtitle')}
+        </p>
+        <HRSubNav />
+      </div>
 
-        <div className="flex items-center justify-between mb-5 mt-6">
-          <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
-            {t('hr.employees.title')}
-          </h3>
+      <div className="flex items-center justify-between mb-5 mt-6">
+        <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
+          {t('hr.employees.title')}
+        </h3>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setIsImportModalOpen(true)}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+          >
+            <Upload className="w-4 h-4" />
+            <span>Import CSV</span>
+          </button>
           <button
             onClick={() => setShowAddModal(true)}
             className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition-colors"
@@ -86,221 +96,230 @@ export function HREmployees() {
             <span>+ {t('hr.employees.addEmployee')}</span>
           </button>
         </div>
+      </div>
 
-        {/* Filters */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 mb-4">
-          <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-end">
-            {/* Global search */}
-            <div className="flex-1 w-full relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <input
-                type="text"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="ID, F.I.Sh. yoki lavozim bo‘yicha qidirish"
-                className="w-full pl-9 pr-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-white rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
+      {/* Filters */}
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 mb-4">
+        <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-end">
+          {/* Global search */}
+          <div className="flex-1 w-full relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="ID, F.I.Sh. yoki lavozim bo‘yicha qidirish"
+              className="w-full pl-9 pr-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-white rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+          </div>
 
-            {/* Dropdown filters */}
-            <div className="flex flex-wrap gap-2 w-full lg:w-auto">
-              <select
-                value={departmentFilter}
-                onChange={(e) => setDepartmentFilter(e.target.value)}
-                className="px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-white rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent min-w-[160px]"
+          {/* Dropdown filters */}
+          <div className="flex flex-wrap gap-2 w-full lg:w-auto">
+            <select
+              value={departmentFilter}
+              onChange={(e) => setDepartmentFilter(e.target.value)}
+              className="px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-white rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent min-w-[160px]"
+            >
+              <option value="all">Barcha bo‘limlar</option>
+              {departments.map((dept) => (
+                <option key={dept} value={dept}>
+                  {dept}
+                </option>
+              ))}
+            </select>
+
+            <select
+              value={positionFilter}
+              onChange={(e) => setPositionFilter(e.target.value)}
+              className="px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-white rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent min-w-[160px]"
+            >
+              <option value="all">Barcha lavozimlar</option>
+              {positions.map((pos) => (
+                <option key={pos} value={pos}>
+                  {pos}
+                </option>
+              ))}
+            </select>
+
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value as 'all' | EmployeeStatus)}
+              className="px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-white rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent min-w-[140px]"
+            >
+              <option value="all">{t('hr.all')}</option>
+              <option value="active">{t('hr.employees.statusActive')}</option>
+              <option value="inactive">{t('hr.employees.statusInactive')}</option>
+            </select>
+
+            {hasActiveFilters && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSearchTerm('');
+                  setDepartmentFilter('all');
+                  setPositionFilter('all');
+                  setStatusFilter('all');
+                }}
+                className="px-3 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg text-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
               >
-                <option value="all">Barcha bo‘limlar</option>
-                {departments.map((dept) => (
-                  <option key={dept} value={dept}>
-                    {dept}
-                  </option>
-                ))}
-              </select>
-
-              <select
-                value={positionFilter}
-                onChange={(e) => setPositionFilter(e.target.value)}
-                className="px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-white rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent min-w-[160px]"
-              >
-                <option value="all">Barcha lavozimlar</option>
-                {positions.map((pos) => (
-                  <option key={pos} value={pos}>
-                    {pos}
-                  </option>
-                ))}
-              </select>
-
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value as 'all' | EmployeeStatus)}
-                className="px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-white rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent min-w-[140px]"
-              >
-                <option value="all">{t('hr.all')}</option>
-                <option value="active">{t('hr.employees.statusActive')}</option>
-                <option value="inactive">{t('hr.employees.statusInactive')}</option>
-              </select>
-
-              {hasActiveFilters && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSearchTerm('');
-                    setDepartmentFilter('all');
-                    setPositionFilter('all');
-                    setStatusFilter('all');
-                  }}
-                  className="px-3 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg text-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-                >
-                  Filtrlarni tozalash
-                </button>
-              )}
-            </div>
+                Filtrlarni tozalash
+              </button>
+            )}
           </div>
         </div>
+      </div>
 
-        {employees.length === 0 ? (
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-12 text-center">
-            <p className="text-gray-500 dark:text-gray-400">
-              {t('hr.employees.noEmployees')}
-            </p>
-          </div>
-        ) : (
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-              <thead className="bg-gray-50 dark:bg-gray-900/40">
+      {employees.length === 0 ? (
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-12 text-center">
+          <p className="text-gray-500 dark:text-gray-400">
+            {t('hr.employees.noEmployees')}
+          </p>
+        </div>
+      ) : (
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+            <thead className="bg-gray-50 dark:bg-gray-900/40">
+              <tr>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  {t('hr.employees.employeeId')}
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  {t('hr.employees.fullName')}
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  {t('hr.employees.department')}
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  {t('hr.employees.position')}
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  {t('hr.employees.employmentDate')}
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  {t('hr.employees.status')}
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  {t('hr.employees.actions')}
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+              {filteredEmployees.length === 0 && (
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    {t('hr.employees.employeeId')}
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    {t('hr.employees.fullName')}
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    {t('hr.employees.department')}
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    {t('hr.employees.position')}
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    {t('hr.employees.employmentDate')}
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    {t('hr.employees.status')}
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    {t('hr.employees.actions')}
-                  </th>
+                  <td
+                    colSpan={7}
+                    className="px-4 py-6 text-center text-sm text-gray-500 dark:text-gray-400"
+                  >
+                    Mos keladigan xodim topilmadi
+                  </td>
                 </tr>
-              </thead>
-              <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                {filteredEmployees.length === 0 && (
-                  <tr>
-                    <td
-                      colSpan={7}
-                      className="px-4 py-6 text-center text-sm text-gray-500 dark:text-gray-400"
-                    >
-                      Mos keladigan xodim topilmadi
-                    </td>
-                  </tr>
-                )}
-                {filteredEmployees.map((employee) => (
-                  <tr key={employee.employeeId} className="hover:bg-gray-50 dark:hover:bg-gray-800/70">
-                    <td className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-white">
-                      {employee.employeeId}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">
-                      {employee.fullName}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
-                      {employee.department}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
-                      {employee.position}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
-                      {new Date(employee.employmentDate).toLocaleDateString('uz-UZ')}
-                    </td>
-                    <td className="px-4 py-3 text-sm">
-                      <span
-                        className={
-                          employee.status === 'active'
-                            ? 'inline-flex px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-400'
-                            : employee.status === 'sick'
+              )}
+              {filteredEmployees.map((employee) => (
+                <tr key={employee.employeeId} className="hover:bg-gray-50 dark:hover:bg-gray-800/70">
+                  <td className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-white">
+                    {employee.employeeId}
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">
+                    {employee.fullName}
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
+                    {employee.department}
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
+                    {employee.position}
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
+                    {new Date(employee.employmentDate).toLocaleDateString('uz-UZ')}
+                  </td>
+                  <td className="px-4 py-3 text-sm">
+                    <span
+                      className={
+                        employee.status === 'active'
+                          ? 'inline-flex px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-400'
+                          : employee.status === 'sick'
                             ? 'inline-flex px-2 py-1 text-xs font-medium rounded-full bg-orange-100 text-orange-700 dark:bg-orange-900/20 dark:text-orange-400'
                             : employee.status === 'vacation'
-                            ? 'inline-flex px-2 py-1 text-xs font-medium rounded-full bg-purple-100 text-purple-700 dark:bg-purple-900/20 dark:text-purple-400'
-                            : employee.status === 'absent'
-                            ? 'inline-flex px-2 py-1 text-xs font-medium rounded-full bg-red-100 text-red-700 dark:bg-red-900/20 dark:text-red-400'
-                            : 'inline-flex px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
-                        }
-                      >
-                        {employee.status === 'active'
-                          ? t('hr.employees.statusActive')
-                          : employee.status === 'sick'
+                              ? 'inline-flex px-2 py-1 text-xs font-medium rounded-full bg-purple-100 text-purple-700 dark:bg-purple-900/20 dark:text-purple-400'
+                              : employee.status === 'absent'
+                                ? 'inline-flex px-2 py-1 text-xs font-medium rounded-full bg-red-100 text-red-700 dark:bg-red-900/20 dark:text-red-400'
+                                : 'inline-flex px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
+                      }
+                    >
+                      {employee.status === 'active'
+                        ? t('hr.employees.statusActive')
+                        : employee.status === 'sick'
                           ? t('hr.employees.statusSick')
                           : employee.status === 'vacation'
-                          ? t('hr.employees.statusVacation')
-                          : employee.status === 'absent'
-                          ? t('hr.employees.statusAbsent')
-                          : t('hr.employees.statusInactive')}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-sm">
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => setSelectedEmployee(employee)}
-                          className="p-1.5 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition-colors"
-                          title={t('hr.employees.view')}
-                        >
-                          <Eye className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => setEditingEmployee(employee)}
-                          className="p-1.5 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 rounded transition-colors"
-                          title={t('hr.employees.edit')}
-                        >
-                          <Edit2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+                            ? t('hr.employees.statusVacation')
+                            : employee.status === 'absent'
+                              ? t('hr.employees.statusAbsent')
+                              : t('hr.employees.statusInactive')}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-sm">
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setSelectedEmployee(employee)}
+                        className="p-1.5 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition-colors"
+                        title={t('hr.employees.view')}
+                      >
+                        <Eye className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => setEditingEmployee(employee)}
+                        className="p-1.5 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 rounded transition-colors"
+                        title={t('hr.employees.edit')}
+                      >
+                        <Edit2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
 
-        {selectedEmployee && (
-          <EmployeeCardModal
-            employee={selectedEmployee}
-            onClose={() => setSelectedEmployee(null)}
-          />
-        )}
+      {selectedEmployee && (
+        <EmployeeCardModal
+          employee={selectedEmployee}
+          onClose={() => setSelectedEmployee(null)}
+        />
+      )}
 
-        {showAddModal && (
-          <EmployeeFormModal
-            employees={employees}
-            onClose={() => setShowAddModal(false)}
-            onSave={(employee) => {
-              setEmployees([...employees, employee]);
-              setShowAddModal(false);
-            }}
-          />
-        )}
+      {showAddModal && (
+        <EmployeeFormModal
+          employees={employees}
+          onClose={() => setShowAddModal(false)}
+          onSave={(employee) => {
+            setEmployees([...employees, employee]);
+            setShowAddModal(false);
+          }}
+        />
+      )}
 
-        {editingEmployee && (
-          <EmployeeFormModal
-            employees={employees}
-            employee={editingEmployee}
-            onClose={() => setEditingEmployee(null)}
-            onSave={(updatedEmployee) => {
-              setEmployees(employees.map(e => 
-                e.employeeId === updatedEmployee.employeeId ? updatedEmployee : e
-              ));
-              setEditingEmployee(null);
-            }}
-          />
-        )}
+      {editingEmployee && (
+        <EmployeeFormModal
+          employees={employees}
+          employee={editingEmployee}
+          onClose={() => setEditingEmployee(null)}
+          onSave={(updatedEmployee) => {
+            setEmployees(employees.map(e =>
+              e.employeeId === updatedEmployee.employeeId ? updatedEmployee : e
+            ));
+            setEditingEmployee(null);
+          }}
+        />
+      )}
+
+      <BulkImportModal
+        isOpen={isImportModalOpen}
+        onClose={() => setIsImportModalOpen(false)}
+        title="Xodimlarni ommaviy yuklash"
+        endpoint="/imports/hr/employees"
+        templateUrl="data:text/csv;charset=utf-8,username,full_name,employee_id,role,password%0Ausername1,Full Name Example,EMP-100,ADMIN,Password123!"
+      />
     </div>
   );
 }
@@ -347,12 +366,12 @@ function EmployeeCardModal({ employee, onClose }: EmployeeCardModalProps) {
                   employee.status === 'active'
                     ? t('hr.employees.statusActive')
                     : employee.status === 'sick'
-                    ? t('hr.employees.statusSick')
-                    : employee.status === 'vacation'
-                    ? t('hr.employees.statusVacation')
-                    : employee.status === 'absent'
-                    ? t('hr.employees.statusAbsent')
-                    : t('hr.employees.statusInactive')
+                      ? t('hr.employees.statusSick')
+                      : employee.status === 'vacation'
+                        ? t('hr.employees.statusVacation')
+                        : employee.status === 'absent'
+                          ? t('hr.employees.statusAbsent')
+                          : t('hr.employees.statusInactive')
                 }
               />
             </div>
@@ -533,9 +552,8 @@ function EmployeeFormModal({ employees, employee, onClose, onSave }: EmployeeFor
               type="text"
               value={formData.fullName}
               onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
-              className={`w-full px-3 py-2 border rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                errors.fullName ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
-              }`}
+              className={`w-full px-3 py-2 border rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent ${errors.fullName ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
+                }`}
             />
             {errors.fullName && (
               <p className="mt-1 text-xs text-red-500">{errors.fullName}</p>
@@ -549,9 +567,8 @@ function EmployeeFormModal({ employees, employee, onClose, onSave }: EmployeeFor
             <select
               value={formData.department}
               onChange={(e) => setFormData({ ...formData, department: e.target.value })}
-              className={`w-full px-3 py-2 border rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                errors.department ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
-              }`}
+              className={`w-full px-3 py-2 border rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent ${errors.department ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
+                }`}
             >
               <option value="">{t('hr.employees.selectDepartment')}</option>
               {departments.map(dept => (
@@ -571,9 +588,8 @@ function EmployeeFormModal({ employees, employee, onClose, onSave }: EmployeeFor
               type="text"
               value={formData.position}
               onChange={(e) => setFormData({ ...formData, position: e.target.value })}
-              className={`w-full px-3 py-2 border rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                errors.position ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
-              }`}
+              className={`w-full px-3 py-2 border rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent ${errors.position ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
+                }`}
             />
             {errors.position && (
               <p className="mt-1 text-xs text-red-500">{errors.position}</p>
@@ -588,9 +604,8 @@ function EmployeeFormModal({ employees, employee, onClose, onSave }: EmployeeFor
               type="date"
               value={formData.employmentDate}
               onChange={(e) => setFormData({ ...formData, employmentDate: e.target.value })}
-              className={`w-full px-3 py-2 border rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                errors.employmentDate ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
-              }`}
+              className={`w-full px-3 py-2 border rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent ${errors.employmentDate ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
+                }`}
             />
             {errors.employmentDate && (
               <p className="mt-1 text-xs text-red-500">{errors.employmentDate}</p>

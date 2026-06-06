@@ -24,6 +24,7 @@ class ProductionService:
         for item in bom.items:
             total_needed = item.quantity_required * plan_data.planned_quantity
             self.warehouse_service.reserve_materials_for_plan(
+
                 plan_id=saved_plan.id,
                 material_id=item.material_id,
                 required_qty=total_needed,

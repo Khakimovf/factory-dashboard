@@ -13,23 +13,25 @@ class UserRepository(BaseRepository[User, str]):
         self._users: dict[str, User] = {
             "admin-1": User(
                 id="admin-1",
-                username="123",
+                username="Admin",
                 full_name="System Administrator",
                 employee_id="ADM-001",
                 role=UserRole.SUPER_ADMIN,
                 is_first_login=False,
-                password_hash="$2b$12$6mBwYhX.6o.I.vM8Xv/x.vQxZlW.o.r.o.r.o.r.o.r.o.r.o" 
+                password_hash="$2b$12$az2fETKdWEqK.LbIfmVP0eq5pwebw8R/Jv75XeetzH.QMZaTGtvzG" 
             ),
             "it-specialist-1": User(
                 id="it-specialist-1",
-                username="Khakimovf",
+                username="khakimovf",
                 full_name="Khakimov F. (IT Specialist)",
                 employee_id="IT-999",
                 role=UserRole.IT_SPECIALIST,
                 is_first_login=False,
-                password_hash="$2b$10$OO/AXH4RQjaT0gJWVxB7lu7xAowy.fvB1pojO8K9tv2zsIjB4X/62"
+                password_hash="$2b$12$KJxczqCly9m5VHcpHkR.6OvEbMN1xS9VInlBRGDnOsmxRHIUYfJIK"
             )
+
         }
+
     
     def create(self, entity: User) -> User:
         """Create a new user."""

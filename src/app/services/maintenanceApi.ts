@@ -14,6 +14,8 @@ export interface FailureReport {
   assigned_to?: string;
   comments?: string;
   photo_urls: string[];
+  issue_type?: string;
+  machine_id?: string;
   created_at: string;
   start_time?: string;
   worker_arrived_at?: string;
@@ -27,6 +29,8 @@ export interface FailureReportCreate {
   description: string;
   reported_by: string;
   priority?: string;
+  issue_type?: string;
+  machine_id?: string;
 }
 
 export interface FailureReportUpdate {
@@ -47,7 +51,7 @@ class MaintenanceApiService {
     const params = new URLSearchParams();
     if (statusFilter) params.append('status_filter', statusFilter);
     if (lineId) params.append('line_id', lineId);
-    
+
     const query = params.toString() ? `?${params.toString()}` : '';
     return apiClient.get<FailureReport[]>(`/maintenance/failure-reports${query}`);
   }

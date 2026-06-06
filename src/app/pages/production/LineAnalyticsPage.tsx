@@ -103,7 +103,7 @@ export function LineAnalyticsPage() {
 
     if (!line || !analytics) {
         return (
-            <div className="p-8 bg-gray-900 min-h-screen flex items-center justify-center">
+            <div className="p-8 bg-gray-900 min-h-full flex items-center justify-center">
                 <p className="text-gray-400">{t('productionDetail.lineNotFound')}</p>
             </div>
         );
@@ -123,7 +123,7 @@ export function LineAnalyticsPage() {
     const totalMonthlyLoss = lossData.reduce((s, d) => s + d.lost, 0);
 
     return (
-        <div className="p-8 bg-gray-900 min-h-screen text-white">
+        <div className="p-8 bg-gray-900 min-h-full text-white">
             {/* Header */}
             <div className="mb-8">
                 <button

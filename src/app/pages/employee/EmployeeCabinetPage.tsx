@@ -149,7 +149,7 @@ export function EmployeeCabinetPage() {
 
   // ─── 1. Smart Header & Identity ───
   return (
-    <div className={`min-h-screen p-4 sm:p-8 font-sans transition-colors duration-500 ${bgClass} pb-24`}>
+    <div className={`min-h-full p-4 sm:p-8 font-sans transition-colors duration-500 ${bgClass} pb-24`}>
 
       {/* Shadow View for Root */}
       {isRoot && (
@@ -219,6 +219,37 @@ export function EmployeeCabinetPage() {
               <p className={`text-4xl font-mono font-black ${textPrimary} tracking-tighter`}>12<span className="text-xl text-slate-500 font-sans mx-1">soat</span>45<span className="text-xl text-slate-500 font-sans ml-1">min</span></p>
               <p className={`text-xs font-bold ${textMuted} mt-2`}><Clock className="w-3.5 h-3.5 inline mr-1" /> Ertaga, 08:00 (1-smena)</p>
             </div>
+          </div>
+        </div>
+
+        {/* HAFTALIK JADVALIM (Weekly My Schedule) */}
+        <div className={`relative overflow-hidden rounded-3xl border p-6 sm:p-8 ${cardClass}`}>
+          <div className="flex items-center justify-between mb-6">
+            <h3 className={`text-lg font-black uppercase tracking-widest flex items-center gap-2 ${textPrimary}`}>
+              <Calendar className={`w-5 h-5 ${isDark ? 'text-indigo-400' : 'text-indigo-600'}`} />
+              {t('hr.weeklySchedule.title')}
+            </h3>
+            <Badge variant="outline" className="border-indigo-500/30 text-indigo-400 uppercase text-[9px] font-black tracking-widest px-3 py-1">Joriy Hafta</Badge>
+          </div>
+
+          <div className="grid grid-cols-7 gap-3">
+            {[
+              { day: 'Du', date: '01', shift: '1-smena', color: 'bg-blue-500' },
+              { day: 'Se', date: '02', shift: '1-smena', color: 'bg-blue-500' },
+              { day: 'Ch', date: '03', shift: '1-smena', color: 'bg-blue-500' },
+              { day: 'Pa', date: '04', shift: '1-smena', color: 'bg-blue-500' },
+              { day: 'Ju', date: '05', shift: 'Dam', color: 'bg-slate-700' },
+              { day: 'Sh', date: '06', shift: '2-smena', color: 'bg-purple-500' },
+              { day: 'Ya', date: '07', shift: '2-smena', color: 'bg-purple-500' },
+            ].map((d, i) => (
+              <div key={i} className={`flex flex-col items-center p-3 rounded-2xl border transition-all ${isDark ? 'bg-slate-950/50 border-slate-800' : 'bg-slate-50 border-slate-200'}`}>
+                <span className={`text-[10px] font-black uppercase tracking-widest ${textMuted} mb-1`}>{d.day}</span>
+                <span className={`text-xl font-black ${textPrimary} mb-3`}>{d.date}</span>
+                <div className={`px-2 py-1 rounded-md text-[8px] font-black uppercase tracking-tighter text-white ${d.color} shadow-lg shadow-${d.color.split('-')[1]}-500/20`}>
+                  {d.shift}
+                </div>
+              </div>
+            ))}
           </div>
         </div>
 

@@ -26,7 +26,16 @@
     "finishedGoods": "Tayyor mahsulotlar",
     "logisticsGate": "VGM — Transport Nazorat",
     "canteen": "Oshxona",
-    "administration": "Ma'muriyat"
+    "administration": "Ma'muriyat",
+    "logisticsAndWarehouse": "Logistika va Ombor",
+    "production": "Ishlab chiqarish",
+    "hrAndService": "Xodimlar va Servis",
+    "systemRoot": "Tizim Boshqaruvi",
+    "mrp": "MRP — Material Plan",
+    "traceability": "Traceability",
+    "shiftSchedule": "Smena Jadvali",
+    "containerLogistics": "Konteyner Logistikasi",
+    "inventoryReconciliation": "👉 INVENTARIZATSIYA & BALANS"
   },
   "admin": {
     "title": "Tizim ma'muriyati",
@@ -640,6 +649,9 @@
           "submit": "Yuborish",
           "cancel": "Bekor qilish",
           "submitPlaceholder": "So'rov yuborish funksiyasi backend API tayyor bo'lganda ishlaydi"
+        },
+        "weeklySchedule": {
+          "title": "HAFTALIK JADVALIM"
         }
       }
     }

@@ -141,7 +141,7 @@ export function HRStatsPage() {
   const newReportsCount = lateReports.filter(r => r.status === 'new').length;
 
   return (
-    <div className="p-8 bg-background text-foreground min-h-screen">
+    <div className="p-8 bg-background text-foreground min-h-full">
       <div className="mb-6">
         <h2 className="text-3xl font-semibold text-gray-900 dark:text-white">
           {t('hr.title')}

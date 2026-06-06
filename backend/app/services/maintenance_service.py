@@ -48,6 +48,8 @@ class MaintenanceService:
                 description=report_data.description,
                 reported_by=report_data.reported_by,
                 priority=report_data.priority or "normal",
+                issue_type=report_data.issue_type,
+                machine_id=report_data.machine_id,
                 status=MaintenanceStatus.OPEN,
                 created_at=datetime.now(),
                 photo_urls=[],

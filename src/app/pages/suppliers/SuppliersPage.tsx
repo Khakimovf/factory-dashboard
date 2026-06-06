@@ -329,7 +329,7 @@ export function SuppliersPage() {
   );
 
   return (
-    <div className="p-8 bg-slate-950 text-slate-100 min-h-screen">
+    <div className="p-8 bg-slate-950 text-slate-100 min-h-full">
       <div className="mb-8 flex items-center justify-between">
         <div>
           <h2 className="text-3xl font-bold text-white flex items-center gap-3 tracking-tight">

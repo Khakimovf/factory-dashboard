@@ -3,9 +3,11 @@ import json
 
 BASE_URL = "http://localhost:8000/api/v1"
 
-def request(path, method="GET", data=None):
+def request(path, method="GET", data=None, token=None):
     url = f"{BASE_URL}{path}"
     headers = {"Content-Type": "application/json"}
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
     body = json.dumps(data).encode("utf-8") if data else None
     
     req = urllib.request.Request(url, data=body, headers=headers, method=method)
@@ -20,13 +22,15 @@ def test_admin_flow():
     
     # 1. Login as Admin
     print("1. Logging in as admin...")
-    status, admin_user = request("/admin/login", method="POST", data={
-        "username": "admin",
-        "password": "password123"
+    status, login_res = request("/admin/login", method="POST", data={
+        "username": "Admin",
+        "password": "Admin"
     })
     if status != 200:
-        print(f"FAILED: Login failed {admin_user}")
+        print(f"FAILED: Login failed {login_res}")
         return
+    token = login_res["access_token"]
+    admin_user = login_res["user"]
     print(f"SUCCESS: Logged in as {admin_user['full_name']}")
 
     # 2. Register New User
@@ -38,7 +42,7 @@ def test_admin_flow():
         "role": "VGM_GUARD",
         "password": "password123"
     }
-    status, new_user = request("/admin/users", method="POST", data=new_user_data)
+    status, new_user = request("/admin/users", method="POST", data=new_user_data, token=token)
     if status != 200:
         print(f"FAILED: Registration failed {new_user}")
         return
@@ -46,7 +50,7 @@ def test_admin_flow():
 
     # 3. Check Audit Logs
     print("\n3. Checking Audit Logs...")
-    status, logs = request("/admin/audit")
+    status, logs = request("/admin/audit", token=token)
     if any(log['action'] == 'CREATE_USER' and log['target_id'] == new_user['id'] for log in logs):
         print("SUCCESS: Audit log found for user creation")
     else:
@@ -54,10 +58,14 @@ def test_admin_flow():
 
     # 4. Test New User Login (First Time)
     print("\n4. Testing new user login...")
-    status, test_user = request("/admin/login", method="POST", data={
+    status, test_login_res = request("/admin/login", method="POST", data={
         "username": "test_guard",
         "password": "password123"
     })
+    if status != 200:
+        print(f"FAILED: Test user login failed {test_login_res}")
+        return
+    test_user = test_login_res["user"]
     if test_user['is_first_login']:
         print("SUCCESS: New user flagged for first-time password change")
     else:

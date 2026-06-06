@@ -223,7 +223,7 @@ export function LineBufferPage() {
 
   if (!line) {
     return (
-      <div className="min-h-screen p-8 bg-background text-foreground">
+      <div className="min-h-full p-8 bg-background text-foreground">
         <div className="text-center">
           <h2 className="text-2xl font-semibold text-foreground">
             {t('productionDetail.lineNotFound') || 'Production line not found'}

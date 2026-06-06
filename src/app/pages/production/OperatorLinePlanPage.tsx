@@ -388,7 +388,7 @@ export function OperatorLinePlanPage() {
 
     if (!line) {
         return (
-            <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-slate-400">
+            <div className="min-h-full bg-slate-950 flex flex-col items-center justify-center text-slate-400">
                 <Factory className="w-16 h-16 text-slate-700 mb-4" />
                 <p className="text-xl font-bold">Line not found</p>
                 <button onClick={() => navigate(backPath)} className="mt-6 text-cyan-400 hover:text-white font-bold flex items-center gap-2">
@@ -408,7 +408,6 @@ export function OperatorLinePlanPage() {
             addMaterialRequest(`MES-PLAN ${line.name} Q:${totalReja} | BATCH-${Math.floor(Math.random() * 90000) + 10000}`,
                 bom.map(rm => ({ id: `ri-${rm.partId}-${Date.now()}`, name: rm.name, partNumber: rm.partId, requiredQty: rm.qtyPerUnit * totalReja, currentStock: mockStock[rm.partId] ?? 0, binLocation: rm.bin })),
                 'High', 'Line Replenishment', line.name);
-            bom.forEach(rm => updateMaterialQuantity(rm.partId, -(rm.qtyPerUnit * totalReja)));
             toast('WMS Sync → ActiveOps', { description: `${line.name} batch dispatched.`, icon: '🔗' });
         }
 
@@ -431,7 +430,7 @@ export function OperatorLinePlanPage() {
     ];
 
     return (
-        <div className="min-h-screen bg-slate-950 text-slate-300 animate-in fade-in slide-in-from-bottom-3 duration-400">
+        <div className="min-h-full bg-slate-950 text-slate-300 animate-in fade-in slide-in-from-bottom-3 duration-400">
 
             {/* Sticky Config + Tab Bar */}
             <div className="sticky top-0 z-30 bg-slate-900/90 backdrop-blur-xl border-b border-slate-800 shadow-lg">

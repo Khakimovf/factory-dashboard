@@ -132,7 +132,7 @@ export function WarehouseReceivingPage() {
     Object.values(warehouseLocations).every(loc => loc.trim() !== '');
 
   return (
-    <div className="min-h-screen p-8 bg-background text-foreground">
+    <div className="min-h-full p-8 bg-background text-foreground">
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="mb-8">

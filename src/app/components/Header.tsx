@@ -9,13 +9,13 @@ import { motion, AnimatePresence } from 'motion/react';
 export function Header() {
   const { theme, toggleTheme } = useTheme();
   const { language, setLanguage, t } = useLanguage();
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [isProfileHovered, setIsProfileHovered] = useState(false);
   const [isControlsHovered, setIsControlsHovered] = useState(false);
   const navigate = useNavigate();
 
-  const isITSpecialist = user?.role === 'IT_SPECIALIST';
+  const isITSpecialist = ['IT_SPECIALIST', 'SUPER_ADMIN', 'system_owner'].includes(user?.role || '');
 
   return (
     <header className="h-16 border-b border-white/5 bg-slate-950/20 backdrop-blur-3xl flex items-center justify-between px-6 sticky top-0 z-[60] shadow-2xl ring-1 ring-white/5">
@@ -154,7 +154,7 @@ export function Header() {
                     icon={LogOut}
                     label={t('header.logout')}
                     color="text-rose-500"
-                    onClick={() => navigate('/login')}
+                    onClick={() => { logout(); navigate('/login'); }}
                   />
                 </div>
               </motion.div>

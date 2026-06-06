@@ -20,6 +20,8 @@ class FailureReportBase(BaseModel):
     description: str = Field(..., description="Description of the failure")
     reported_by: str = Field(..., description="Line master who reported the failure")
     priority: Optional[str] = Field(default="normal", description="Priority level (low, normal, high, urgent)")
+    issue_type: Optional[str] = Field(None, description="Type of failure (mechanical, electrical, etc.)")
+    machine_id: Optional[str] = Field(None, description="Specific machine ID if applicable")
 
 
 class FailureReportCreate(FailureReportBase):

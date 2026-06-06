@@ -111,7 +111,7 @@ export function TPAMoldingCockpit() {
     };
 
     return (
-        <div className="p-8 bg-slate-950 min-h-screen text-slate-100 font-mono selection:bg-purple-500/30">
+        <div className="p-8 bg-slate-950 min-h-full text-slate-100 font-mono selection:bg-purple-500/30">
             {/* Blueprint Grid Overlay */}
             <div className="fixed inset-0 pointer-events-none opacity-[0.03] bg-[linear-gradient(to_right,#a855f7_1px,transparent_1px),linear-gradient(to_bottom,#a855f7_1px,transparent_1px)] bg-[size:40px_40px]" />
 

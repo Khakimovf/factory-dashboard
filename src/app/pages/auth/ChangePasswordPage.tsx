@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ShieldCheck, Key, ArrowRight, Lock, CheckCircle2 } from 'lucide-react';
+import { ShieldCheck, Key, ArrowRight, Lock, CheckCircle2, ArrowLeft } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -7,10 +7,12 @@ import { useNavigate } from 'react-router-dom';
 export default function ChangePasswordPage() {
     const { user, updatePassword } = useAuth();
     const navigate = useNavigate();
+    const [oldPassword, setOldPassword] = useState('');
     const [newPassword, setNewPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+    const [success, setSuccess] = useState(false);
 
     if (!user) {
         navigate('/login');
@@ -24,14 +26,20 @@ export default function ChangePasswordPage() {
             return;
         }
         if (newPassword.length < 6) {
-            setError('Parol kamida 6 belgidan iborat bo\'lishi kerak');
+            setError("Parol kamida 6 belgidan iborat bo'lishi kerak");
+            return;
+        }
+        if (newPassword === oldPassword) {
+            setError("Yangi parol eski parol bilan bir xil bo'lmasligi kerak");
             return;
         }
 
         setLoading(true);
+        setError('');
         try {
-            await updatePassword(newPassword);
-            navigate('/');
+            await updatePassword(oldPassword, newPassword);
+            setSuccess(true);
+            setTimeout(() => navigate('/'), 2000);
         } catch (err: any) {
             setError(err.message);
         } finally {
@@ -40,7 +48,7 @@ export default function ChangePasswordPage() {
     };
 
     return (
-        <div className="min-h-screen bg-slate-950 flex items-center justify-center p-6 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-indigo-900/20 via-slate-950 to-slate-950">
+        <div className="min-h-full bg-slate-950 flex items-center justify-center p-6 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-indigo-900/20 via-slate-950 to-slate-950">
             <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-10 pointer-events-none" />
 
             <motion.div
@@ -61,58 +69,96 @@ export default function ChangePasswordPage() {
                                 Xavfsizlik <span className="text-indigo-400">Birinchi</span>
                             </h1>
                             <p className="text-slate-400 font-bold text-xs uppercase tracking-[0.2em]">
-                                Birinchi marta kirish: Parolni yangilang
+                                {user.isFirstLogin ? 'Birinchi marta kirish: Parolni yangilang' : 'Parolni o\'zgartirish'}
                             </p>
                         </div>
 
-                        <form onSubmit={handleSubmit} className="space-y-4 pt-4">
-                            {error && (
-                                <div className="bg-rose-500/10 border border-rose-500/20 p-3 rounded-2xl text-rose-500 text-xs font-bold uppercase italic">
-                                    {error}
-                                </div>
-                            )}
-
-                            <div className="space-y-4">
-                                <div className="relative group">
-                                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-indigo-500 transition-colors w-5 h-5" />
-                                    <input
-                                        required
-                                        type="password"
-                                        value={newPassword}
-                                        onChange={(e) => setNewPassword(e.target.value)}
-                                        placeholder="YANGI PAROL"
-                                        className="w-full bg-slate-800 border-2 border-slate-700/50 rounded-2xl py-4 pl-12 pr-4 text-white placeholder:text-slate-600 focus:outline-none focus:border-indigo-500/50 focus:ring-4 focus:ring-indigo-500/10 transition-all font-black tracking-widest uppercase italic-placeholder"
-                                    />
-                                </div>
-
-                                <div className="relative group">
-                                    <Key className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-indigo-500 transition-colors w-5 h-5" />
-                                    <input
-                                        required
-                                        type="password"
-                                        value={confirmPassword}
-                                        onChange={(e) => setConfirmPassword(e.target.value)}
-                                        placeholder="PAROLNI TASDIQLASH"
-                                        className="w-full bg-slate-800 border-2 border-slate-700/50 rounded-2xl py-4 pl-12 pr-4 text-white placeholder:text-slate-600 focus:outline-none focus:border-indigo-500/50 focus:ring-4 focus:ring-indigo-500/10 transition-all font-black tracking-widest uppercase italic-placeholder"
-                                    />
-                                </div>
-                            </div>
-
-                            <button
-                                disabled={loading}
-                                type="submit"
-                                className="w-full bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-black py-5 rounded-2xl transition-all shadow-lg shadow-indigo-600/20 flex items-center justify-center gap-3 uppercase italic tracking-wider group"
+                        {success ? (
+                            <motion.div
+                                initial={{ scale: 0 }}
+                                animate={{ scale: 1 }}
+                                className="py-8 flex flex-col items-center gap-3"
                             >
-                                {loading ? 'YUBORILMOQDA...' : (
-                                    <>
-                                        PAROLNI SAQLASH
-                                        <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                                    </>
+                                <CheckCircle2 className="w-16 h-16 text-emerald-500" />
+                                <p className="text-emerald-400 font-black uppercase tracking-wider">Parol muvaffaqiyatli o'zgartirildi!</p>
+                                <p className="text-slate-500 text-xs">Bosh sahifaga yo'naltirilmoqda...</p>
+                            </motion.div>
+                        ) : (
+                            <form onSubmit={handleSubmit} className="space-y-4 pt-4">
+                                {error && (
+                                    <div className="bg-rose-500/10 border border-rose-500/20 p-3 rounded-2xl text-rose-500 text-xs font-bold uppercase italic">
+                                        {error}
+                                    </div>
                                 )}
-                            </button>
-                        </form>
 
-                        <div className="pt-6 grid grid-cols-2 gap-4">
+                                <div className="space-y-4">
+                                    {/* Old password */}
+                                    <div className="relative group">
+                                        <Key className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-indigo-500 transition-colors w-5 h-5" />
+                                        <input
+                                            required
+                                            type="password"
+                                            value={oldPassword}
+                                            onChange={(e) => setOldPassword(e.target.value)}
+                                            placeholder="JORIY PAROL"
+                                            className="w-full bg-slate-800 border-2 border-slate-700/50 rounded-2xl py-4 pl-12 pr-4 text-white placeholder:text-slate-600 focus:outline-none focus:border-indigo-500/50 focus:ring-4 focus:ring-indigo-500/10 transition-all font-black tracking-widest"
+                                        />
+                                    </div>
+
+                                    {/* New password */}
+                                    <div className="relative group">
+                                        <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-indigo-500 transition-colors w-5 h-5" />
+                                        <input
+                                            required
+                                            type="password"
+                                            value={newPassword}
+                                            onChange={(e) => setNewPassword(e.target.value)}
+                                            placeholder="YANGI PAROL"
+                                            className="w-full bg-slate-800 border-2 border-slate-700/50 rounded-2xl py-4 pl-12 pr-4 text-white placeholder:text-slate-600 focus:outline-none focus:border-indigo-500/50 focus:ring-4 focus:ring-indigo-500/10 transition-all font-black tracking-widest"
+                                        />
+                                    </div>
+
+                                    {/* Confirm */}
+                                    <div className="relative group">
+                                        <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-indigo-500 transition-colors w-5 h-5" />
+                                        <input
+                                            required
+                                            type="password"
+                                            value={confirmPassword}
+                                            onChange={(e) => setConfirmPassword(e.target.value)}
+                                            placeholder="PAROLNI TASDIQLASH"
+                                            className="w-full bg-slate-800 border-2 border-slate-700/50 rounded-2xl py-4 pl-12 pr-4 text-white placeholder:text-slate-600 focus:outline-none focus:border-indigo-500/50 focus:ring-4 focus:ring-indigo-500/10 transition-all font-black tracking-widest"
+                                        />
+                                    </div>
+                                </div>
+
+                                <button
+                                    disabled={loading}
+                                    type="submit"
+                                    className="w-full bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-black py-5 rounded-2xl transition-all shadow-lg shadow-indigo-600/20 flex items-center justify-center gap-3 uppercase italic tracking-wider group"
+                                >
+                                    {loading ? 'YUBORILMOQDA...' : (
+                                        <>
+                                            PAROLNI SAQLASH
+                                            <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                                        </>
+                                    )}
+                                </button>
+
+                                {!user.isFirstLogin && (
+                                    <button
+                                        type="button"
+                                        onClick={() => navigate(-1)}
+                                        className="w-full text-slate-500 hover:text-slate-300 text-xs font-bold uppercase tracking-widest flex items-center justify-center gap-2 transition-colors pt-2"
+                                    >
+                                        <ArrowLeft className="w-3.5 h-3.5" />
+                                        Orqaga
+                                    </button>
+                                )}
+                            </form>
+                        )}
+
+                        <div className="pt-2 grid grid-cols-2 gap-4">
                             <div className="flex items-center gap-2 text-[9px] font-black text-slate-500 uppercase tracking-widest justify-center">
                                 <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
                                 MIN 6 BELGI

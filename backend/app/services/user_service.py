@@ -7,9 +7,7 @@ from app.models.audit import AuditLog
 from app.repositories.user_repository import UserRepository
 from app.repositories.audit_repository import AuditRepository
 
-from passlib.context import CryptContext
-
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+from app.core.security import verify_password, get_password_hash
 
 class UserService:
     """Service for user management."""
@@ -32,7 +30,7 @@ class UserService:
             employee_id=user_create.employee_id,
             role=user_create.role,
             is_first_login=True,
-            password_hash=pwd_context.hash(user_create.password)
+            password_hash=get_password_hash(user_create.password)
         )
         created_user = self.user_repo.create(new_user)
         
@@ -61,10 +59,10 @@ class UserService:
     def update_password(self, user_id: str, password_update: PasswordUpdate) -> bool:
         """Update user password and clear first login flag."""
         user = self.user_repo.get_by_id(user_id)
-        if not user or not pwd_context.verify(password_update.old_password, user.password_hash):
+        if not user or not verify_password(password_update.old_password, user.password_hash):
             return False
         
-        user.password_hash = pwd_context.hash(password_update.new_password)
+        user.password_hash = get_password_hash(password_update.new_password)
         user.is_first_login = False
         self.user_repo.update(user_id, user)
         
@@ -84,7 +82,7 @@ class UserService:
 
     def verify_password(self, plain_password: str, hashed_password: str) -> bool:
         """Verify password against hash."""
-        return pwd_context.verify(plain_password, hashed_password)
+        return verify_password(plain_password, hashed_password)
     
     def list_users(self) -> List[User]:
         """List all users."""

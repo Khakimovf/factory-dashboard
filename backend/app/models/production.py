@@ -1,4 +1,6 @@
+from __future__ import annotations
 from pydantic import BaseModel, Field
+
 from typing import List
 from datetime import date
 from enum import Enum
@@ -13,7 +15,8 @@ class BillOfMaterial(BaseModel):
 
 class DailyPlan(BaseModel):
     id: str = Field(...)
-    date: date = Field(...)
+    plan_date: date = Field(...)
+
     finished_good_id: str = Field(...)
     planned_quantity: int = Field(...)
     created_by: str = Field(..., description="User session ID")

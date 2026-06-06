@@ -43,7 +43,7 @@ export function AdminPage() {
     const [activeTab, setActiveTab] = useState('users');
 
     return (
-        <div className="min-h-screen bg-slate-950 p-8 pt-24">
+        <div className="min-h-full bg-slate-950 p-8 pt-24">
             {/* Header */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
                 <div>

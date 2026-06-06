@@ -73,7 +73,7 @@ export function CanteenPage() {
   };
 
   return (
-    <div className="min-h-screen p-4 sm:p-6 lg:p-8 font-sans transition-colors duration-500 bg-slate-950 text-slate-300 pb-24 overflow-x-hidden w-full mx-auto">
+    <div className="min-h-full p-4 sm:p-6 lg:p-8 font-sans transition-colors duration-500 bg-slate-950 text-slate-300 pb-24 overflow-x-hidden w-full mx-auto">
 
       {/* Top Navigation */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-8 w-full">

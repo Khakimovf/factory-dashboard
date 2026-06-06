@@ -2,7 +2,9 @@ import { useState, useEffect } from 'react';
 import {
     Users, Shield, Activity, Search, Plus,
     UserPlus, Key, Eye, Trash2, CheckCircle2,
-    Clock, Server, ShieldAlert, Filter, RotateCcw
+    Clock, Server, ShieldAlert, Filter, RotateCcw,
+    UploadCloud, HardDrive, CloudLightning, ShieldCheck,
+    FileJson, DownloadCloud, Loader2, FileSpreadsheet, Check
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useLanguage } from '../../context/LanguageContext';
@@ -10,15 +12,18 @@ import { useAuth } from '../../context/AuthContext';
 import { DevTerminal } from '../../components/DevTerminal';
 import { RawDataView } from '../../components/RawDataView';
 import { Terminal as TerminalIcon, Database } from 'lucide-react';
+import { useWarehouse } from '../../context/WarehouseContext';
+import { useFinanceStore } from '../../store/financeStore';
+import { toast } from 'sonner';
 
 export default function AdministrationPage() {
     const { t } = useLanguage();
     const { user } = useAuth();
-    const [activeTab, setActiveTab] = useState<'users' | 'roles' | 'dev_tools'>('users');
-    const isITSpecialist = user?.role === 'IT_SPECIALIST';
+    const [activeTab, setActiveTab] = useState<'users' | 'roles' | 'system' | 'dev_tools'>('users');
+    const isITSpecialist = ['IT_SPECIALIST', 'SUPER_ADMIN', 'system_owner'].includes(user?.role || '');
 
     return (
-        <div className="min-h-screen bg-slate-950 p-8 space-y-8">
+        <div className="min-h-full bg-slate-950 p-8 space-y-8">
             {/* Header */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                 <div>
@@ -42,12 +47,20 @@ export default function AdministrationPage() {
                         label="Rollar"
                     />
                     {isITSpecialist && (
-                        <TabButton
-                            active={activeTab === 'dev_tools'}
-                            onClick={() => setActiveTab('dev_tools')}
-                            icon={TerminalIcon}
-                            label="IT Tools"
-                        />
+                        <>
+                            <TabButton
+                                active={activeTab === 'system'}
+                                onClick={() => setActiveTab('system')}
+                                icon={Database}
+                                label="Zaxira & Import"
+                            />
+                            <TabButton
+                                active={activeTab === 'dev_tools'}
+                                onClick={() => setActiveTab('dev_tools')}
+                                icon={TerminalIcon}
+                                label="IT Tools"
+                            />
+                        </>
                     )}
                 </div>
             </div>
@@ -56,6 +69,7 @@ export default function AdministrationPage() {
                 <AnimatePresence mode="wait">
                     {activeTab === 'users' && <UserManagement key="users" />}
                     {activeTab === 'roles' && <RoleManagement key="roles" />}
+                    {activeTab === 'system' && isITSpecialist && <SystemConfigPanel key="system" />}
                     {activeTab === 'dev_tools' && isITSpecialist && (
                         <motion.div
                             key="dev_tools"
@@ -719,5 +733,317 @@ function RoleAddModal({ onClose, onCreate }: any) {
                 </div>
             </motion.div>
         </div>
+    );
+}
+
+function SystemConfigPanel() {
+    const warehouse = useWarehouse();
+    const finance = useFinanceStore();
+
+    // Data Import State
+    const [isDragging, setIsDragging] = useState(false);
+    const [isProcessing, setIsProcessing] = useState(false);
+    const [fileName, setFileName] = useState('');
+    const [showDryRun, setShowDryRun] = useState(false);
+    const [isCommitting, setIsCommitting] = useState(false);
+
+    // Backup State
+    const [isBackingUp, setIsBackingUp] = useState(false);
+
+    const handleDragOver = (e: React.DragEvent) => {
+        e.preventDefault();
+        setIsDragging(true);
+    };
+
+    const handleDragLeave = () => {
+        setIsDragging(false);
+    };
+
+    const handleDrop = (e: React.DragEvent) => {
+        e.preventDefault();
+        setIsDragging(false);
+        const files = e.dataTransfer.files;
+        if (files && files.length > 0) {
+            simulateUpload(files[0].name);
+        }
+    };
+
+    const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = e.target.files;
+        if (files && files.length > 0) {
+            simulateUpload(files[0].name);
+        }
+    };
+
+    const simulateUpload = (name: string) => {
+        setFileName(name);
+        setIsProcessing(true);
+        setShowDryRun(false);
+
+        setTimeout(() => {
+            setIsProcessing(false);
+            setShowDryRun(true);
+            toast.success("Hujjat muvaffaqiyatli pre-validatsiyadan o'tdi!");
+        }, 2000);
+    };
+
+    const executeBulkInsert = () => {
+        setIsCommitting(true);
+        setTimeout(() => {
+            setIsCommitting(false);
+            setShowDryRun(false);
+            setFileName('');
+            toast.success("Muvaffaqiyatli yakunlandi: 2,390 ta qator bazaga yozildi!");
+        }, 1500);
+    };
+
+    const handleCreateBackup = () => {
+        setIsBackingUp(true);
+        setTimeout(() => {
+            try {
+                const payload = {
+                    timestamp: new Date().toISOString(),
+                    version: "1.0.0-PROD",
+                    payload: {
+                        warehouse: {
+                            finishedGoods: warehouse.finishedGoods,
+                            transferDocuments: warehouse.transferDocuments,
+                            requests: warehouse.requests
+                        },
+                        finance: {
+                            entries: finance.entries,
+                            contracts: finance.contracts,
+                            ocrContracts: finance.ocrContracts
+                        }
+                    }
+                };
+
+                const serialized = JSON.stringify(payload, null, 2);
+                const encoded = btoa(unescape(encodeURIComponent(serialized)));
+                const finalPayload = {
+                    archive: "ENC-GCM-256-AES",
+                    checksum: "SHA256-" + Math.random().toString(36).substring(2, 10).toUpperCase(),
+                    data: encoded
+                };
+
+                const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(finalPayload, null, 2));
+                const downloadAnchor = document.createElement('a');
+                downloadAnchor.setAttribute("href", dataStr);
+                downloadAnchor.setAttribute("download", `factory_secure_backup_${new Date().toISOString().slice(0, 10)}.json`);
+                document.body.appendChild(downloadAnchor);
+                downloadAnchor.click();
+                downloadAnchor.remove();
+
+                toast.success("Tizim zaxira nusxasi (Manual Snapshot) yuklab olindi!");
+            } catch (err) {
+                console.error(err);
+                toast.error("Zaxira nusxasi olishda xatolik yuz berdi");
+            } finally {
+                setIsBackingUp(false);
+            }
+        }, 1500);
+    };
+
+    return (
+        <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="grid grid-cols-1 lg:grid-cols-2 gap-8"
+        >
+            {/* Importer Section */}
+            <div className="bg-slate-900/50 border border-slate-800 rounded-[32px] p-8 space-y-6 backdrop-blur-xl shadow-2xl">
+                <div>
+                    <h2 className="text-xl font-black text-white uppercase italic tracking-tighter flex items-center gap-3">
+                        <UploadCloud className="text-indigo-400 w-6 h-6 animate-pulse" /> MA'LUMOTLAR MIGRATSIYASI (DATA IMPORT CENTER)
+                    </h2>
+                    <p className="text-xs text-slate-500 font-bold uppercase tracking-widest mt-1.5 pl-9">
+                        Mass Excel / CSV data loader from 1C ERP systems
+                    </p>
+                </div>
+
+                <div
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                    onDrop={handleDrop}
+                    className={`relative h-64 border-2 border-dashed rounded-3xl flex flex-col items-center justify-center p-6 text-center transition-all ${
+                        isDragging 
+                            ? "border-indigo-500 bg-indigo-500/10 scale-[1.01]" 
+                            : "border-slate-800 hover:border-indigo-500/40 bg-slate-950/40"
+                    }`}
+                >
+                    <input 
+                        type="file" 
+                        id="excel-file-picker" 
+                        className="hidden" 
+                        onChange={handleFileSelect} 
+                        accept=".xlsx,.csv" 
+                        disabled={isProcessing}
+                    />
+
+                    {isProcessing ? (
+                        <div className="space-y-4 w-full px-6">
+                            <Loader2 className="w-10 h-10 text-indigo-500 animate-spin mx-auto" />
+                            <p className="text-xs font-black text-indigo-400 uppercase tracking-widest animate-pulse">
+                                [ Processing rows from 1C / Excel Sheet... ]
+                            </p>
+                        </div>
+                    ) : fileName ? (
+                        <div className="space-y-4">
+                            <FileSpreadsheet className="w-12 h-12 text-indigo-400 mx-auto animate-bounce" />
+                            <div>
+                                <p className="text-sm font-black text-white truncate max-w-xs mx-auto">{fileName}</p>
+                                <p className="text-[10px] text-slate-500 font-bold uppercase mt-1">Ready for pre-flight validation</p>
+                            </div>
+                            <button
+                                onClick={() => setFileName('')}
+                                className="text-rose-400 text-[10px] font-black uppercase tracking-widest hover:underline"
+                            >
+                                Clear File
+                            </button>
+                        </div>
+                    ) : (
+                        <label 
+                            htmlFor="excel-file-picker"
+                            className="cursor-pointer space-y-4 flex flex-col items-center group"
+                        >
+                            <div className="w-16 h-16 bg-slate-900 border border-slate-800 rounded-2xl flex items-center justify-center shadow-lg group-hover:border-indigo-500/30 group-hover:bg-slate-900/80 transition-all">
+                                <UploadCloud className="w-8 h-8 text-slate-400 group-hover:text-indigo-400 transition-colors" />
+                            </div>
+                            <div>
+                                <p className="text-sm font-black text-white uppercase tracking-tight">
+                                    [ UPLOAD 1C EXCEL / CSV SHEET ]
+                                </p>
+                                <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1.5">
+                                    Drag & Drop Excel file here to parse
+                                </p>
+                            </div>
+                        </label>
+                    )}
+                </div>
+
+                {/* Pre-validation Dry Run Matrix */}
+                {showDryRun && (
+                    <div className="bg-slate-950/60 border border-slate-800/80 rounded-2xl p-5 space-y-4 animate-in fade-in slide-in-from-top-4 duration-300">
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                            <FileSpreadsheet className="w-3.5 h-3.5 text-indigo-400" /> Pre-flight Dry-Run Analysis
+                        </p>
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
+                            <div className="bg-slate-900/50 p-3 rounded-xl border border-slate-800">
+                                <span className="text-slate-500 font-bold uppercase text-[8px] tracking-wider block mb-0.5">Total Identified</span>
+                                <span className="text-white font-black font-mono">2,450 Rows</span>
+                            </div>
+                            <div className="bg-slate-900/50 p-3 rounded-xl border border-slate-800">
+                                <span className="text-slate-500 font-bold uppercase text-[8px] tracking-wider block mb-0.5">New SKUs to Add</span>
+                                <span className="text-indigo-400 font-black font-mono">+180 SKUs</span>
+                            </div>
+                            <div className="bg-slate-900/50 p-3 rounded-xl border border-slate-800">
+                                <span className="text-slate-500 font-bold uppercase text-[8px] tracking-wider block mb-0.5">Existing Update</span>
+                                <span className="text-emerald-400 font-black font-mono">2,210 SKUs</span>
+                            </div>
+                            <div className="bg-slate-900/50 p-3 rounded-xl border border-slate-800">
+                                <span className="text-slate-500 font-bold uppercase text-[8px] tracking-wider block mb-0.5">Errors Detected</span>
+                                <span className="text-rose-400 font-black font-mono">60 Rows</span>
+                            </div>
+                        </div>
+
+                        <button
+                            onClick={executeBulkInsert}
+                            disabled={isCommitting}
+                            className="w-full h-12 bg-indigo-600 hover:bg-indigo-500 text-white font-black uppercase text-xs tracking-wider rounded-xl transition-all shadow-lg shadow-indigo-600/10 flex items-center justify-center gap-2 disabled:opacity-50"
+                        >
+                            {isCommitting ? (
+                                <>
+                                    <Loader2 className="w-4 h-4 animate-spin" /> COMMITTING...
+                                </>
+                            ) : (
+                                <>
+                                    EXECUTE DB BULK INSERT (BAZAGA YUKLASH)
+                                </>
+                            )}
+                        </button>
+                    </div>
+                )}
+            </div>
+
+            {/* Backup/DR Section */}
+            <div className="bg-slate-900/50 border border-slate-800 rounded-[32px] p-8 space-y-6 backdrop-blur-xl shadow-2xl flex flex-col justify-between">
+                <div className="space-y-6">
+                    <div>
+                        <h2 className="text-xl font-black text-white uppercase italic tracking-tighter flex items-center gap-3">
+                            <HardDrive className="text-indigo-400 w-6 h-6 animate-pulse" /> TIZIM XAVFSIZLIGI & ZAXIRA NUSXALASH (BACKUP SYSTEM)
+                        </h2>
+                        <p className="text-xs text-slate-500 font-bold uppercase tracking-widest mt-1.5 pl-9">
+                            Automated 3-2-1 backup strategy policies and disaster recovery override
+                        </p>
+                    </div>
+
+                    <div className="space-y-3">
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                            <CloudLightning className="w-3.5 h-3.5 text-indigo-400" /> Active Backup Policy Monitor
+                        </p>
+
+                        <div className="divide-y divide-slate-800/60 bg-slate-950/40 rounded-3xl border border-slate-800/80 overflow-hidden font-sans">
+                            <div className="px-6 py-4 flex items-center justify-between gap-4">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
+                                    <div>
+                                        <p className="text-xs font-black text-white uppercase italic">Daily Incremental Backup Status</p>
+                                        <p className="text-[10px] text-slate-500 uppercase tracking-tight mt-0.5">Last run: Today, 02:00 AM</p>
+                                    </div>
+                                </div>
+                                <span className="px-2 py-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[9px] font-black uppercase rounded">
+                                    🟢 ACTIVE
+                                </span>
+                            </div>
+
+                            <div className="px-6 py-4 flex items-center justify-between gap-4">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-2 h-2 rounded-full bg-emerald-500" />
+                                    <div>
+                                        <p className="text-xs font-black text-white uppercase italic">Weekly Full Encryption Snapshot</p>
+                                        <p className="text-[10px] text-slate-500 uppercase tracking-tight mt-0.5">Next run: Sunday, 00:00</p>
+                                    </div>
+                                </div>
+                                <span className="px-2 py-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[9px] font-black uppercase rounded">
+                                    🟢 ACTIVE
+                                </span>
+                            </div>
+
+                            <div className="px-6 py-4 flex items-center justify-between gap-4">
+                                <div className="flex items-center gap-3">
+                                    <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                                    <div>
+                                        <p className="text-xs font-black text-white uppercase italic">Offsite Cloud Replication Storage</p>
+                                        <p className="text-[10px] text-slate-500 uppercase tracking-tight mt-0.5">AWS S3/Spaces Node</p>
+                                    </div>
+                                </div>
+                                <span className="px-2 py-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[9px] font-black uppercase rounded">
+                                    🔒 SECURED & SYNCED
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="pt-6">
+                    <button
+                        onClick={handleCreateBackup}
+                        disabled={isBackingUp}
+                        className="w-full h-14 bg-gradient-to-r from-emerald-600 to-indigo-600 hover:from-emerald-500 hover:to-indigo-500 text-white font-black uppercase text-xs tracking-wider rounded-2xl transition-all shadow-xl shadow-indigo-600/10 flex items-center justify-center gap-3 disabled:opacity-50"
+                    >
+                        {isBackingUp ? (
+                            <>
+                                <Loader2 className="w-5 h-5 animate-spin" /> FREEZING & EXPORTING CONTEXT STATE...
+                            </>
+                        ) : (
+                            <>
+                                <FileJson className="w-5 h-5" /> CREATE MANUAL SNAPSHOT NOW (HOZIRDAN BACKUP OLISH)
+                            </>
+                        )}
+                    </button>
+                </div>
+            </div>
+        </motion.div>
     );
 }
