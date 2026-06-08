@@ -44,6 +44,7 @@ const navItems: NavItem[] = [
       { path: '/qc', label: 'sidebar.qc' },
       { path: '/mrp', label: 'sidebar.mrp' },
       { path: '/traceability', label: 'sidebar.traceability' },
+      { path: '/brak-recycling', label: '♻️ Brak va Qayta Ishlash' },
     ]
   },
   {

@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import {
     Truck,
     ArrowRightCircle,
@@ -120,6 +120,43 @@ export function LogisticsGatePage() {
 
     const [searchQuery, setSearchQuery] = useState('');
     const [historySearchQuery, setHistorySearchQuery] = useState('');
+
+    // ── Live terminal clock (split: time + date with Uzbek day) ──────────────
+    const UZ_DAYS = ['Yakshanba','Dushanba','Seshanba','Chorshanba','Payshanba','Juma','Shanba'];
+    const buildClock = () => {
+        const n = new Date();
+        const p = (v: number) => String(v).padStart(2, '0');
+        return {
+            time: `${p(n.getHours())}:${p(n.getMinutes())}:${p(n.getSeconds())}`,
+            date: `${p(n.getDate())}.${p(n.getMonth()+1)}.${n.getFullYear()} • ${UZ_DAYS[n.getDay()].toUpperCase()}`,
+        };
+    };
+    const [clockTime, setClockTime] = useState(() => buildClock().time);
+    const [clockDate, setClockDate] = useState(() => buildClock().date);
+    // Keep legacy liveClock for submittedAt payload binding
+    const [liveClock, setLiveClock] = useState(() => {
+        const n = new Date(); const p = (v: number) => String(v).padStart(2, '0');
+        return `${p(n.getDate())}.${p(n.getMonth()+1)}.${n.getFullYear()} — ${p(n.getHours())}:${p(n.getMinutes())}:${p(n.getSeconds())}`;
+    });
+    useEffect(() => {
+        const id = setInterval(() => {
+            const { time, date } = buildClock();
+            setClockTime(time);
+            setClockDate(date);
+            const n = new Date(); const p = (v: number) => String(v).padStart(2, '0');
+            setLiveClock(`${p(n.getDate())}.${p(n.getMonth()+1)}.${n.getFullYear()} — ${p(n.getHours())}:${p(n.getMinutes())}:${p(n.getSeconds())}`);
+        }, 1000);
+        return () => clearInterval(id);
+    }, []);
+
+    // ── Advanced history filter states ─────────────────────────────────────
+    const [histWaybill,   setHistWaybill]   = useState('');
+    const [histDateFrom,  setHistDateFrom]  = useState('');
+    const [histDateTo,    setHistDateTo]    = useState('');
+    const [histTimeFrom,  setHistTimeFrom]  = useState('');
+    const [histTimeTo,    setHistTimeTo]    = useState('');
+    const [histType,      setHistType]      = useState<'ALL'|'IN'|'OUT'>('ALL');
+    const [histPost,      setHistPost]      = useState('ALL');
 
     // Persistent storage for demo purposes
     const [entries, setEntries] = useState<GateEntry[]>(() => {
@@ -291,9 +328,13 @@ export function LogisticsGatePage() {
         }
 
         const now = new Date();
+        const p = (v: number) => String(v).padStart(2, '0');
+        // Exact timestamp captured at submit moment — bound from live clock
+        const submittedAt = `${p(now.getDate())}.${p(now.getMonth()+1)}.${now.getFullYear()} — ${p(now.getHours())}:${p(now.getMinutes())}:${p(now.getSeconds())}`;
+
         const newEntry: GateEntry = {
             id: Date.now().toString(),
-            time: now.toLocaleTimeString(),
+            time: `${p(now.getHours())}:${p(now.getMinutes())}:${p(now.getSeconds())}`,
             date: now.toISOString().split('T')[0],
             type: 'IN',
             plateNumber: inPlate.toUpperCase(),
@@ -305,7 +346,9 @@ export function LogisticsGatePage() {
             status: 'Hududda',
             operator: authorizedOperator?.name || 'Unknown',
             post: selectedPost || 'N/A',
-            waybillRef: inInvoiceRef
+            waybillRef: inInvoiceRef,
+            // Auto-stamped from live clock at submission moment
+            ...({ submittedAt } as any)
         };
 
         setEntries([newEntry, ...entries]);
@@ -363,12 +406,35 @@ export function LogisticsGatePage() {
         return isToday && matchesSearch;
     });
 
-    const filteredHistory = entries.filter(e =>
-        e.plateNumber.toLowerCase().includes(historySearchQuery.toLowerCase()) ||
-        e.driver.toLowerCase().includes(historySearchQuery.toLowerCase()) ||
-        e.operator.toLowerCase().includes(historySearchQuery.toLowerCase()) ||
-        (e.waybillRef && e.waybillRef.toLowerCase().includes(historySearchQuery.toLowerCase()))
-    );
+    const filteredHistory = entries.filter(e => {
+        // General text search
+        const q = historySearchQuery.toLowerCase();
+        const matchText = !q || [
+            e.plateNumber, e.driver, e.operator, e.waybillRef ?? ''
+        ].some(v => v.toLowerCase().includes(q));
+
+        // Waybill exact / partial match
+        const matchWaybill = !histWaybill.trim() ||
+            (e.waybillRef?.toLowerCase().includes(histWaybill.trim().toLowerCase()));
+
+        // Date range
+        const matchDateFrom = !histDateFrom || e.date >= histDateFrom;
+        const matchDateTo   = !histDateTo   || e.date <= histDateTo;
+
+        // Time range (HH:MM string comparison — works for same-day shifts)
+        const entryHHMM = e.time.slice(0, 5); // "HH:MM"
+        const matchTimeFrom = !histTimeFrom || entryHHMM >= histTimeFrom;
+        const matchTimeTo   = !histTimeTo   || entryHHMM <= histTimeTo;
+
+        // Direction filter
+        const matchType = histType === 'ALL' || e.type === histType;
+
+        // Post filter
+        const matchPost = histPost === 'ALL' || e.post === histPost;
+
+        return matchText && matchWaybill && matchDateFrom && matchDateTo &&
+               matchTimeFrom && matchTimeTo && matchType && matchPost;
+    });
 
     if (!selectedPost) {
         return (
@@ -486,6 +552,41 @@ export function LogisticsGatePage() {
                         </Button>
                     </div>
                 </div>
+            )}
+
+            {/* ── MASTER TERMINAL CLOCK — top-center between header and tabs ── */}
+            {authorizedOperator && (
+                <motion.div
+                    initial={{ opacity: 0, y: -8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.4 }}
+                    className="flex justify-center"
+                >
+                    <div className="flex flex-col items-center justify-center py-3 px-8 bg-slate-900/40 border border-slate-800 rounded-2xl shadow-2xl backdrop-blur-md relative overflow-hidden">
+                        {/* Subtle glow layer */}
+                        <div className="absolute inset-0 bg-gradient-to-b from-emerald-500/5 to-transparent pointer-events-none" />
+                        {/* HH:MM:SS */}
+                        <span
+                            className="text-4xl font-black tracking-widest text-emerald-400 font-mono leading-none"
+                            style={{ textShadow: '0 0 20px rgba(52,211,153,0.45), 0 0 40px rgba(52,211,153,0.15)' }}
+                        >
+                            {clockTime}
+                        </span>
+                        {/* Date • Uzbek Day */}
+                        <span className="text-[11px] font-semibold tracking-[0.3em] text-slate-400 uppercase mt-1.5">
+                            {clockDate}
+                        </span>
+                        {/* LIVE pulse badge */}
+                        <div className="absolute top-2.5 right-3 flex items-center gap-1.5">
+                            <motion.span
+                                animate={{ opacity: [1, 0.2, 1] }}
+                                transition={{ duration: 1.2, repeat: Infinity }}
+                                className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block"
+                            />
+                            <span className="text-[7px] font-black text-emerald-600 uppercase tracking-[0.3em]">LIVE</span>
+                        </div>
+                    </div>
+                </motion.div>
             )}
 
             {/* Main Content */}
@@ -879,25 +980,148 @@ export function LogisticsGatePage() {
                         {/* HISTORY TAB */}
                         <TabsContent value="history" className="mt-0 outline-none">
                             <Card className="bg-slate-900 border-slate-800 shadow-2xl rounded-3xl overflow-hidden min-h-[600px]">
-                                <CardHeader className="border-b border-slate-800/50 pb-6 bg-slate-900/50">
-                                    <div className="flex items-center justify-between">
+                                <CardHeader className="border-b border-slate-800/50 pb-0 bg-slate-900/50">
+                                    {/* ── Title row ───────────────────────────────────────── */}
+                                    <div className="flex items-center justify-between pb-5">
                                         <div className="flex items-center gap-3">
                                             <div className="w-8 h-8 bg-indigo-500/20 rounded-lg flex items-center justify-center">
                                                 <Filter className="w-5 h-5 text-indigo-500" />
                                             </div>
-                                            <CardTitle className="text-white font-black uppercase text-lg tracking-tighter italic">VGM Global History Journal</CardTitle>
-                                        </div>
-                                        <div className="flex items-center gap-4">
-                                            <div className="relative w-96">
-                                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-                                                <Input
-                                                    placeholder="Search history by plate, driver, waybill... "
-                                                    value={historySearchQuery}
-                                                    onChange={e => setHistorySearchQuery(e.target.value)}
-                                                    className="bg-slate-950 border-slate-800 pl-10 text-xs font-bold rounded-xl h-12 w-full italic"
-                                                />
+                                            <div>
+                                                <CardTitle className="text-white font-black uppercase text-lg tracking-tighter italic">VGM Global History Journal</CardTitle>
+                                                <p className="text-[9px] text-slate-600 font-black uppercase tracking-[0.2em] mt-0.5">Harakatlar Arrivi — Multi-Criteria Advanced Filter</p>
                                             </div>
                                         </div>
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-[9px] font-black text-slate-600 uppercase tracking-widest">{filteredHistory.length} YOZUV</span>
+                                        </div>
+                                    </div>
+
+                                    {/* ── Advanced Filter Bar Grid ─────────────────────────── */}
+                                    <div className="border-t border-slate-800/60 pt-5 pb-5 space-y-4">
+                                        {/* Row 1 — Text search + Waybill + Type + Post */}
+                                        <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                                            {/* General search */}
+                                            <div className="relative md:col-span-1">
+                                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600" />
+                                                <input
+                                                    type="text"
+                                                    placeholder="Plate / Haydovchi / Guard..."
+                                                    value={historySearchQuery}
+                                                    onChange={e => setHistorySearchQuery(e.target.value)}
+                                                    className="w-full bg-slate-950 border border-slate-800 text-slate-200 text-[11px] font-bold rounded-xl h-10 pl-10 pr-4 focus:outline-none focus:border-indigo-500/40 transition-colors placeholder:text-slate-700 italic"
+                                                />
+                                            </div>
+                                            {/* Waybill / Nakladnaya No. */}
+                                            <div className="relative">
+                                                <FileText className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600" />
+                                                <input
+                                                    type="text"
+                                                    placeholder="Waybill / Nakladnaya № (REF: MAT-5000124)"
+                                                    value={histWaybill}
+                                                    onChange={e => setHistWaybill(e.target.value)}
+                                                    className="w-full bg-slate-950 border border-slate-800 text-slate-200 text-[11px] font-bold rounded-xl h-10 pl-10 pr-4 focus:outline-none focus:border-indigo-500/40 transition-colors placeholder:text-slate-700 italic"
+                                                />
+                                            </div>
+                                            {/* Direction filter */}
+                                            <div className="flex items-center gap-1 bg-slate-950 border border-slate-800 rounded-xl h-10 px-2">
+                                                {(['ALL','IN','OUT'] as const).map(t => (
+                                                    <button
+                                                        key={t}
+                                                        onClick={() => setHistType(t)}
+                                                        className={`flex-1 h-7 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${
+                                                            histType === t
+                                                                ? t === 'IN'  ? 'bg-emerald-600 text-white'
+                                                                : t === 'OUT' ? 'bg-rose-600 text-white'
+                                                                : 'bg-indigo-600 text-white'
+                                                                : 'text-slate-600 hover:text-slate-400'
+                                                        }`}
+                                                    >{t === 'ALL' ? 'Barchasi' : t === 'IN' ? '↓ KIRISH' : '↑ CHIQISH'}</button>
+                                                ))}
+                                            </div>
+                                            {/* Post filter */}
+                                            <div className="relative">
+                                                <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600" />
+                                                <select
+                                                    value={histPost}
+                                                    onChange={e => setHistPost(e.target.value)}
+                                                    className="w-full appearance-none bg-slate-950 border border-slate-800 text-slate-200 text-[11px] font-bold rounded-xl h-10 pl-10 pr-8 focus:outline-none focus:border-indigo-500/40 transition-colors cursor-pointer"
+                                                >
+                                                    <option value="ALL">Barcha Postlar</option>
+                                                    {POSTS.map(p => <option key={p} value={p}>{p}</option>)}
+                                                </select>
+                                                <ArrowRight className="absolute right-3 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-600 rotate-90 pointer-events-none" />
+                                            </div>
+                                        </div>
+
+                                        {/* Row 2 — Date range + Time range */}
+                                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 items-end">
+                                            {/* Date from */}
+                                            <div className="flex flex-col gap-1.5">
+                                                <p className="text-[8px] font-black text-slate-600 uppercase tracking-[0.25em] pl-1">Sana (Dan)</p>
+                                                <div className="relative">
+                                                    <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-600" />
+                                                    <input
+                                                        type="date"
+                                                        value={histDateFrom}
+                                                        onChange={e => setHistDateFrom(e.target.value)}
+                                                        className="w-full bg-slate-950 border border-slate-800 text-slate-300 text-[11px] font-bold rounded-xl h-10 pl-10 pr-3 focus:outline-none focus:border-indigo-500/40 transition-colors [color-scheme:dark]"
+                                                    />
+                                                </div>
+                                            </div>
+                                            {/* Date to */}
+                                            <div className="flex flex-col gap-1.5">
+                                                <p className="text-[8px] font-black text-slate-600 uppercase tracking-[0.25em] pl-1">Sana (Gacha)</p>
+                                                <div className="relative">
+                                                    <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-600" />
+                                                    <input
+                                                        type="date"
+                                                        value={histDateTo}
+                                                        onChange={e => setHistDateTo(e.target.value)}
+                                                        className="w-full bg-slate-950 border border-slate-800 text-slate-300 text-[11px] font-bold rounded-xl h-10 pl-10 pr-3 focus:outline-none focus:border-indigo-500/40 transition-colors [color-scheme:dark]"
+                                                    />
+                                                </div>
+                                            </div>
+                                            {/* Time from */}
+                                            <div className="flex flex-col gap-1.5">
+                                                <p className="text-[8px] font-black text-slate-600 uppercase tracking-[0.25em] pl-1">Soat (Dan — HH:MM)</p>
+                                                <div className="relative">
+                                                    <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-600" />
+                                                    <input
+                                                        type="time"
+                                                        value={histTimeFrom}
+                                                        onChange={e => setHistTimeFrom(e.target.value)}
+                                                        className="w-full bg-slate-950 border border-slate-800 text-slate-300 text-[11px] font-bold rounded-xl h-10 pl-10 pr-3 focus:outline-none focus:border-amber-500/40 transition-colors [color-scheme:dark]"
+                                                    />
+                                                </div>
+                                            </div>
+                                            {/* Time to */}
+                                            <div className="flex flex-col gap-1.5">
+                                                <p className="text-[8px] font-black text-slate-600 uppercase tracking-[0.25em] pl-1">Soat (Gacha — HH:MM)</p>
+                                                <div className="relative">
+                                                    <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-600" />
+                                                    <input
+                                                        type="time"
+                                                        value={histTimeTo}
+                                                        onChange={e => setHistTimeTo(e.target.value)}
+                                                        className="w-full bg-slate-950 border border-slate-800 text-slate-300 text-[11px] font-bold rounded-xl h-10 pl-10 pr-3 focus:outline-none focus:border-amber-500/40 transition-colors [color-scheme:dark]"
+                                                    />
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Clear filters row */}
+                                        {(historySearchQuery || histWaybill || histDateFrom || histDateTo || histTimeFrom || histTimeTo || histType !== 'ALL' || histPost !== 'ALL') && (
+                                            <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} className="flex items-center gap-3">
+                                                <button
+                                                    onClick={() => { setHistorySearchQuery(''); setHistWaybill(''); setHistDateFrom(''); setHistDateTo(''); setHistTimeFrom(''); setHistTimeTo(''); setHistType('ALL'); setHistPost('ALL'); }}
+                                                    className="flex items-center gap-2 px-4 py-1.5 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-[10px] font-black uppercase tracking-widest hover:bg-rose-500/20 transition-all"
+                                                >
+                                                    <XCircle className="w-3.5 h-3.5" /> Filtrlarni Tozalash
+                                                </button>
+                                                <span className="text-[9px] text-slate-600 font-bold italic">{filteredHistory.length} ta natija topildi</span>
+                                            </motion.div>
+                                        )}
                                     </div>
                                 </CardHeader>
                                 <CardContent className="p-0">

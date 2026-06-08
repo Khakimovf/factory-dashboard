@@ -2,21 +2,24 @@ import React from 'react';
 import { useLocation } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { ShieldAlert, Wifi, Lock, AlertTriangle } from 'lucide-react';
-import { useMaintenance, LOCKABLE_MODULES, ModuleId } from '../context/MaintenanceContext';
+import { useMaintenance } from '../context/MaintenanceContext';
+import { useMaintenanceStore } from '../store/maintenanceStore';
 
 /**
  * MaintenanceGuard — wraps the main layout content.
- * If the current route belongs to a locked module, this replaces the children
+ * If the current route belongs to a locked module or child sub-route, this replaces the children
  * with a full-screen maintenance lock screen.
  */
 export function MaintenanceGuard({ children }: { children: React.ReactNode }) {
-    const { lockedModules, activeBroadcast, dismissBroadcast } = useMaintenance();
+    const { activeBroadcast, dismissBroadcast } = useMaintenance();
     const location = useLocation();
 
-    // Determine if any locked module matches the current path
-    const lockedModule = LOCKABLE_MODULES.find(
-        m => lockedModules[m.id as ModuleId] && location.pathname.startsWith(m.pathPrefix)
-    );
+    // Select modules to reactively trigger updates on toggle
+    const modules = useMaintenanceStore((state) => state.modules);
+    const isRouteLocked = useMaintenanceStore((state) => state.isRouteLocked);
+
+    const lockedInfo = isRouteLocked(location.pathname);
+
 
     // Determine if the broadcast matches the current path layout
     const isBroadcastVisible = React.useMemo(() => {
@@ -114,7 +117,7 @@ export function MaintenanceGuard({ children }: { children: React.ReactNode }) {
             )}
 
             {/* ── Module Lock Screen ───────────────────────────────────────────── */}
-            {lockedModule ? (
+            {lockedInfo ? (
                 <motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
@@ -157,7 +160,7 @@ export function MaintenanceGuard({ children }: { children: React.ReactNode }) {
                         </div>
 
                         <h2 className="text-2xl font-black text-white uppercase tracking-tight mb-3">
-                            {lockedModule.label}
+                            {lockedInfo.lockLabel}
                         </h2>
                         <p className="text-sm font-bold text-slate-400 leading-relaxed mb-2">
                             Ushbu bo'limda tizim administratori tomonidan yangilanish ishlari olib borilmoqda.

@@ -7,11 +7,14 @@ import {
     Activity, ArrowRight, X, Download, Archive, Cpu,
     Radio, Bell, Send, ToggleLeft, ToggleRight, Wifi,
     AlertTriangle, ShieldAlert, Package, DollarSign, Truck,
-    ChevronDown, MemoryStick, Network, GitBranch, Layers,
-    Boxes
+    ChevronDown, ChevronUp, MemoryStick, Network, GitBranch, Layers,
+    Boxes, Factory, Users,
+    LayoutDashboard, Wrench, Shield, BarChart2, ShoppingCart
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { useMaintenance, LOCKABLE_MODULES, ModuleId, BroadcastSeverity } from '../../context/MaintenanceContext';
+import { useMaintenance, BroadcastSeverity } from '../../context/MaintenanceContext';
+import { useMaintenanceStore, ModuleToggleTree, SubRouteToggle } from '../../store/maintenanceStore';
+
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -988,32 +991,95 @@ function BroadcastSection() {
 
 // ─── Section D: Module Live Toggles ──────────────────────────────────────────
 
-const MODULE_ICONS: Record<string, any> = {
-    warehouse: Package,
-    gate: Truck,
-    finance: DollarSign,
+// ─── Section D: Module Live Toggles ──────────────────────────────────────────
+
+const PARENT_ICONS: Record<string, any> = {
+    dashboard:        LayoutDashboard,
+    warehouse_logistics: Boxes,
+    maintenance_tech: Wrench,
+    production_plan:  Factory,
+    hr_service:       Users,
+    vgm_transport:    Shield,
+    reports_intel:    BarChart2,
+    finance_co:       DollarSign,
+    procurement_mm:   ShoppingCart,
 };
 
-const MODULE_COLORS: Record<string, { pill: string; on: string; glow: string }> = {
-    warehouse: { pill: 'border-blue-500/30 bg-blue-500/5', on: 'bg-blue-500', glow: 'shadow-blue-500/40' },
-    gate: { pill: 'border-amber-500/30 bg-amber-500/5', on: 'bg-amber-500', glow: 'shadow-amber-500/40' },
-    finance: { pill: 'border-violet-500/30 bg-violet-500/5', on: 'bg-violet-500', glow: 'shadow-violet-500/40' },
+const PARENT_COLORS: Record<string, { bg: string; border: string; text: string }> = {
+    dashboard:        { bg: 'from-sky-500/10 to-blue-500/5',      border: 'border-sky-500/20',     text: 'text-sky-400' },
+    warehouse_logistics: { bg: 'from-blue-500/10 to-indigo-500/5',  border: 'border-blue-500/20',    text: 'text-blue-400' },
+    maintenance_tech: { bg: 'from-orange-500/10 to-red-500/5',    border: 'border-orange-500/20',  text: 'text-orange-400' },
+    production_plan:  { bg: 'from-emerald-500/10 to-teal-500/5',  border: 'border-emerald-500/20', text: 'text-emerald-400' },
+    hr_service:       { bg: 'from-violet-500/10 to-purple-500/5', border: 'border-violet-500/20',  text: 'text-violet-400' },
+    vgm_transport:    { bg: 'from-amber-500/10 to-yellow-500/5',  border: 'border-amber-500/20',   text: 'text-amber-400' },
+    reports_intel:    { bg: 'from-cyan-500/10 to-teal-500/5',     border: 'border-cyan-500/20',    text: 'text-cyan-400' },
+    finance_co:       { bg: 'from-amber-500/10 to-yellow-500/5',  border: 'border-amber-500/20',   text: 'text-amber-400' },
+    procurement_mm:   { bg: 'from-rose-500/10 to-pink-500/5',     border: 'border-rose-500/20',    text: 'text-rose-400' },
 };
 
 function ModuleTogglesSection() {
-    const { lockedModules, toggleModule } = useMaintenance();
+    const rawModules = useMaintenanceStore((state) => state.modules);
+    // Guard: if Zustand hydration returns undefined (e.g. stale/corrupt persisted state)
+    const modules = rawModules ?? [];
+    const toggleParent = useMaintenanceStore((state) => state.toggleParent);
+    const toggleSubRoute = useMaintenanceStore((state) => state.toggleSubRoute);
 
-    const handleToggle = (id: ModuleId) => {
-        const willLock = !lockedModules[id];
-        toggleModule(id);
-        if (willLock) {
-            toast.warning(`⚠️ ${LOCKABLE_MODULES.find(m => m.id === id)?.label} MAINTENANCE MODE ON — operatorlar bloklanadi`, { duration: 4000 });
+    // Expand state for accordion sections
+    const [expanded, setExpanded] = useState<Record<string, boolean>>({
+        dashboard:           true,
+        warehouse_logistics: false,
+        maintenance_tech:    false,
+        production_plan:     false,
+        hr_service:          false,
+        vgm_transport:       false,
+        reports_intel:       false,
+        finance_co:          false,
+        procurement_mm:      false,
+    });
+
+    const toggleExpanded = (id: string) => {
+        setExpanded(prev => ({ ...prev, [id]: !prev[id] }));
+    };
+
+    const handleParentToggle = (parentId: string, label: string) => {
+        const mod = modules.find(m => m.id === parentId);
+        if (!mod) return;
+        const willEnable = !mod.enabled;
+        toggleParent(parentId);
+        if (willEnable) {
+            toast.success(`✅ ${label.toUpperCase()} GLOBAL ACTIVE — barcha sub-routelar yoqildi`, { duration: 3500 });
         } else {
-            toast.success(`✅ ${LOCKABLE_MODULES.find(m => m.id === id)?.label} tiklandi — modul faol`, { duration: 3000 });
+            toast.warning(`⚠️ ${label.toUpperCase()} GLOBAL MAINTENANCE LOCK — barcha sub-routelar muzlatildi`, { duration: 4500 });
         }
     };
 
-    const lockedCount = Object.values(lockedModules).filter(Boolean).length;
+    const handleSubToggle = (parentId: string, subRouteId: string, label: string) => {
+        const mod = modules.find(m => m.id === parentId);
+        if (!mod) return;
+        if (!mod.enabled) {
+            toast.error(`❌ Global lock faol. Avval ${mod.label} master switchini yoqing!`);
+            return;
+        }
+
+        const sub = mod.subRoutes.find(r => r.id === subRouteId);
+        if (!sub) return;
+        const willEnable = !sub.enabled;
+        toggleSubRoute(parentId, subRouteId);
+        if (willEnable) {
+            toast.success(`✅ ${label} faollashtirildi`, { duration: 3000 });
+        } else {
+            toast.warning(`⚠️ ${label} o'chirildi — ushbu yo'nalish bloklandi`, { duration: 3500 });
+        }
+    };
+
+    // Calculate total locked sub-routes (guard subRoutes in case of stale persisted data)
+    const lockedCount = modules.reduce((count, mod) => {
+        const subs = mod.subRoutes ?? [];
+        if (!mod.enabled) {
+            return count + subs.length;
+        }
+        return count + subs.filter(r => !r.enabled).length;
+    }, 0);
 
     return (
         <motion.div
@@ -1025,7 +1091,7 @@ function ModuleTogglesSection() {
             <div className="flex items-start justify-between gap-4">
                 <SectionHeader
                     title="Core System Status & Live Toggles"
-                    subtitle="Modullarni Qulflash — Maintenance Mode Override"
+                    subtitle="Nested Hierarchical Toggle Tree — Maintenance Mode Override"
                     icon={ToggleRight}
                     color="bg-rose-600"
                 />
@@ -1042,89 +1108,189 @@ function ModuleTogglesSection() {
                     >
                         <AlertTriangle className="w-5 h-5 text-rose-400 shrink-0 animate-pulse" />
                         <p className="text-[10px] font-black text-rose-400 uppercase tracking-widest">
-                            {lockedCount} ta modul maintenance rejimida — operatorlar kirishi bloklangan
+                            {lockedCount} ta sub-route maintenance rejimida — operatorlar kirishi bloklangan
                         </p>
                     </motion.div>
                 )}
             </AnimatePresence>
 
-            {/* Toggle rows */}
-            <div className="space-y-3">
-                {LOCKABLE_MODULES.map(mod => {
-                    const isLocked = lockedModules[mod.id];
-                    const Icon = MODULE_ICONS[mod.id];
-                    const colors = MODULE_COLORS[mod.id];
+            {/* Collapsible Accordion Toggles Tree */}
+            <div className="space-y-4">
+                {modules.map((mod) => {
+                    const isExpanded = !!expanded[mod.id];
+                    const isParentEnabled = mod.enabled;
+                    const Icon = PARENT_ICONS[mod.id] || Boxes;
+                    // Guard: PARENT_COLORS[mod.id] may be undefined if persisted store has an unknown id
+                    const FALLBACK_COLOR = { bg: 'from-slate-500/10 to-slate-500/5', border: 'border-slate-500/20', text: 'text-slate-400' };
+                    const LOCKED_COLOR   = { bg: 'from-rose-500/5 to-red-500/2', border: 'border-rose-500/20', text: 'text-rose-400' };
+                    const colors = isParentEnabled
+                        ? (PARENT_COLORS[mod.id] ?? FALLBACK_COLOR)
+                        : LOCKED_COLOR;
+
+                    // Guard: subRoutes may be missing in stale persisted data
+                    const subRoutes = mod.subRoutes ?? [];
+                    const parentLockedCount = !isParentEnabled ? subRoutes.length : subRoutes.filter(r => !r.enabled).length;
 
                     return (
-                        <motion.div
+                        <div
                             key={mod.id}
-                            layout
-                            className={`flex items-center gap-5 p-5 rounded-2xl border transition-all ${
-                                isLocked
-                                    ? 'bg-rose-500/5 border-rose-500/20'
-                                    : 'bg-slate-950/60 border-slate-800 hover:border-slate-700'
-                            }`}
+                            className={`rounded-2xl border bg-gradient-to-br transition-all duration-300 ${colors.bg} ${colors.border}`}
                         >
-                            {/* Module icon */}
-                            <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 border transition-all ${
-                                isLocked ? 'bg-rose-500/10 border-rose-500/20' : `${colors.pill}`
-                            }`}>
-                                {isLocked
-                                    ? <Lock className="w-6 h-6 text-rose-400" />
-                                    : <Icon className="w-6 h-6 text-slate-400" />
-                                }
-                            </div>
+                            {/* Accordion Header Row */}
+                            <div className="flex items-center justify-between gap-4 p-5">
+                                {/* Clicking the details area expands the card */}
+                                <div 
+                                    onClick={() => toggleExpanded(mod.id)}
+                                    className="flex-1 flex items-center gap-4 cursor-pointer select-none group"
+                                >
+                                    {/* Icon */}
+                                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 border transition-all ${
+                                        isParentEnabled ? 'bg-slate-900 border-slate-800' : 'bg-rose-950/20 border-rose-500/30'
+                                    }`}>
+                                        {!isParentEnabled ? (
+                                            <Lock className="w-5 h-5 text-rose-400" />
+                                        ) : (
+                                            <Icon className={`w-5 h-5 ${colors.text} group-hover:scale-110 transition-transform`} />
+                                        )}
+                                    </div>
 
-                            {/* Info */}
-                            <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2 flex-wrap">
-                                    <p className="font-black text-white uppercase text-xs tracking-tight">{mod.label}</p>
-                                    <span className="text-[8px] text-slate-600 font-bold uppercase">({mod.subLabel})</span>
-                                    {isLocked && (
-                                        <motion.span
-                                            initial={{ scale: 0 }}
-                                            animate={{ scale: 1 }}
-                                            className="inline-flex items-center gap-1 px-2 py-0.5 bg-rose-500/10 border border-rose-500/20 rounded-lg text-[8px] font-black text-rose-400 uppercase tracking-wider"
-                                        >
-                                            <span className="w-1 h-1 rounded-full bg-rose-500 animate-pulse" />
-                                            LOCKED
-                                        </motion.span>
-                                    )}
+                                    {/* Info */}
+                                    <div>
+                                        <div className="flex items-center gap-2.5 flex-wrap">
+                                            <h3 className="font-black text-white uppercase text-sm tracking-tight">{mod.label}</h3>
+                                            <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider">
+                                                ({mod.globalKey})
+                                            </span>
+                                            {parentLockedCount > 0 && (
+                                                <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-rose-500/10 border border-rose-500/20 rounded-lg text-[8px] font-black text-rose-400 uppercase tracking-wider animate-pulse">
+                                                    {parentLockedCount} Locked
+                                                </span>
+                                            )}
+                                        </div>
+                                        <p className="text-[9px] text-slate-500 font-bold uppercase tracking-wider mt-1">
+                                            {subRoutes.length} ta granular sub-route · Click to {isExpanded ? 'collapse' : 'expand'}
+                                        </p>
+                                    </div>
+
+                                    {/* Chevron indicator */}
+                                    <motion.div
+                                        animate={{ rotate: isExpanded ? 180 : 0 }}
+                                        className="text-slate-500 group-hover:text-white ml-2 shrink-0"
+                                    >
+                                        <ChevronDown className="w-4 h-4" />
+                                    </motion.div>
                                 </div>
-                                <p className="text-[9px] text-slate-500 font-bold uppercase tracking-wider mt-1">
-                                    Route: {mod.pathPrefix}
-                                    {isLocked && ' · Operators see maintenance screen'}
-                                </p>
+
+                                {/* Global Toggle switch (stays clickable even if we click elsewhere to expand) */}
+                                <div className="flex items-center gap-3 shrink-0 pl-4 border-l border-slate-800/40">
+                                    <span className={`text-[10px] font-black uppercase tracking-widest ${
+                                        isParentEnabled ? 'text-emerald-400' : 'text-rose-400'
+                                    }`}>
+                                        {isParentEnabled ? 'GLOBAL ON' : 'GLOBAL OFF'}
+                                    </span>
+                                    <IOSToggle
+                                        checked={isParentEnabled}
+                                        onChange={() => handleParentToggle(mod.id, mod.label)}
+                                        colorOn="bg-emerald-500"
+                                        colorOff="bg-rose-600"
+                                    />
+                                </div>
                             </div>
 
-                            {/* Toggle + state label */}
-                            <div className="flex items-center gap-3 shrink-0">
-                                <span className={`text-[9px] font-black uppercase tracking-widest ${
-                                    isLocked ? 'text-rose-400' : 'text-emerald-400'
-                                }`}>
-                                    {isLocked ? 'OFF' : 'ON'}
-                                </span>
-                                <IOSToggle
-                                    checked={!isLocked}
-                                    onChange={() => handleToggle(mod.id)}
-                                    colorOn="bg-emerald-500"
-                                    colorOff="bg-rose-600"
-                                />
-                            </div>
-                        </motion.div>
+                            {/* Accordion Nested Child Routes Tree */}
+                            <AnimatePresence initial={false}>
+                                {isExpanded && (
+                                    <motion.div
+                                        initial={{ height: 0, opacity: 0 }}
+                                        animate={{ height: 'auto', opacity: 1 }}
+                                        exit={{ height: 0, opacity: 0 }}
+                                        transition={{ duration: 0.2, ease: 'easeOut' }}
+                                        className="overflow-hidden border-t border-slate-800/50 bg-black/20"
+                                    >
+                                        <div className="relative pl-12 pr-6 py-5 space-y-3">
+                                            {/* Tree connecting vertical line */}
+                                            <div className="absolute left-[34px] top-0 bottom-8 w-px bg-slate-800" />
+
+                                            {subRoutes.map((sub) => {
+                                                const isChildEnabled = isParentEnabled && sub.enabled;
+                                                
+                                                return (
+                                                    <div 
+                                                        key={sub.id}
+                                                        className={`relative flex items-center justify-between gap-4 p-4 rounded-xl border transition-all ${
+                                                            isChildEnabled 
+                                                                ? 'bg-slate-950/40 border-slate-900/60 hover:border-slate-800/60 hover:bg-slate-950/80' 
+                                                                : 'bg-rose-950/5 border-rose-950/20 opacity-70'
+                                                        }`}
+                                                    >
+                                                        {/* Dotted horizontal tree branch line */}
+                                                        <div className="absolute -left-[18px] top-1/2 w-4 h-px bg-slate-800" />
+                                                        
+                                                        {/* Child Label & Route info */}
+                                                        <div className="flex items-center gap-3">
+                                                            <div className={`w-2 h-2 rounded-full shrink-0 ${
+                                                                isChildEnabled ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-rose-600 shadow-[0_0_8px_rgba(220,38,38,0.5)]'
+                                                            }`} />
+                                                            <div>
+                                                                <span className={`text-[11px] font-black uppercase tracking-tight ${
+                                                                    isChildEnabled ? 'text-slate-300' : 'text-slate-500 line-through'
+                                                                }`}>
+                                                                    {sub.label}
+                                                                </span>
+                                                                <div className="flex items-center gap-2 mt-0.5">
+                                                                    <span className="text-[8px] text-slate-600 font-mono">
+                                                                        Prefix: {sub.pathPrefixes.join(', ')}
+                                                                    </span>
+                                                                    {!isParentEnabled && (
+                                                                        <span className="inline-flex items-center gap-1 text-[7px] font-black uppercase text-rose-400 bg-rose-500/10 border border-rose-500/20 px-1 py-0.2 rounded-md">
+                                                                            <Lock size={8} /> Parent Locked
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+
+                                                        {/* Child Switch Toggle */}
+                                                        <div className="flex items-center gap-3 shrink-0">
+                                                            <span className={`text-[9px] font-black uppercase tracking-widest ${
+                                                                isChildEnabled ? 'text-emerald-400' : 'text-rose-400'
+                                                            }`}>
+                                                                {isChildEnabled ? 'ON' : 'OFF'}
+                                                            </span>
+                                                            <IOSToggle
+                                                                checked={isChildEnabled}
+                                                                onChange={() => handleSubToggle(mod.id, sub.id, sub.label)}
+                                                                colorOn="bg-emerald-500"
+                                                                colorOff="bg-rose-600"
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
+                        </div>
                     );
                 })}
             </div>
 
             {/* Legend */}
-            <div className="flex items-center gap-6 pt-2 border-t border-slate-800/60">
+            <div className="flex flex-wrap gap-x-6 gap-y-2 pt-4 border-t border-slate-800/60">
                 <div className="flex items-center gap-2">
                     <div className="w-3 h-3 rounded-full bg-emerald-500" />
-                    <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">ON — Modul faol, operatorlar kira oladi</span>
+                    <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">ON — Sub-route faol, kirish ochiq</span>
                 </div>
                 <div className="flex items-center gap-2">
                     <div className="w-3 h-3 rounded-full bg-rose-600" />
                     <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">OFF — Maintenance lock, kirish bloklangan</span>
+                </div>
+                <div className="flex items-center gap-2">
+                    <span className="inline-flex items-center gap-1 text-[7px] font-black uppercase text-rose-400 bg-rose-500/10 border border-rose-500/20 px-1.5 py-0.5 rounded-md">
+                        <Lock size={8} /> Parent Locked
+                    </span>
+                    <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Master switch o'chirilgan ( visual freeze )</span>
                 </div>
             </div>
         </motion.div>

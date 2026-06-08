@@ -49,6 +49,14 @@ export interface HRDocument {
   date: string;
 }
 
+export interface WipBufferItem {
+  id: string;
+  name: string;
+  quantity: number;
+  teleshka: number;
+  status: 'HEALTHY' | 'LOW_STOCK' | 'ROBOT_INJECTING';
+}
+
 interface FactoryContextType {
   materials: Material[];
   productionLines: ProductionLine[];
@@ -62,6 +70,9 @@ interface FactoryContextType {
   addMaterial: (material: Omit<Material, 'id' | 'createdAt' | 'createdByRole'> & { materialId: string }) => void;
   updateMaterialQuantity: (materialId: string, quantity: number) => void;
   updateTPAMachine: (lineId: string, machineId: string, updates: any) => void;
+  tpaWipBuffer: WipBufferItem[];
+  updateTpaWipBuffer: (id: string, quantity: number) => void;
+  triggerEmergencyInject: (id: string) => void;
 }
 
 const FactoryContext = createContext<FactoryContextType | undefined>(undefined);
@@ -145,23 +156,47 @@ const initialProductionLines: ProductionLine[] = [
     }
   },
   {
-    id: '5',
-    name: 'TPA Molding Workshop',
+    id: '5A',
+    name: 'Katta TPA Uchastkasi',
     type: 'tpa_molding',
     status: 'active',
     qcStatus: 'OK',
-    efficiency: 89,
+    efficiency: 88,
     requiredMaterials: [
       { materialId: '1', quantity: 50 },
     ],
-    output: 1200,
+    output: 850,
     tpaData: {
       scrapRate: 1.2,
-      machines: [
-        { id: 'TPA-01', status: 'running', cycleTime: 12.5, mold: 'M-1024-PL', cavityStatus: '8/8 OK' },
-        { id: 'TPA-02', status: 'running', cycleTime: 14.2, mold: 'M-2055-HS', cavityStatus: '4/4 OK' },
-        { id: 'TPA-03', status: 'setup', cycleTime: 0, mold: 'M-3011-RG', cavityStatus: 'N/A' },
-      ]
+      machines: Array.from({ length: 10 }).map((_, i) => ({
+        id: `TPA-H-${String(i+1).padStart(2, '0')}`,
+        status: 'running',
+        cycleTime: 15.0,
+        mold: 'M-HEAVY',
+        cavityStatus: 'OK'
+      }))
+    }
+  },
+  {
+    id: '5B',
+    name: 'Kichik TPA Uchastkasi',
+    type: 'tpa_molding',
+    status: 'active',
+    qcStatus: 'OK',
+    efficiency: 93,
+    requiredMaterials: [
+      { materialId: '1', quantity: 10 },
+    ],
+    output: 6400,
+    tpaData: {
+      scrapRate: 0.8,
+      machines: Array.from({ length: 25 }).map((_, i) => ({
+        id: `TPA-L-${String(i+1).padStart(2, '0')}`,
+        status: 'running',
+        cycleTime: 6.0,
+        mold: 'M-LIGHT',
+        cavityStatus: 'OK'
+      }))
     }
   },
 ];
@@ -179,6 +214,38 @@ export function FactoryProvider({ children }: { children: ReactNode }) {
   const [materials, setMaterials] = useState<Material[]>(initialMaterials);
   const [productionLines, setProductionLines] = useState<ProductionLine[]>(initialProductionLines);
   const [hrDocuments, setHRDocuments] = useState<HRDocument[]>(initialHRDocuments);
+
+  const [tpaWipBuffer, setTpaWipBuffer] = useState<WipBufferItem[]>([
+    { id: 'DT-INT-002', name: 'Door Trim Base', quantity: 800, teleshka: 4, status: 'HEALTHY' },
+    { id: 'SW-BASE-99', name: 'Switch Frame', quantity: 150, teleshka: 0.5, status: 'LOW_STOCK' },
+    { id: 'CONS-FR-04', name: 'Console Frame', quantity: 400, teleshka: 2, status: 'ROBOT_INJECTING' },
+  ]);
+
+  const updateTpaWipBuffer = (id: string, quantity: number) => {
+    setTpaWipBuffer(prev => prev.map(item => {
+      if (item.id === id) {
+        const newQty = Math.max(0, quantity);
+        const newTeleshka = Number((newQty / 200).toFixed(1));
+        let newStatus: WipBufferItem['status'] = 'HEALTHY';
+        if (newQty <= 150) newStatus = 'LOW_STOCK';
+        else if (item.status === 'ROBOT_INJECTING' && newQty < 800) newStatus = 'ROBOT_INJECTING';
+        return { ...item, quantity: newQty, teleshka: newTeleshka, status: newStatus };
+      }
+      return item;
+    }));
+  };
+
+  const triggerEmergencyInject = (id: string) => {
+    setTpaWipBuffer(prev => prev.map(item => {
+      if (item.id === id) {
+        toast.success(`TPA Machine: Shoshilinch quyish buyrug'i yuborildi - ${item.name}`, {
+          description: "Quyish roboti faollashtirildi, zaxira to'ldirilmoqda."
+        });
+        return { ...item, quantity: 800, teleshka: 4, status: 'HEALTHY' };
+      }
+      return item;
+    }));
+  };
 
   const addProductionLine = (line: Omit<ProductionLine, 'id'>) => {
     const newLine = { ...line, id: Date.now().toString() };
@@ -336,6 +403,9 @@ export function FactoryProvider({ children }: { children: ReactNode }) {
         addMaterial,
         updateMaterialQuantity,
         updateTPAMachine,
+        tpaWipBuffer,
+        updateTpaWipBuffer,
+        triggerEmergencyInject,
       }}
     >
       {children}

@@ -16,7 +16,7 @@ export default defineConfig({
   },
   server: {
     watch: {
-      ignored: ['**/node_modules/**', '**/backend/**', '**/.git/**'],
+      ignored: ['**/node_modules/**', '**/backend/**', '**/venv/**', '**/.git/**'],
     },
     fs: {
       allow: [fileURLToPath(new URL('.', import.meta.url))],

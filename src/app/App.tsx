@@ -51,6 +51,7 @@ import { ProcurementPage } from './pages/procurement/ProcurementPage';
 import { MRPPage } from './pages/production/MRPPage';
 import { ShiftSchedulePage } from './pages/hr/ShiftSchedulePage';
 import { TraceabilityPage } from './pages/production/TraceabilityPage';
+import { BrakRecyclingPage } from './pages/production/BrakRecyclingPage';
 // Sales route removed and merged into Finished Goods
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { FactoryProvider } from './context/FactoryContext';
@@ -176,6 +177,7 @@ function AppLayout() {
             <Route path="/shift-schedule" element={<ShiftSchedulePage />} />
             <Route path="/system-settings" element={<SystemSettingsRoot />} />
             <Route path="/traceability" element={<TraceabilityPage />} />
+            <Route path="/brak-recycling" element={<BrakRecyclingPage />} />
             <Route path="/suppliers" element={<SuppliersLayout />}>
               <Route index element={<SuppliersPage />} />
               <Route path=":id" element={<SupplierDetailPage />} />
