@@ -54,6 +54,7 @@ interface CourierData {
     doverennostNo: string;
     validUntil: string;
     issueDate: string;
+    truckPlate: string;
 }
 
 // ─── Unique companies derived from contracts ──────────────────────────────────
@@ -68,12 +69,21 @@ function GIPreviewStage({
     onPrint: () => void;
     onBack: () => void;
 }) {
+    const [shakePlate, setShakePlate] = useState(false);
     const total = lines.reduce((s, l) => s + l.qty * l.unitPrice, 0);
     const isValid = courier.name.trim() && courier.doverennostNo.trim();
 
     return (
         <div className="space-y-6 animate-in fade-in duration-500">
             <style>{`
+                @keyframes shake {
+                    0%, 100% { transform: translateX(0); }
+                    25% { transform: translateX(-6px); }
+                    75% { transform: translateX(6px); }
+                }
+                .shake-input {
+                    animation: shake 0.2s ease-in-out 2;
+                }
                 @media print {
                     body * { visibility: hidden !important; }
                     #gi-print-area, #gi-print-area * { visibility: visible !important; }
@@ -105,7 +115,22 @@ function GIPreviewStage({
                             <Button variant="ghost" onClick={onBack} className="text-slate-400 hover:text-white text-[10px] font-black uppercase h-9">
                                 <ArrowRight className="w-3 h-3 mr-1 rotate-180" /> Back to Picking
                             </Button>
-                            <Button disabled={!isValid} onClick={onPrint} className="bg-blue-600 hover:bg-blue-500 text-white font-black text-xs uppercase h-10 px-6 gap-2">
+                            <Button 
+                                disabled={!isValid} 
+                                onClick={() => {
+                                    const isUzAuto = contract.receiver.name === "UzAuto Motors JSC";
+                                    if (isUzAuto && (!courier.truckPlate || !courier.truckPlate.trim())) {
+                                        setShakePlate(true);
+                                        toast.error("Avtomobil davlat raqami kiritilishi shart!", {
+                                            description: "UzAuto Motors zavodiga kirish uchun transport raqami talab etiladi."
+                                        });
+                                        setTimeout(() => setShakePlate(false), 500);
+                                        return;
+                                    }
+                                    onPrint();
+                                }} 
+                                className="bg-blue-600 hover:bg-blue-500 text-white font-black text-xs uppercase h-10 px-6 gap-2"
+                            >
                                 <Printer className="w-4 h-4" /> Finalize & Print
                             </Button>
                         </div>
@@ -134,6 +159,18 @@ function GIPreviewStage({
                                         <Input value={courier.validUntil} onChange={e => setCourier({ ...courier, validUntil: e.target.value })}
                                             placeholder="DD.MM.YYYY" className="bg-slate-950 border-slate-700 text-xs h-10 font-mono" />
                                     </div>
+                                </div>
+                                <div className={`flex flex-col gap-1.5 mt-3 transition-all ${shakePlate ? 'shake-input' : ''}`}>
+                                    <Label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                                        🚚 Avtomobil Davlat Raqami (Truck License Plate) <span className="text-red-500">*</span>
+                                    </Label>
+                                    <input 
+                                        type="text" 
+                                        placeholder="e.g., 60 A 777 AA" 
+                                        value={courier.truckPlate}
+                                        onChange={e => setCourier({ ...courier, truckPlate: e.target.value.toUpperCase() })}
+                                        className={`w-full p-3 bg-slate-900 border-2 ${shakePlate ? 'border-red-500 focus:border-red-500 shadow-[0_0_0_2px_rgba(239,68,68,0.2)]' : 'border-slate-700 focus:border-blue-500'} text-white font-mono font-bold uppercase rounded-lg transition-all placeholder:text-slate-600`}
+                                    />
                                 </div>
                             </div>
 
@@ -181,6 +218,12 @@ function GIPreviewStage({
                                         <p>{contract.receiver.address}</p>
                                         <p>ИНН: {contract.receiver.inn} | Основание: Договор {contract.contractNumber}</p>
                                     </div>
+                                </div>
+
+                                {/* Transport Vehicle Info */}
+                                <div className="border border-black p-2 mb-6 text-[10px] space-y-1">
+                                    <p className="font-bold underline mb-1">Транспортные параметры (Transport Parameters):</p>
+                                    <p>Транспортное средство (автомобиль): <span className="font-bold font-mono text-[11px]">{courier.truckPlate || '________________'}</span></p>
                                 </div>
 
                                 {/* Main Materials Ledger */}
@@ -285,7 +328,7 @@ export default function GoodsIssueWaybillTab() {
     const [pickQty, setPickQty] = useState<string>('');
 
     const [courier, setCourier] = useState<CourierData>({
-        name: '', doverennostNo: '', validUntil: '', issueDate: format(new Date(), 'dd.MM.yyyy')
+        name: '', doverennostNo: '', validUntil: '', issueDate: format(new Date(), 'dd.MM.yyyy'), truckPlate: ''
     });
     const [nextDocNo, setNextDocNo] = useState('');
 
@@ -494,7 +537,8 @@ export default function GoodsIssueWaybillTab() {
             clientName: selectedClient,
             courier: courier.name,
             doverennost: courier.doverennostNo,
-            validUntil: courier.validUntil
+            validUntil: courier.validUntil,
+            truckPlate: courier.truckPlate
         });
 
         // Increment B2B contract delivered volume
@@ -513,7 +557,7 @@ export default function GoodsIssueWaybillTab() {
         setStep('gate'); setClientSearch(''); setSelectedClient('');
         setSelectedContract(null); setCartItems([]);
         setSkuSearch(''); setSelectedFoundMaterial(null); setSelectedBinId(''); setPickQty('');
-        setCourier({ name: '', doverennostNo: '', validUntil: '', issueDate: format(new Date(), 'dd.MM.yyyy') });
+        setCourier({ name: '', doverennostNo: '', validUntil: '', issueDate: format(new Date(), 'dd.MM.yyyy'), truckPlate: '' });
         setLocalStock(MOCK_WAREHOUSE_DB); // Reload master data on reset
     };
 

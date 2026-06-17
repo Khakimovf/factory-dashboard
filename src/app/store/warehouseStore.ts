@@ -83,6 +83,7 @@ export interface MaterialDocument {
     doverennost?: string;
     validUntil?: string;
     supplier?: string;
+    truckPlate?: string;
 }
 
 export interface ASN {
