@@ -367,10 +367,10 @@ export function SupplierDetailPage() {
   };
 
   return (
-    <div className="fixed inset-0 bg-slate-950 overflow-y-auto z-50 custom-scrollbar">
+    <div className="w-full min-h-screen px-6 lg:px-12 mx-auto bg-slate-950 overflow-y-auto z-50 custom-scrollbar">
       {/* Global Action Bar (Sticky Header) */}
       <div className="sticky top-0 z-20 bg-slate-900/95 backdrop-blur-md border-b border-slate-800 shadow-sm">
-        <div className="w-full px-8 py-5">
+        <div className="w-full py-5">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-5">
               <Button
@@ -479,32 +479,34 @@ export function SupplierDetailPage() {
       </div>
 
       {/* Main Content */}
-      <div className="w-full px-8 py-8">
+      <div className="w-full py-8">
 
         {/* TAB 1: OVERVIEW & ANALYTICS */}
         {activeTab === 'overview' && (
           <div className="animate-in fade-in duration-300">
-            {/* Financial & Status Guardrails */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-              <div className="bg-slate-900 border border-slate-800 rounded-lg p-4 flex flex-col justify-center">
-                <p className="text-xs text-slate-400 uppercase tracking-wider font-semibold mb-1">Total Spend (YTD)</p>
-                <p className="text-2xl font-bold text-white">{ytdSpend.toLocaleString()} UZS</p>
-              </div>
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 w-full">
+              {/* Left Column Analytics & Materials */}
+              <div className="lg:col-span-8 flex flex-col gap-6 w-full">
+                {/* Top Layer: Total Spend and Active Pipeline */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
+                  <div className={`bg-slate-900 border border-slate-800 rounded-lg p-6 flex flex-col justify-center w-full ${
+                    !(supplier.status === 'active' && getOpenRequestsCount(supplier.id) > 0) ? 'md:col-span-2' : ''
+                  }`}>
+                    <p className="text-xs text-slate-400 uppercase tracking-wider font-semibold mb-1">Total Spend (YTD)</p>
+                    <p className="text-2xl font-bold text-white">{ytdSpend.toLocaleString()} UZS</p>
+                  </div>
 
-              {supplier.status === 'active' && getOpenRequestsCount(supplier.id) > 0 && (
-                <div className="bg-indigo-900/20 border border-indigo-800/50 rounded-lg p-4 flex flex-col justify-center">
-                  <p className="text-xs text-indigo-400 uppercase tracking-wider font-semibold mb-1">Active Pipeline</p>
-                  <p className="text-2xl font-bold text-indigo-300">
-                    {getOpenRequestsCount(supplier.id)} Orders In-Flight
-                  </p>
+                  {supplier.status === 'active' && getOpenRequestsCount(supplier.id) > 0 && (
+                    <div className="bg-indigo-900/20 border border-indigo-800/50 rounded-lg p-6 flex flex-col justify-center w-full">
+                      <p className="text-xs text-indigo-400 uppercase tracking-wider font-semibold mb-1">Active Pipeline</p>
+                      <p className="text-2xl font-bold text-indigo-300">
+                        {getOpenRequestsCount(supplier.id)} Orders In-Flight
+                      </p>
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* LEFT COLUMN */}
-              <div className="space-y-6 min-w-0">
-                {/* Contact Info */}
+                {/* Middle Layer: Contact Info */}
                 <div className="w-full bg-slate-900 rounded-lg border border-slate-800 p-6">
                   <h3 className="text-sm font-bold text-white uppercase tracking-wider mb-4">
                     {t('suppliers.contactInformation')}
@@ -527,7 +529,7 @@ export function SupplierDetailPage() {
                   </div>
                 </div>
 
-                {/* Contract Materials */}
+                {/* Bottom Layer: Supplied Materials */}
                 <div className="w-full bg-slate-900 rounded-lg border border-slate-800 p-6">
                   <h3 className="text-sm font-bold text-white uppercase tracking-wider mb-4">
                     {t('suppliers.suppliedMaterials')}
@@ -539,26 +541,26 @@ export function SupplierDetailPage() {
                         return (
                           <div
                             key={materialId}
-                            className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-slate-800/50 border border-slate-700/50 rounded-lg gap-3"
+                            className="flex flex-col sm:flex-row sm:items-center justify-between p-5 bg-slate-800/50 border border-slate-700/50 rounded-lg gap-4 w-full"
                           >
-                            <div>
-                              <p className="text-sm font-bold text-white">
+                            <div className="min-w-0 flex-1">
+                              <p className="text-sm font-bold text-white truncate">
                                 {material?.name || materialId}
                               </p>
-                              <div className="flex items-center gap-2 mt-1.5">
-                                <Badge variant="outline" className="border-emerald-500/30 text-emerald-400 bg-emerald-500/10 text-[10px] py-0">
+                              <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                                <Badge variant="outline" className="border-emerald-500/30 text-emerald-400 bg-emerald-500/10 text-[10px] py-0.5 px-2 whitespace-nowrap">
                                   ISO 9001
                                 </Badge>
-                                <span className="text-xs text-slate-500 font-medium">
+                                <span className="text-xs text-slate-500 font-medium whitespace-nowrap">
                                   Certified Quality
                                 </span>
                               </div>
                             </div>
-                            <div className="text-left sm:text-right">
-                              <p className="text-sm font-bold text-indigo-400">
+                            <div className="text-left sm:text-right flex-shrink-0">
+                              <p className="text-sm font-bold text-indigo-400 whitespace-nowrap">
                                 {supplier.prices[materialId]?.toLocaleString() || 0} {t('suppliers.currency')}
                               </p>
-                              <p className="text-xs text-slate-500 uppercase tracking-wider font-semibold mt-0.5">
+                              <p className="text-xs text-slate-500 uppercase tracking-wider font-semibold mt-0.5 whitespace-nowrap">
                                 {t('suppliers.perUnit')} ({material?.unit || 'unit'})
                               </p>
                             </div>
@@ -572,52 +574,55 @@ export function SupplierDetailPage() {
                     </p>
                   )}
                 </div>
+              </div>
 
+              {/* Right Column Indicators */}
+              <div className="lg:col-span-4 w-full">
                 {/* Performance Metrics */}
                 {supplier.rating && (
                   <div className="w-full bg-slate-900 rounded-lg border border-slate-800 p-6">
                     <h4 className="text-sm font-bold text-white mb-4 uppercase tracking-wider">
                       {t('suppliers.performanceMetrics')}
                     </h4>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <p className="text-xs text-slate-400 font-semibold tracking-wider uppercase mb-1">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2 gap-4">
+                      <div className="p-4 bg-slate-800/40 rounded-lg border border-slate-700/30 flex flex-col justify-between min-h-[90px]">
+                        <p className="text-[10px] text-slate-400 font-semibold tracking-wider uppercase">
                           {t('suppliers.overallRating')}
                         </p>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 mt-2">
                           <p className={`text-2xl font-bold ${getRatingColor(supplier.rating.overall)}`}>
                             {supplier.rating.overall}<span className="text-sm text-slate-500">/100</span>
                           </p>
                           {getTrendIcon(supplier.rating.trend)}
                         </div>
                       </div>
-                      <div>
-                        <p className="text-xs text-slate-400 font-semibold tracking-wider uppercase mb-1">
+                      <div className="p-4 bg-slate-800/40 rounded-lg border border-slate-700/30 flex flex-col justify-between min-h-[90px]">
+                        <p className="text-[10px] text-slate-400 font-semibold tracking-wider uppercase">
                           {t('suppliers.onTimeDelivery')}
                         </p>
-                        <p className="text-2xl font-bold text-white">
+                        <p className="text-2xl font-bold text-white mt-2">
                           {supplier.rating.onTimeDeliveryRate}%
                         </p>
                       </div>
-                      <div>
-                        <p className="text-xs text-slate-400 font-semibold tracking-wider uppercase mb-1">
+                      <div className="p-4 bg-slate-800/40 rounded-lg border border-slate-700/30 flex flex-col justify-between min-h-[90px]">
+                        <p className="text-[10px] text-slate-400 font-semibold tracking-wider uppercase">
                           {t('suppliers.averageDelay')}
                         </p>
                         <p
-                          className={`text-xl font-bold ${supplier.rating.averageDelayDays > 0
+                          className={`text-xl font-bold mt-2 ${supplier.rating.averageDelayDays > 0
                             ? 'text-rose-400'
                             : 'text-emerald-400'
                             }`}
                         >
                           {supplier.rating.averageDelayDays > 0 ? '+' : ''}
-                          {supplier.rating.averageDelayDays.toFixed(1)} <span className="text-sm font-medium">{t('suppliers.days')}</span>
+                          {supplier.rating.averageDelayDays.toFixed(1)} <span className="text-xs font-medium text-slate-500">{t('suppliers.days')}</span>
                         </p>
                       </div>
-                      <div>
-                        <p className="text-xs text-slate-400 font-semibold tracking-wider uppercase mb-1">
+                      <div className="p-4 bg-slate-800/40 rounded-lg border border-slate-700/30 flex flex-col justify-between min-h-[90px]">
+                        <p className="text-[10px] text-slate-400 font-semibold tracking-wider uppercase">
                           {t('suppliers.defectRate')}
                         </p>
-                        <p className="text-xl font-bold text-white">
+                        <p className="text-2xl font-bold text-white mt-2">
                           {supplier.rating.defectRate.toFixed(1)}%
                         </p>
                       </div>
@@ -625,7 +630,6 @@ export function SupplierDetailPage() {
                   </div>
                 )}
               </div>
-
             </div>
           </div>
         )}
