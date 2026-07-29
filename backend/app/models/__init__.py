@@ -8,6 +8,17 @@ from .maintenance import (
     FailureReportUpdate,
     MaintenanceStatus
 )
+from .details import (
+    FatherDetail,
+    FatherDetailCreate,
+    FatherDetailUpdate,
+    ChildDetail,
+    ChildDetailCreate,
+    ChildDetailUpdate,
+    BOMItem,
+    BOMResult,
+    DetailStats,
+)
 
 __all__ = [
     "DocumentMetadata",
@@ -20,4 +31,13 @@ __all__ = [
     "FailureReportCreate",
     "FailureReportUpdate",
     "MaintenanceStatus",
+    "FatherDetail",
+    "FatherDetailCreate",
+    "FatherDetailUpdate",
+    "ChildDetail",
+    "ChildDetailCreate",
+    "ChildDetailUpdate",
+    "BOMItem",
+    "BOMResult",
+    "DetailStats",
 ]

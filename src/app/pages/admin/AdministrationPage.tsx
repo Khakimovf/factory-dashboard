@@ -4,7 +4,8 @@ import {
     UserPlus, Key, Eye, Trash2, CheckCircle2,
     Clock, Server, ShieldAlert, Filter, RotateCcw,
     UploadCloud, HardDrive, CloudLightning, ShieldCheck,
-    FileJson, DownloadCloud, Loader2, FileSpreadsheet, Check
+    FileJson, DownloadCloud, Loader2, FileSpreadsheet, Check,
+    GitBranch
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useLanguage } from '../../context/LanguageContext';
@@ -15,11 +16,12 @@ import { Terminal as TerminalIcon, Database } from 'lucide-react';
 import { useWarehouse } from '../../context/WarehouseContext';
 import { useFinanceStore } from '../../store/financeStore';
 import { toast } from 'sonner';
+import DetailManagementPage from './DetailManagementPage';
 
 export default function AdministrationPage() {
     const { t } = useLanguage();
     const { user } = useAuth();
-    const [activeTab, setActiveTab] = useState<'users' | 'roles' | 'system' | 'dev_tools'>('users');
+    const [activeTab, setActiveTab] = useState<'users' | 'roles' | 'system' | 'dev_tools' | 'details'>('users');
     const isITSpecialist = ['IT_SPECIALIST', 'SUPER_ADMIN', 'system_owner'].includes(user?.role || '');
 
     return (
@@ -60,6 +62,12 @@ export default function AdministrationPage() {
                                 icon={TerminalIcon}
                                 label="IT Tools"
                             />
+                            <TabButton
+                                active={activeTab === 'details'}
+                                onClick={() => setActiveTab('details')}
+                                icon={GitBranch}
+                                label="Detail Boshqaruvi"
+                            />
                         </>
                     )}
                 </div>
@@ -70,6 +78,16 @@ export default function AdministrationPage() {
                     {activeTab === 'users' && <UserManagement key="users" />}
                     {activeTab === 'roles' && <RoleManagement key="roles" />}
                     {activeTab === 'system' && isITSpecialist && <SystemConfigPanel key="system" />}
+                    {activeTab === 'details' && isITSpecialist && (
+                        <motion.div
+                            key="details"
+                            initial={{ opacity: 0, scale: 0.98 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.98 }}
+                        >
+                            <DetailManagementPage />
+                        </motion.div>
+                    )}
                     {activeTab === 'dev_tools' && isITSpecialist && (
                         <motion.div
                             key="dev_tools"

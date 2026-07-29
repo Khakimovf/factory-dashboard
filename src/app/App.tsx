@@ -70,6 +70,7 @@ import { ExportManagementPage } from './pages/logistics/ContainerLogistics/Expor
 import { SystemSettingsRoot } from './pages/admin/SystemSettingsPage';
 import { MaintenanceProvider } from './context/MaintenanceContext';
 import { MaintenanceGuard } from './components/MaintenanceGuard';
+import DetailManagementPage from './pages/admin/DetailManagementPage';
 
 export default function App() {
   return (
@@ -167,6 +168,7 @@ function AppLayout() {
             <Route path="/admin" element={<AdministrationPage />} />
             <Route path="/admin/system" element={<AdministrationPage />} />
             <Route path="/admin/audit-log" element={<AuditLogPage />} />
+            <Route path="/admin/details" element={<DetailManagementPage />} />
             <Route path="/roles-permissions" element={<RolesPermissionsPage />} />
             <Route path="/finance" element={<FinancePage />} />
             <Route path="/finance/contracts" element={<ContractsPage />} />

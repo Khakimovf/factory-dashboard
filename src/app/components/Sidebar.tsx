@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Package, Factory, Users, Wrench, BarChart2,
   ShieldCheck, Settings, LogOut, IdCard, DollarSign, ShoppingCart,
   Truck, Box, ClipboardCheck, Send, Utensils, ChevronRight, Shield, UserCircle,
-  Grid, Calendar, QrCode, Ship, LayoutGrid, ScrollText, Cpu
+  Grid, Calendar, QrCode, Ship, LayoutGrid, ScrollText, Cpu, GitBranch
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useLanguage } from '../context/LanguageContext';
@@ -332,6 +332,10 @@ export function Sidebar() {
                       to: '/system-settings',
                       label: 'Tizim Sozlamalari',
                       icon: Cpu,
+                    }, {
+                      to: '/admin/details',
+                      label: 'Detail Boshqaruvi',
+                      icon: GitBranch,
                     }].map(({ to, label, icon: ChildIcon }) => {
                       const isChildActive = location.pathname === to || (to !== '/' && location.pathname.startsWith(to));
                       return (

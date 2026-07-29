@@ -12,7 +12,7 @@ import sys
 # sys.setrecursionlimit(2000) - Removed as circular dependency is fixed
 
 
-from app.api.routes import documents, maintenance, warehouse, production, admin, wms, imports, procurement, finance
+from app.api.routes import documents, maintenance, warehouse, production, admin, wms, imports, procurement, finance, details
 
 
 from app.api.exceptions import (
@@ -62,6 +62,7 @@ app.include_router(imports.router, prefix=settings.API_PREFIX)
 app.include_router(admin.router, prefix=settings.API_PREFIX)
 app.include_router(procurement.router, prefix=settings.API_PREFIX)
 app.include_router(finance.router, prefix=settings.API_PREFIX)
+app.include_router(details.router, prefix=settings.API_PREFIX)
 
 
 @app.middleware("http")
