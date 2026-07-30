@@ -3,9 +3,10 @@ from typing import List, Optional
 from fastapi import APIRouter, HTTPException, Depends, Query
 
 from app.models.details import (
-    FatherDetail, FatherDetailCreate, FatherDetailUpdate,
-    ChildDetail, ChildDetailCreate, ChildDetailUpdate,
+    FatherDetail, FatherDetailCreate, FatherDetailUpdate, BulkFatherUpdate,
+    ChildDetail, ChildDetailCreate, ChildDetailUpdate, BulkChildUpdate, BulkDelete,
     BOMItem, BOMResult, DetailStats,
+    CodeChangeLog, ContractComment, ContractCommentCreate,
 )
 from app.models.user import User
 from app.core.dependencies import get_current_user, allow_admin
@@ -36,7 +37,6 @@ async def get_father_detail(father_id: str):
 @router.post("/fathers", response_model=FatherDetail, dependencies=[Depends(allow_admin)])
 async def create_father_detail(data: FatherDetailCreate):
     """Create a new FatherDetail (admin only)."""
-    # Uniqueness check
     existing = details_repo.get_father_by_code(data.code)
     if existing:
         raise HTTPException(status_code=400, detail=f"Code '{data.code}' already exists")
@@ -45,11 +45,24 @@ async def create_father_detail(data: FatherDetailCreate):
 
 @router.put("/fathers/{father_id}", response_model=FatherDetail, dependencies=[Depends(allow_admin)])
 async def update_father_detail(father_id: str, data: FatherDetailUpdate):
-    """Update a FatherDetail (admin only)."""
+    """Update a FatherDetail (admin only). Automatically logs code changes."""
     updated = details_repo.update_father(father_id, data)
     if not updated:
         raise HTTPException(status_code=404, detail="FatherDetail not found")
     return updated
+
+
+@router.post("/fathers/bulk-update", response_model=List[FatherDetail], dependencies=[Depends(allow_admin)])
+async def bulk_update_fathers(data: BulkFatherUpdate):
+    """Bulk update multiple FatherDetails."""
+    return details_repo.bulk_update_fathers(data)
+
+
+@router.post("/fathers/bulk-delete", dependencies=[Depends(allow_admin)])
+async def bulk_delete_fathers(data: BulkDelete):
+    """Bulk delete multiple FatherDetails."""
+    count = details_repo.bulk_delete_fathers(data.ids)
+    return {"status": "deleted", "count": count}
 
 
 @router.delete("/fathers/{father_id}", dependencies=[Depends(allow_admin)])
@@ -68,6 +81,41 @@ async def get_children_for_father(father_id: str):
     if not f:
         raise HTTPException(status_code=404, detail="FatherDetail not found")
     return details_repo.list_children_by_father(father_id)
+
+
+# ── Code Change History for Fathers ──────────────────────────────────────────
+
+@router.get("/fathers/{father_id}/changes", response_model=List[CodeChangeLog])
+async def get_father_code_changes(father_id: str):
+    """Get the code change history for a FatherDetail."""
+    f = details_repo.get_father(father_id)
+    if not f:
+        raise HTTPException(status_code=404, detail="FatherDetail not found")
+    return details_repo.get_code_changes(father_id, "father")
+
+
+# ── Contract Comments for Fathers ────────────────────────────────────────────
+
+@router.get("/fathers/{father_id}/comments", response_model=List[ContractComment])
+async def get_father_comments(father_id: str):
+    """Get all contract comments for a FatherDetail."""
+    f = details_repo.get_father(father_id)
+    if not f:
+        raise HTTPException(status_code=404, detail="FatherDetail not found")
+    return details_repo.get_comments(father_id, "father")
+
+
+@router.post("/fathers/{father_id}/comments", response_model=ContractComment)
+async def add_father_comment(
+    father_id: str,
+    data: ContractCommentCreate,
+    current_user: User = Depends(get_current_user),
+):
+    """Add a contract comment to a FatherDetail."""
+    f = details_repo.get_father(father_id)
+    if not f:
+        raise HTTPException(status_code=404, detail="FatherDetail not found")
+    return details_repo.add_comment(father_id, "father", data, user=current_user.username)
 
 
 # ============================================================
@@ -92,7 +140,6 @@ async def get_child_detail(child_id: str):
 @router.post("/children", response_model=ChildDetail, dependencies=[Depends(allow_admin)])
 async def create_child_detail(data: ChildDetailCreate):
     """Create a new ChildDetail (admin only)."""
-    # Validate parent exists
     parent = details_repo.get_father(data.father_detail_id)
     if not parent:
         raise HTTPException(status_code=404, detail="Parent FatherDetail not found")
@@ -101,7 +148,7 @@ async def create_child_detail(data: ChildDetailCreate):
 
 @router.put("/children/{child_id}", response_model=ChildDetail, dependencies=[Depends(allow_admin)])
 async def update_child_detail(child_id: str, data: ChildDetailUpdate):
-    """Update a ChildDetail (admin only)."""
+    """Update a ChildDetail (admin only). Automatically logs code changes."""
     if data.father_detail_id:
         parent = details_repo.get_father(data.father_detail_id)
         if not parent:
@@ -112,6 +159,19 @@ async def update_child_detail(child_id: str, data: ChildDetailUpdate):
     return updated
 
 
+@router.post("/children/bulk-update", response_model=List[ChildDetail], dependencies=[Depends(allow_admin)])
+async def bulk_update_children(data: BulkChildUpdate):
+    """Bulk update multiple ChildDetails."""
+    return details_repo.bulk_update_children(data)
+
+
+@router.post("/children/bulk-delete", dependencies=[Depends(allow_admin)])
+async def bulk_delete_children(data: BulkDelete):
+    """Bulk delete multiple ChildDetails."""
+    count = details_repo.bulk_delete_children(data.ids)
+    return {"status": "deleted", "count": count}
+
+
 @router.delete("/children/{child_id}", dependencies=[Depends(allow_admin)])
 async def delete_child_detail(child_id: str):
     """Delete a ChildDetail (admin only)."""
@@ -119,6 +179,41 @@ async def delete_child_detail(child_id: str):
     if not success:
         raise HTTPException(status_code=404, detail="ChildDetail not found")
     return {"status": "deleted", "id": child_id}
+
+
+# ── Code Change History for Children ─────────────────────────────────────────
+
+@router.get("/children/{child_id}/changes", response_model=List[CodeChangeLog])
+async def get_child_code_changes(child_id: str):
+    """Get the code change history for a ChildDetail."""
+    c = details_repo.get_child(child_id)
+    if not c:
+        raise HTTPException(status_code=404, detail="ChildDetail not found")
+    return details_repo.get_code_changes(child_id, "child")
+
+
+# ── Contract Comments for Children ───────────────────────────────────────────
+
+@router.get("/children/{child_id}/comments", response_model=List[ContractComment])
+async def get_child_comments(child_id: str):
+    """Get all contract comments for a ChildDetail."""
+    c = details_repo.get_child(child_id)
+    if not c:
+        raise HTTPException(status_code=404, detail="ChildDetail not found")
+    return details_repo.get_comments(child_id, "child")
+
+
+@router.post("/children/{child_id}/comments", response_model=ContractComment)
+async def add_child_comment(
+    child_id: str,
+    data: ContractCommentCreate,
+    current_user: User = Depends(get_current_user),
+):
+    """Add a contract comment to a ChildDetail."""
+    c = details_repo.get_child(child_id)
+    if not c:
+        raise HTTPException(status_code=404, detail="ChildDetail not found")
+    return details_repo.add_comment(child_id, "child", data, user=current_user.username)
 
 
 # ============================================================

@@ -71,6 +71,10 @@ import { SystemSettingsRoot } from './pages/admin/SystemSettingsPage';
 import { MaintenanceProvider } from './context/MaintenanceContext';
 import { MaintenanceGuard } from './components/MaintenanceGuard';
 import DetailManagementPage from './pages/admin/DetailManagementPage';
+import FatherDetailInfoPage from './pages/admin/details/FatherDetailInfoPage';
+import FatherChildrenPage from './pages/admin/details/FatherChildrenPage';
+import ChildDetailListPage from './pages/admin/details/ChildDetailListPage';
+import ChildDetailInfoPage from './pages/admin/details/ChildDetailInfoPage';
 
 export default function App() {
   return (
@@ -169,6 +173,10 @@ function AppLayout() {
             <Route path="/admin/system" element={<AdministrationPage />} />
             <Route path="/admin/audit-log" element={<AuditLogPage />} />
             <Route path="/admin/details" element={<DetailManagementPage />} />
+            <Route path="/admin/details/fathers/:id" element={<FatherDetailInfoPage />} />
+            <Route path="/admin/details/fathers/:id/children" element={<FatherChildrenPage />} />
+            <Route path="/admin/details/children" element={<ChildDetailListPage />} />
+            <Route path="/admin/details/children/:id" element={<ChildDetailInfoPage />} />
             <Route path="/roles-permissions" element={<RolesPermissionsPage />} />
             <Route path="/finance" element={<FinancePage />} />
             <Route path="/finance/contracts" element={<ContractsPage />} />
