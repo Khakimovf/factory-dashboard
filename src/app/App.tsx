@@ -76,50 +76,57 @@ import FatherChildrenPage from './pages/admin/details/FatherChildrenPage';
 import ChildDetailListPage from './pages/admin/details/ChildDetailListPage';
 import ChildDetailInfoPage from './pages/admin/details/ChildDetailInfoPage';
 
+import * as TooltipPrimitive from '@radix-ui/react-tooltip';
+import { CommandPaletteModal } from './components/common/CommandPaletteModal';
+import { BarcodeScannerModal } from './components/mobile/BarcodeScannerModal';
+
 export default function App() {
   return (
-    <ThemeProvider>
-      <LanguageProvider>
-        <AuthProvider>
-          <MaintenanceProvider>
-            <FactoryProvider>
-              <WarehouseProvider>
-                <SalesProvider>
-                  <DailyProductionPlanProvider>
-                    <QCProvider>
-                      <AuditLogProvider>
-                        <Router>
-                          <Routes>
-                            {/* Public route */}
-                            <Route path="/login" element={<LoginPage />} />
-                            {/* All protected routes */}
-                            <Route
-                              path="/*"
-                              element={
-                                <ProtectedRoute>
-                                  <AppLayout />
-                                </ProtectedRoute>
-                              }
-                            />
-                          </Routes>
-                        </Router>
-                        <Toaster />
-                      </AuditLogProvider>
-                    </QCProvider>
-                  </DailyProductionPlanProvider>
-                </SalesProvider>
-              </WarehouseProvider>
-            </FactoryProvider>
-          </MaintenanceProvider>
-        </AuthProvider>
-      </LanguageProvider>
-    </ThemeProvider>
+    <TooltipPrimitive.Provider delayDuration={200}>
+      <ThemeProvider>
+        <LanguageProvider>
+          <AuthProvider>
+            <MaintenanceProvider>
+              <FactoryProvider>
+                <WarehouseProvider>
+                  <SalesProvider>
+                    <DailyProductionPlanProvider>
+                      <QCProvider>
+                        <AuditLogProvider>
+                          <Router>
+                            <Routes>
+                              {/* Public route */}
+                              <Route path="/login" element={<LoginPage />} />
+                              {/* All protected routes */}
+                              <Route
+                                path="/*"
+                                element={
+                                  <ProtectedRoute>
+                                    <AppLayout />
+                                  </ProtectedRoute>
+                                }
+                              />
+                            </Routes>
+                          </Router>
+                          <Toaster />
+                        </AuditLogProvider>
+                      </QCProvider>
+                    </DailyProductionPlanProvider>
+                  </SalesProvider>
+                </WarehouseProvider>
+              </FactoryProvider>
+            </MaintenanceProvider>
+          </AuthProvider>
+        </LanguageProvider>
+      </ThemeProvider>
+    </TooltipPrimitive.Provider>
   );
 }
 
 function AppLayout() {
   const { user, logout } = useAuth();
   const location = useLocation();
+  const [showScanner, setShowScanner] = React.useState(false);
 
   // Redirect first-time logins to change password
   if (user?.isFirstLogin && location.pathname !== '/change-password') {
@@ -201,6 +208,8 @@ function AppLayout() {
         </main>
         </MaintenanceGuard>
       </div>
+      <CommandPaletteModal onOpenScanner={() => setShowScanner(true)} />
+      <BarcodeScannerModal isOpen={showScanner} onClose={() => setShowScanner(false)} />
     </div>
   );
 }

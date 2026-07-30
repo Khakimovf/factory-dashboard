@@ -1,10 +1,12 @@
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect, useCallback } from 'react';
 import { useFactory } from '../context/FactoryContext';
 import { useSales } from '../context/SalesContext';
 import { useWarehouse } from '../context/WarehouseContext';
 import { useLanguage } from '../context/LanguageContext';
 import {
   ResponsiveContainer,
+  AreaChart,
+  Area,
   BarChart,
   Bar,
   LineChart,
@@ -15,357 +17,574 @@ import {
   Tooltip,
   Cell,
   ComposedChart,
+  PieChart,
+  Pie,
 } from 'recharts';
 import {
-  Zap,
-  Activity,
-  Package,
-  CheckCircle2,
-  AlertTriangle,
-  TrendingUp,
-  Truck,
-  Utensils,
-  Wrench,
-  Clock,
-  Gauge,
-  ShieldAlert,
-  BarChart3,
-  Factory,
-  LayoutGrid
+  Zap, Activity, Package, CheckCircle2, AlertTriangle, TrendingUp, TrendingDown,
+  Truck, Utensils, Wrench, Clock, Gauge, ShieldAlert, BarChart3, Factory,
+  LayoutGrid, Bell, RefreshCw, ArrowRight, Layers, Box, AlertCircle,
+  X, ChevronRight, CircleDot,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useDetailsStore } from '../store/detailsStore';
+
+// ─── Mock trend data ──────────────────────────────────────────────────────────
+const oeeWeekData = [
+  { day: 'Du', val: 84 }, { day: 'Se', val: 89 }, { day: 'Ch', val: 82 },
+  { day: 'Pa', val: 91 }, { day: 'Ju', val: 87 }, { day: 'Sh', val: 93 }, { day: 'Ya', val: 90 },
+];
+
+const productionTrend = [
+  { time: '06:00', actual: 120, target: 130 }, { time: '08:00', actual: 145, target: 130 },
+  { time: '10:00', actual: 138, target: 130 }, { time: '12:00', actual: 102, target: 130 },
+  { time: '14:00', actual: 151, target: 130 }, { time: '16:00', actual: 163, target: 130 },
+  { time: '18:00', actual: 155, target: 130 },
+];
+
+const defectData = [
+  { name: 'Kosmetik', count: 42, fill: '#f43f5e' },
+  { name: 'Bo\'yoq',   count: 28, fill: '#fb923c' },
+  { name: 'Tuzilma',  count: 15, fill: '#facc15' },
+  { name: 'Funks.',   count: 10, fill: '#4ade80' },
+  { name: 'Boshqa',   count: 24, fill: '#818cf8' },
+];
+
+// ─── KPI thresholds ───────────────────────────────────────────────────────────
+const KPI_TARGETS = { oee: 85, ftq: 97, uptime: 99, otd: 95 };
+
+// ─── Alert type ───────────────────────────────────────────────────────────────
+interface Alert { id: string; level: 'critical' | 'warning' | 'info'; title: string; detail: string; time: string; }
+
+const INITIAL_ALERTS: Alert[] = [
+  { id: 'a1', level: 'critical', title: 'Zaxira past: CLIP-ABS-BLK-01', detail: 'Omborxonada 42 dona qoldi — Kritik daraja!', time: '2 daqiqa oldin' },
+  { id: 'a2', level: 'warning',  title: 'Liniya B: OEE 72%',            detail: 'Maqsad: 85%. Texnik xizmat tavsiya etiladi.', time: '15 daqiqa oldin' },
+  { id: 'a3', level: 'info',     title: 'MRP rejalash tugadi',           detail: "Bugun 1,240 ta detal tarqatildi.",            time: '1 soat oldin' },
+];
 
 export function Dashboard() {
   const { productionLines } = useFactory();
-  const { salesStats, salesOrders } = useSales();
+  const { salesStats } = useSales();
   const { finishedGoods } = useWarehouse() as any;
   const { t } = useLanguage();
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { fathers, children, fetchFathers, fetchChildren } = useDetailsStore();
 
+  // Redirect employees
   useEffect(() => {
-    if (user?.role === 'EMPLOYEE') {
-      navigate('/worker-cabinet', { replace: true });
-    }
+    if (user?.role === 'EMPLOYEE') navigate('/worker-cabinet', { replace: true });
   }, [user, navigate]);
 
-  const [uptime, setUptime] = useState(99.85);
-  const [pulse, setPulse] = useState(false);
+  // Load detail data
+  useEffect(() => {
+    if (!fathers.length) fetchFathers();
+    if (!children.length) fetchChildren();
+  }, []);
+
+  // Live KPI values
+  const [uptime, setUptime]     = useState(99.85);
+  const [ftq,    setFtq]        = useState(98.2);
+  const [otd,    setOtd]        = useState(96.1);
+  const [lastRefresh, setLastRefresh] = useState(new Date());
+  const [alerts, setAlerts]     = useState<Alert[]>(INITIAL_ALERTS);
+  const [showAlerts, setShowAlerts] = useState(false);
+
+  // Auto-refresh every 30s
+  const refresh = useCallback(() => {
+    setUptime(prev => parseFloat(Math.min(100, Math.max(99.5, prev + (Math.random() - 0.5) * 0.05)).toFixed(2)));
+    setFtq(prev   => parseFloat(Math.min(100, Math.max(96.5, prev + (Math.random() - 0.5) * 0.1)).toFixed(1)));
+    setOtd(prev   => parseFloat(Math.min(100, Math.max(93,   prev + (Math.random() - 0.5) * 0.3)).toFixed(1)));
+    setLastRefresh(new Date());
+  }, []);
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      setUptime(prev => {
-        const delta = (Math.random() - 0.5) * 0.01;
-        return parseFloat(Math.min(100, Math.max(99.8, prev + delta)).toFixed(2));
-      });
-      setPulse(p => !p);
-    }, 5000);
+    const interval = setInterval(refresh, 30_000);
     return () => clearInterval(interval);
-  }, []);
+  }, [refresh]);
 
   const avgEfficiency = useMemo(() =>
     productionLines.length > 0
       ? productionLines.reduce((sum, l) => sum + l.efficiency, 0) / productionLines.length
-      : 0
-    , [productionLines]);
+      : 87.4,
+    [productionLines]
+  );
 
-  const inventoryHealth = [
-    { name: t('dashboard.metal'), val: 88, color: '#06b6d4', status: t('dashboard.statusNominal') },
-    { name: t('dashboard.polymer'), val: 42, color: '#f59e0b', status: t('dashboard.lowReserve') },
-    { name: t('dashboard.circuit'), val: 95, color: '#10b981', status: t('dashboard.statusStabilized') },
-  ];
+  // Detail stats
+  const totalFathers  = fathers.length;
+  const totalChildren = children.length;
+  const lowStockCount = children.filter(c => (c.stock_level ?? 250) < 50).length;
+  const outOfStock    = children.filter(c => (c.stock_level ?? 250) === 0).length;
 
-  const paretoData = [
-    { name: t('qc.category.cosmetic'), count: 42, percentage: 35 },
-    { name: t('qc.category.paint'), count: 28, percentage: 58 },
-    { name: t('qc.category.structural'), count: 15, percentage: 71 },
-    { name: t('qc.category.functional'), count: 10, percentage: 80 },
-    { name: t('qc.category.other'), count: 24, percentage: 100 },
-  ];
+  const dismissAlert = (id: string) => setAlerts(a => a.filter(x => x.id !== id));
+
+  // ─── Gauge color ─────────────────────────────────────────────────────────
+  const kpiColor = (val: number, target: number) =>
+    val >= target ? '#10b981' : val >= target * 0.9 ? '#f59e0b' : '#f43f5e';
 
   return (
-    <div className="h-full w-full bg-slate-950 text-slate-200 p-4 flex flex-col gap-4 overflow-hidden relative font-sans selection:bg-cyan-500/30">
+    <div className="h-full w-full bg-slate-950 text-slate-200 flex flex-col overflow-hidden relative select-none font-sans">
 
-      {/* GLOBAL TELEMETRY HEADER */}
-      <div className="flex items-center justify-between shrink-0 h-14">
+      {/* ── TOP HEADER BAR ─────────────────────────────────────────────────── */}
+      <div className="shrink-0 flex items-center justify-between px-5 py-3 border-b border-white/5 bg-slate-900/40 backdrop-blur-xl">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-slate-900 border border-white/10 flex items-center justify-center shadow-lg">
-            <Factory className="w-5 h-5 text-cyan-400" />
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-cyan-600 to-indigo-700 flex items-center justify-center shadow-lg shadow-cyan-900/30">
+            <Factory className="w-5 h-5 text-white" />
           </div>
           <div>
-            <h1 className="text-xl font-black text-white tracking-tighter uppercase italic leading-none">{t('dashboard.nerveCenterTitle')}</h1>
-            <p className="text-[8px] font-bold text-slate-500 uppercase tracking-[0.2em] mt-0.5 flex items-center gap-1.5 font-mono">
-              <span className="w-1 h-1 rounded-full bg-emerald-500 animate-pulse" />
-              HQ-PRIME // STATUS: {t('dashboard.statusNominal')}
+            <h1 className="text-sm font-black text-white tracking-tighter uppercase italic leading-none">
+              {t('dashboard.nerveCenterTitle')}
+            </h1>
+            <p className="text-[8px] font-bold text-slate-500 uppercase tracking-[0.2em] flex items-center gap-1.5 mt-0.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              LIVE · {lastRefresh.toLocaleTimeString('uz', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })}
+              <button onClick={refresh} className="ml-1 text-slate-600 hover:text-slate-300 transition-colors">
+                <RefreshCw className="w-2.5 h-2.5" />
+              </button>
             </p>
           </div>
         </div>
 
-        <div className="flex gap-6">
-          <TelemetryMini icon={<Activity className="w-3.5 h-3.5" />} label="OEE" value={`${avgEfficiency.toFixed(1)}%`} color="cyan" />
-          <TelemetryMini icon={<ShieldAlert className="w-3.5 h-3.5" />} label="FTQ" value="98.2%" color="rose" />
-          <TelemetryMini icon={<CheckCircle2 className="w-3.5 h-3.5" />} label="UPTIME" value={`${uptime}%`} color="emerald" />
-          <TelemetryMini icon={<Zap className="w-3.5 h-3.5" />} label="LOAD" value="4.2ms" color="indigo" />
+        <div className="flex items-center gap-5">
+          {/* Telemetry mini KPIs */}
+          <TelemetryMini label="OEE"    value={`${avgEfficiency.toFixed(1)}%`} color={kpiColor(avgEfficiency, KPI_TARGETS.oee)}    />
+          <TelemetryMini label="FTQ"    value={`${ftq}%`}                      color={kpiColor(ftq, KPI_TARGETS.ftq)}               />
+          <TelemetryMini label="UPTIME" value={`${uptime}%`}                   color={kpiColor(uptime, KPI_TARGETS.uptime)}         />
+          <TelemetryMini label="OTD"    value={`${otd}%`}                      color={kpiColor(otd, KPI_TARGETS.otd)}               />
+
+          {/* Alert bell */}
+          <button
+            onClick={() => setShowAlerts(s => !s)}
+            className="relative p-2 rounded-xl bg-slate-800/60 border border-white/5 text-slate-400 hover:text-white transition-colors"
+          >
+            <Bell className="w-4 h-4" />
+            {alerts.length > 0 && (
+              <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-rose-500 text-[8px] font-black text-white flex items-center justify-center">
+                {alerts.length}
+              </span>
+            )}
+          </button>
         </div>
       </div>
 
-      {/* BALANCED 3x2 GRID SYSTEM */}
-      <div className="flex-1 grid grid-cols-3 grid-rows-2 gap-4 min-h-0">
+      {/* ── ALERT PANEL ────────────────────────────────────────────────────── */}
+      <AnimatePresence>
+        {showAlerts && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="absolute top-14 right-4 z-50 w-80 bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl shadow-black/60 overflow-hidden"
+          >
+            <div className="flex items-center justify-between px-4 py-3 border-b border-slate-800">
+              <span className="text-xs font-black text-white uppercase tracking-wider">Ogohlantirishlar</span>
+              <button onClick={() => setShowAlerts(false)} className="text-slate-500 hover:text-white"><X className="w-3.5 h-3.5" /></button>
+            </div>
+            <div className="max-h-64 overflow-y-auto divide-y divide-slate-800/60">
+              {alerts.length === 0
+                ? <p className="px-4 py-6 text-center text-xs text-slate-500">Hech qanday ogohlantirish yo'q</p>
+                : alerts.map(a => (
+                  <div key={a.id} className={`flex items-start gap-3 px-4 py-3 hover:bg-slate-800/30 transition-colors ${a.level === 'critical' ? 'border-l-2 border-rose-500' : a.level === 'warning' ? 'border-l-2 border-amber-500' : 'border-l-2 border-blue-500'}`}>
+                    <div className="shrink-0 mt-0.5">
+                      {a.level === 'critical' ? <AlertCircle className="w-3.5 h-3.5 text-rose-400" /> :
+                       a.level === 'warning'  ? <AlertTriangle className="w-3.5 h-3.5 text-amber-400" /> :
+                       <CircleDot className="w-3.5 h-3.5 text-blue-400" />}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[11px] font-bold text-white truncate">{a.title}</p>
+                      <p className="text-[10px] text-slate-400 mt-0.5">{a.detail}</p>
+                      <p className="text-[9px] text-slate-600 mt-1">{a.time}</p>
+                    </div>
+                    <button onClick={() => dismissAlert(a.id)} className="shrink-0 text-slate-600 hover:text-slate-300">
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-        {/* 1. PRODUCTION COCKPIT */}
-        <Card containerClass="overflow-hidden">
-          <CardHeader icon={<Gauge className="w-4 h-4" />} title={t('dashboard.productionHub')} sub={t('dashboard.liveTelemetry')} color="cyan" />
-          <div className="flex-1 flex flex-col items-center justify-center min-h-0">
-            <div className="relative w-full aspect-square max-w-[180px] flex items-center justify-center">
-              <svg className="w-full h-full -rotate-90">
-                <circle cx="50%" cy="50%" r="42%" fill="transparent" stroke="rgba(255,255,255,0.02)" strokeWidth="24" />
+      {/* ── MAIN GRID ──────────────────────────────────────────────────────── */}
+      <div className="flex-1 min-h-0 p-4 grid grid-cols-4 grid-rows-2 gap-4">
+
+        {/* ── 1: OEE GAUGE + TREND ─ 2-rows tall ─── */}
+        <Card className="row-span-2 flex flex-col" onClick={() => navigate('/production-lines')}>
+          <CardHeader icon={<Gauge className="w-4 h-4" />} title="Ishlab Chiqarish" sub="OEE • Samaradorlik" color="cyan" />
+          <div className="flex-1 flex flex-col items-center justify-between px-4 pb-4 min-h-0">
+            {/* Circular gauge */}
+            <div className="relative w-36 h-36 flex items-center justify-center mt-2">
+              <svg viewBox="0 0 100 100" className="w-full h-full -rotate-90">
+                <circle cx="50" cy="50" r="40" fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth="10" />
                 <circle
-                  cx="50%" cy="50%" r="42%"
-                  fill="transparent"
-                  stroke="url(#oeeGradient)"
-                  strokeWidth="24"
-                  strokeDasharray="263%"
-                  strokeDashoffset={`${263 - (avgEfficiency / 100) * 263}%`}
+                  cx="50" cy="50" r="40" fill="none"
+                  stroke={kpiColor(avgEfficiency, KPI_TARGETS.oee)}
+                  strokeWidth="10"
                   strokeLinecap="round"
-                  className="transition-all duration-1000 ease-out"
+                  strokeDasharray={`${2 * Math.PI * 40}`}
+                  strokeDashoffset={`${2 * Math.PI * 40 * (1 - avgEfficiency / 100)}`}
+                  style={{ transition: 'stroke-dashoffset 1s ease-out, stroke 0.5s ease' }}
                 />
               </svg>
               <div className="absolute flex flex-col items-center">
-                <span className="text-4xl font-black text-white italic tracking-tighter shadow-cyan-500/10">
-                  {avgEfficiency.toFixed(0)}<span className="text-lg text-cyan-500 ml-0.5">%</span>
+                <span className="text-3xl font-black text-white italic font-mono leading-none">{avgEfficiency.toFixed(0)}<span className="text-base text-cyan-400">%</span></span>
+                <span className="text-[7px] font-black text-slate-500 uppercase tracking-widest mt-1">OEE</span>
+                <span className="text-[7px] font-bold mt-0.5" style={{ color: kpiColor(avgEfficiency, KPI_TARGETS.oee) }}>
+                  {avgEfficiency >= KPI_TARGETS.oee ? '✓ Maqsad' : `Maqsad: ${KPI_TARGETS.oee}%`}
                 </span>
-                <span className="text-[7px] font-black text-slate-500 uppercase tracking-widest mt-0.5">{t('dashboard.efficiency')}</span>
               </div>
             </div>
-            <div className="w-full grid grid-cols-2 gap-2 mt-2 px-4">
-              <div className="bg-slate-950/40 p-2 rounded-xl border border-white/5 text-center">
-                <p className="text-[7px] text-slate-500 uppercase font-mono">{t('dashboard.trend')}</p>
-                <p className="text-xs font-black text-emerald-400 italic">+12.4%</p>
-              </div>
-              <div className="bg-slate-950/40 p-2 rounded-xl border border-white/5 text-center">
-                <p className="text-[7px] text-slate-500 uppercase font-mono">{t('dashboard.status')}</p>
-                <p className="text-xs font-black text-cyan-400 italic">{t('dashboard.statusActive')}</p>
-              </div>
+
+            {/* Mini sub-KPIs */}
+            <div className="w-full grid grid-cols-2 gap-2 mt-3">
+              {[
+                { label: 'FTQ',    val: `${ftq}%`,    color: kpiColor(ftq, KPI_TARGETS.ftq) },
+                { label: 'OTD',    val: `${otd}%`,    color: kpiColor(otd, KPI_TARGETS.otd) },
+                { label: 'UPTIME', val: `${uptime}%`, color: kpiColor(uptime, KPI_TARGETS.uptime) },
+                { label: 'MTTR',   val: '24m',        color: '#10b981' },
+              ].map(k => (
+                <div key={k.label} className="bg-slate-950/50 p-2 rounded-xl border border-white/5 text-center">
+                  <p className="text-[7px] text-slate-500 uppercase font-mono font-bold">{k.label}</p>
+                  <p className="text-sm font-black font-mono italic mt-0.5" style={{ color: k.color }}>{k.val}</p>
+                </div>
+              ))}
             </div>
+
+            {/* Sparkline week trend */}
+            <div className="w-full mt-3">
+              <p className="text-[7px] font-black text-slate-500 uppercase tracking-widest mb-1">Haftalik OEE Trendi</p>
+              <ResponsiveContainer width="100%" height={50}>
+                <AreaChart data={oeeWeekData} margin={{ top: 2, right: 0, left: 0, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="oeeArea" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="#06b6d4" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <Area type="monotone" dataKey="val" stroke="#06b6d4" strokeWidth={2} fill="url(#oeeArea)" dot={false} />
+                  <XAxis dataKey="day" hide />
+                  <YAxis domain={[75, 100]} hide />
+                  <Tooltip
+                    contentStyle={{ background: '#0f172a', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 8, fontSize: 10 }}
+                    labelStyle={{ color: '#64748b' }}
+                    itemStyle={{ color: '#06b6d4', fontWeight: 'bold' }}
+                    formatter={(v: any) => [`${v}%`, 'OEE']}
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+
+            <button
+              onClick={(e) => { e.stopPropagation(); navigate('/production-lines'); }}
+              className="w-full mt-3 flex items-center justify-center gap-1.5 py-2 rounded-xl bg-cyan-600/10 border border-cyan-500/20 text-cyan-400 text-[9px] font-black uppercase tracking-widest hover:bg-cyan-600/20 transition-colors"
+            >
+              Liniyalarni Ko'rish <ArrowRight className="w-3 h-3" />
+            </button>
           </div>
-          <defs>
-            <linearGradient id="oeeGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="#22d3ee" />
-              <stop offset="100%" stopColor="#0891b2" />
-            </linearGradient>
-          </defs>
         </Card>
 
-        {/* 2. QUALITY PARETO */}
-        <Card>
-          <CardHeader icon={<BarChart3 className="w-4 h-4" />} title={t('dashboard.qualityLabs')} sub={t('dashboard.defectsReport')} color="rose" />
-          <div className="flex-1 min-h-0 pt-2">
+        {/* ── 2: PRODUCTION HOURLY TREND ── */}
+        <Card className="col-span-2" onClick={() => navigate('/production-lines')}>
+          <CardHeader icon={<Activity className="w-4 h-4" />} title="Soatlik Ishlab Chiqarish" sub="Haqiqiy vs Maqsad" color="indigo" />
+          <div className="flex-1 min-h-0 px-2 pb-2">
             <ResponsiveContainer width="100%" height="100%">
-              <ComposedChart data={paretoData} margin={{ top: 5, right: 5, bottom: -10, left: -25 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.03)" />
-                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#475569', fontSize: 8, fontWeight: 800 }} />
-                <YAxis yAxisId="left" axisLine={false} tickLine={false} tick={{ fill: '#334155', fontSize: 7 }} />
-                <YAxis yAxisId="right" orientation="right" axisLine={false} tickLine={false} tick={{ fill: '#334155', fontSize: 7 }} />
-                <Bar yAxisId="left" dataKey="count" fill="rgba(244, 63, 94, 0.3)" radius={[3, 3, 0, 0]} barSize={25}>
-                  {paretoData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={index < 2 ? 'rgba(244, 63, 94, 0.6)' : 'rgba(244, 63, 94, 0.2)'} />
-                  ))}
-                </Bar>
-                <Line yAxisId="right" type="monotone" dataKey="percentage" stroke="#f59e0b" strokeWidth={2} dot={{ fill: '#f59e0b', r: 3 }} />
+              <ComposedChart data={productionTrend} margin={{ top: 4, right: 8, bottom: -8, left: -20 }}>
+                <defs>
+                  <linearGradient id="prodGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#818cf8" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#818cf8" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="2 4" vertical={false} stroke="rgba(255,255,255,0.03)" />
+                <XAxis dataKey="time" axisLine={false} tickLine={false} tick={{ fill: '#475569', fontSize: 8, fontWeight: 700 }} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fill: '#334155', fontSize: 8 }} domain={[80, 180]} />
+                <Tooltip
+                  contentStyle={{ background: '#0f172a', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 10, fontSize: 11 }}
+                  labelStyle={{ color: '#64748b', fontWeight: 800 }}
+                  itemStyle={{ fontWeight: 700 }}
+                />
+                <Area type="monotone" dataKey="actual" stroke="#818cf8" strokeWidth={2} fill="url(#prodGrad)" dot={false} name="Haqiqiy" />
+                <Line type="monotone" dataKey="target" stroke="#f59e0b" strokeWidth={1.5} strokeDasharray="4 3" dot={false} name="Maqsad" />
               </ComposedChart>
             </ResponsiveContainer>
           </div>
-          <div className="mt-2 p-2 bg-slate-950/40 rounded-xl border border-white/5 flex items-center justify-between mx-2">
-            <span className="text-[8px] font-bold text-slate-400 italic">{t('dashboard.rootCause')}: {t('qc.rootCause.operator')}</span>
-            <span className="text-[7px] font-black text-rose-500 uppercase font-mono italic">{t('dashboard.statusCritical')}</span>
+        </Card>
+
+        {/* ── 3: ALERTS SUMMARY ── */}
+        <Card onClick={() => setShowAlerts(s => !s)}>
+          <CardHeader icon={<Bell className="w-4 h-4" />} title="Ogohlantirishlar" sub={`${alerts.length} ta faol`} color="rose" />
+          <div className="flex-1 flex flex-col justify-center gap-2 px-4 pb-4">
+            {/* Status counts */}
+            <div className="grid grid-cols-3 gap-2">
+              {[
+                { label: 'Kritik', count: alerts.filter(a => a.level === 'critical').length, color: '#f43f5e', bg: 'bg-rose-950/40 border-rose-500/20' },
+                { label: 'Ogohlantirish', count: alerts.filter(a => a.level === 'warning').length,  color: '#f59e0b', bg: 'bg-amber-950/40 border-amber-500/20' },
+                { label: 'Ma\'lumot',     count: alerts.filter(a => a.level === 'info').length,     color: '#60a5fa', bg: 'bg-blue-950/40 border-blue-500/20' },
+              ].map(s => (
+                <div key={s.label} className={`${s.bg} border rounded-xl p-2 text-center`}>
+                  <p className="text-lg font-black font-mono" style={{ color: s.color }}>{s.count}</p>
+                  <p className="text-[7px] font-bold text-slate-500 uppercase mt-0.5">{s.label}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* Latest alert */}
+            {alerts[0] && (
+              <div className="mt-1 p-2.5 rounded-xl bg-rose-950/30 border border-rose-500/20">
+                <p className="text-[10px] font-bold text-rose-300 truncate">{alerts[0].title}</p>
+                <p className="text-[9px] text-slate-500 mt-0.5 truncate">{alerts[0].time}</p>
+              </div>
+            )}
+
+            <button
+              onClick={(e) => { e.stopPropagation(); setShowAlerts(true); }}
+              className="mt-1 w-full flex items-center justify-center gap-1 py-1.5 rounded-lg bg-rose-600/10 border border-rose-500/20 text-rose-400 text-[9px] font-black uppercase hover:bg-rose-600/20 transition-colors"
+            >
+              Barchasini Ko'rish <ChevronRight className="w-3 h-3" />
+            </button>
           </div>
         </Card>
 
-        {/* 3. INVENTORY HEALTH */}
-        <Card>
-          <CardHeader icon={<Package className="w-4 h-4" />} title={t('dashboard.inventoryDepot')} sub={t('dashboard.stockHealthTitle')} color="emerald" />
-          <div className="flex-1 flex flex-col justify-around px-4 pb-2">
-            {inventoryHealth.map((item) => (
-              <div key={item.name} className="space-y-1.5">
-                <div className="flex justify-between items-end">
-                  <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest">{item.name}</span>
-                  <span className="text-[9px] font-black text-white font-mono">{item.val}%</span>
-                </div>
-                <div className="h-2 bg-slate-950 rounded-full border border-white/5 overflow-hidden">
-                  <motion.div
-                    initial={{ width: 0 }}
-                    animate={{ width: `${item.val}%` }}
-                    className="h-full rounded-full"
-                    style={{ backgroundColor: item.color, opacity: 0.8 }}
-                  />
-                </div>
-                <div className="flex justify-between text-[6px] font-bold uppercase tracking-tighter">
-                  <span className={item.val < 50 ? 'text-amber-500' : 'text-slate-600'}>{item.status}</span>
-                  <span className="text-slate-700">{t('dashboard.buffer')}: {t('dashboard.statusActive')}</span>
-                </div>
+        {/* ── 4: DETAIL MANAGEMENT KPI ── */}
+        <Card onClick={() => navigate('/admin/details')}>
+          <CardHeader icon={<Box className="w-4 h-4" />} title="Detal Boshqaruvi" sub="Father & Child Detallar" color="violet" />
+          <div className="flex-1 flex flex-col justify-center gap-3 px-4 pb-4">
+            {/* Main stats row */}
+            <div className="grid grid-cols-2 gap-2">
+              <div className="bg-indigo-950/40 border border-indigo-500/20 rounded-xl p-3 text-center">
+                <p className="text-2xl font-black text-white font-mono italic">{totalFathers}</p>
+                <p className="text-[7px] font-black text-indigo-400 uppercase tracking-widest mt-0.5">Ota Detallar</p>
               </div>
+              <div className="bg-violet-950/40 border border-violet-500/20 rounded-xl p-3 text-center">
+                <p className="text-2xl font-black text-white font-mono italic">{totalChildren}</p>
+                <p className="text-[7px] font-black text-violet-400 uppercase tracking-widest mt-0.5">Bola Detallar</p>
+              </div>
+            </div>
+
+            {/* Stock alerts */}
+            <div className="space-y-1.5">
+              <div className={`flex items-center justify-between px-3 py-2 rounded-lg border ${lowStockCount > 0 ? 'bg-amber-950/30 border-amber-500/20' : 'bg-slate-800/30 border-white/5'}`}>
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className={`w-3 h-3 ${lowStockCount > 0 ? 'text-amber-400' : 'text-slate-600'}`} />
+                  <span className="text-[9px] font-bold text-slate-300">Kam zaxira</span>
+                </div>
+                <span className={`text-sm font-black font-mono ${lowStockCount > 0 ? 'text-amber-400' : 'text-slate-500'}`}>{lowStockCount}</span>
+              </div>
+              <div className={`flex items-center justify-between px-3 py-2 rounded-lg border ${outOfStock > 0 ? 'bg-rose-950/30 border-rose-500/20' : 'bg-slate-800/30 border-white/5'}`}>
+                <div className="flex items-center gap-2">
+                  <AlertCircle className={`w-3 h-3 ${outOfStock > 0 ? 'text-rose-400' : 'text-slate-600'}`} />
+                  <span className="text-[9px] font-bold text-slate-300">Tugagan</span>
+                </div>
+                <span className={`text-sm font-black font-mono ${outOfStock > 0 ? 'text-rose-400' : 'text-slate-500'}`}>{outOfStock}</span>
+              </div>
+            </div>
+
+            <button
+              onClick={(e) => { e.stopPropagation(); navigate('/admin/details'); }}
+              className="w-full flex items-center justify-center gap-1 py-1.5 rounded-lg bg-violet-600/10 border border-violet-500/20 text-violet-400 text-[9px] font-black uppercase hover:bg-violet-600/20 transition-colors"
+            >
+              Detallarni Boshqarish <ArrowRight className="w-3 h-3" />
+            </button>
+          </div>
+        </Card>
+
+        {/* ── 5: QUALITY DEFECTS CHART ── */}
+        <Card onClick={() => navigate('/qc')}>
+          <CardHeader icon={<BarChart3 className="w-4 h-4" />} title="Sifat Nazorati" sub="Nuqsonlar Tahlili" color="rose" />
+          <div className="flex-1 min-h-0 flex gap-2 px-2 pb-2">
+            <div className="flex-1">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={defectData} margin={{ top: 4, right: 4, bottom: -10, left: -24 }} layout="vertical">
+                  <CartesianGrid strokeDasharray="2 4" horizontal={false} stroke="rgba(255,255,255,0.03)" />
+                  <XAxis type="number" axisLine={false} tickLine={false} tick={{ fill: '#334155', fontSize: 8 }} />
+                  <YAxis type="category" dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#475569', fontSize: 8, fontWeight: 700 }} width={52} />
+                  <Tooltip
+                    contentStyle={{ background: '#0f172a', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, fontSize: 10 }}
+                    itemStyle={{ fontWeight: 700 }}
+                    cursor={{ fill: 'rgba(255,255,255,0.02)' }}
+                  />
+                  <Bar dataKey="count" radius={[0, 4, 4, 0]} barSize={10}>
+                    {defectData.map((d, i) => <Cell key={i} fill={d.fill} opacity={0.75} />)}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+            {/* Donut mini */}
+            <div className="w-20 flex flex-col items-center justify-center">
+              <PieChart width={72} height={72}>
+                <Pie data={defectData} cx={36} cy={36} innerRadius={22} outerRadius={34} paddingAngle={2} dataKey="count" startAngle={90} endAngle={-270}>
+                  {defectData.map((d, i) => <Cell key={i} fill={d.fill} opacity={0.8} />)}
+                </Pie>
+              </PieChart>
+              <p className="text-[7px] text-slate-500 uppercase font-bold tracking-wider mt-1 text-center">Taqsimot</p>
+            </div>
+          </div>
+        </Card>
+
+        {/* ── 6: WAREHOUSE + INVENTORY ── */}
+        <Card onClick={() => navigate('/warehouse')}>
+          <CardHeader icon={<Package className="w-4 h-4" />} title="Omborxona" sub="Tayyor Mahsulot & Zaxira" color="emerald" />
+          <div className="flex-1 flex flex-col justify-center px-4 pb-4 gap-3">
+            {/* Big shipped number */}
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shrink-0">
+                <Truck className="w-5 h-5 text-emerald-400" />
+              </div>
+              <div>
+                <p className="text-2xl font-black text-white italic font-mono leading-tight">
+                  {salesStats.dailyShippedQty.toLocaleString()}
+                </p>
+                <p className="text-[7px] font-black text-emerald-400 uppercase tracking-widest">Bugun Yuborildi (dona)</p>
+              </div>
+            </div>
+
+            {/* Mini metrics */}
+            <div className="grid grid-cols-3 gap-1.5">
+              {[
+                { label: 'Ochiq SO', val: salesStats.pendingOrderCount, color: 'text-amber-400' },
+                { label: 'Jami TM',  val: finishedGoods.reduce((s: number, f: any) => s + f.totalQuantity, 0).toLocaleString(), color: 'text-white' },
+                { label: 'Mavjud',   val: finishedGoods.reduce((s: number, f: any) => s + f.availableQuantity, 0).toLocaleString(), color: 'text-emerald-400' },
+              ].map(m => (
+                <div key={m.label} className="bg-slate-950/50 p-2 rounded-xl border border-white/5 text-center">
+                  <p className={`text-xs font-black font-mono ${m.color}`}>{m.val}</p>
+                  <p className="text-[7px] text-slate-600 uppercase font-bold mt-0.5">{m.label}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* Progress bar for shipment rate */}
+            <div>
+              <div className="flex justify-between text-[8px] font-bold text-slate-500 mb-1">
+                <span>Yetkazib berish darajasi</span>
+                <span className="text-emerald-400">{otd}%</span>
+              </div>
+              <div className="h-2 bg-slate-950 rounded-full overflow-hidden border border-white/5">
+                <motion.div
+                  initial={{ width: 0 }}
+                  animate={{ width: `${otd}%` }}
+                  transition={{ duration: 1, ease: 'easeOut' }}
+                  className="h-full rounded-full"
+                  style={{ background: `linear-gradient(90deg, #10b981, #06b6d4)` }}
+                />
+              </div>
+            </div>
+          </div>
+        </Card>
+
+        {/* ── 7: MAINTENANCE ── */}
+        <Card onClick={() => navigate('/maintenance')}>
+          <CardHeader icon={<Wrench className="w-4 h-4" />} title="Texnik Xizmat" sub="Asset Holati" color="amber" />
+          <div className="flex-1 flex flex-col justify-center px-4 pb-4 gap-3">
+            <div className="grid grid-cols-2 gap-2">
+              {[
+                { label: 'Jarayonda', val: '08', color: '#f59e0b', desc: 'Ta\'mirlash' },
+                { label: "Avg MTTR",  val: '24m', color: '#10b981', desc: 'Tiklash Vaqti' },
+                { label: 'MTBF',      val: '456h', color: '#06b6d4', desc: 'Nosozliklar orasida' },
+                { label: 'OEE Asset', val: '94%', color: '#818cf8', desc: 'Samaradorlik' },
+              ].map(m => (
+                <div key={m.label} className="bg-slate-950/40 p-2.5 rounded-xl border border-white/5">
+                  <p className="text-[7px] text-slate-500 uppercase font-bold">{m.label}</p>
+                  <p className="text-lg font-black font-mono italic mt-0.5" style={{ color: m.color }}>{m.val}</p>
+                  <p className="text-[7px] text-slate-600 mt-0.5">{m.desc}</p>
+                </div>
+              ))}
+            </div>
+            <div className="flex items-center gap-2 px-3 py-2 bg-emerald-500/5 border border-emerald-500/10 rounded-xl">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+              <span className="text-[9px] font-bold text-emerald-400 uppercase">Barcha Liniyalar Ishlamoqda</span>
+            </div>
+          </div>
+        </Card>
+
+        {/* ── 8: QUICK NAVIGATION ── */}
+        <Card>
+          <CardHeader icon={<LayoutGrid className="w-4 h-4" />} title="Tezkor Navigatsiya" sub="Modullar" color="cyan" />
+          <div className="flex-1 grid grid-cols-2 gap-2 px-4 pb-4">
+            {[
+              { label: 'MRP',           path: '/mrp',           color: '#818cf8', bg: 'bg-indigo-950/40 border-indigo-500/15',  icon: <Layers className="w-4 h-4" /> },
+              { label: 'Omborxona',     path: '/warehouse',     color: '#10b981', bg: 'bg-emerald-950/40 border-emerald-500/15', icon: <Package className="w-4 h-4" /> },
+              { label: 'Liniyalar',     path: '/production-lines', color: '#06b6d4', bg: 'bg-cyan-950/40 border-cyan-500/15', icon: <Activity className="w-4 h-4" /> },
+              { label: 'Sifat Nazorati', path: '/qc',           color: '#f43f5e', bg: 'bg-rose-950/40 border-rose-500/15',     icon: <ShieldAlert className="w-4 h-4" /> },
+              { label: 'HR',            path: '/hr',            color: '#f59e0b', bg: 'bg-amber-950/40 border-amber-500/15',   icon: <Utensils className="w-4 h-4" /> },
+              { label: 'Hisobotlar',    path: '/reports',       color: '#a78bfa', bg: 'bg-violet-950/40 border-violet-500/15', icon: <BarChart3 className="w-4 h-4" /> },
+            ].map(n => (
+              <button
+                key={n.path}
+                onClick={() => navigate(n.path)}
+                className={`${n.bg} border rounded-xl p-2.5 flex flex-col items-center justify-center gap-1.5 hover:brightness-125 transition-all text-center`}
+              >
+                <span style={{ color: n.color }}>{n.icon}</span>
+                <span className="text-[8px] font-black text-slate-300 uppercase tracking-wide leading-tight">{n.label}</span>
+              </button>
             ))}
           </div>
         </Card>
 
-        {/* 4. CANTEEN OPS */}
-        <Card>
-          <CardHeader icon={<Utensils className="w-4 h-4" />} title={t('dashboard.canteenOps')} sub={t('dashboard.mealDistribution')} color="cyan" />
-          <div className="flex-1 grid grid-cols-2 gap-4 p-4 text-center">
-            <div className="flex flex-col justify-center gap-1">
-              <p className="text-[7px] font-black text-slate-500 uppercase tracking-widest italic">{t('dashboard.meal1Status')}</p>
-              <p className="text-3xl font-black text-white italic tracking-tighter leading-tight font-mono">482</p>
-              <div className="w-full h-1 bg-slate-950 rounded-full mt-1 overflow-hidden border border-white/5">
-                <div className="h-full bg-cyan-500/60 w-[65%]" />
-              </div>
-              <p className="text-[6px] font-bold text-cyan-600 uppercase mt-1">Wave 2 {t('dashboard.statusActive')}</p>
-            </div>
-            <div className="flex flex-col justify-center gap-1 border-l border-white/5 pl-4">
-              <p className="text-[7px] font-black text-slate-500 uppercase tracking-widest italic">{t('dashboard.meal2Status')}</p>
-              <p className="text-3xl font-black text-white italic tracking-tighter leading-tight font-mono">355</p>
-              <div className="w-full h-1 bg-slate-950 rounded-full mt-1 overflow-hidden border border-white/5">
-                <div className="h-full bg-cyan-400/60 w-[45%]" />
-              </div>
-              <p className="text-[6px] font-bold text-slate-600 uppercase mt-1">{t('dashboard.preparing')}...</p>
-            </div>
-          </div>
-        </Card>
-
-        {/* 5. MAINTENANCE HUB */}
-        <Card>
-          <CardHeader icon={<Wrench className="w-4 h-4" />} title={t('dashboard.maintenanceAsset')} sub={t('dashboard.assetHealth')} color="emerald" />
-          <div className="flex-1 flex flex-col justify-center px-4 gap-4">
-            <div className="flex justify-between items-center bg-slate-950/40 p-3 rounded-2xl border border-white/5">
-              <div className="flex flex-col">
-                <span className="text-[7px] font-black text-slate-500 uppercase mb-1">{t('dashboard.inProcess')}</span>
-                <span className="text-2xl font-black text-white italic font-mono leading-none">08</span>
-              </div>
-              <div className="w-px h-8 bg-white/5" />
-              <div className="flex flex-col items-end">
-                <span className="text-[7px] font-black text-slate-500 uppercase mb-1">{t('dashboard.avgMttr')}</span>
-                <span className="text-2xl font-black text-emerald-400 italic font-mono leading-none">24<span className="text-xs ml-0.5 uppercase">m</span></span>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-500/5 border border-emerald-500/10 rounded-full">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                <span className="text-[8px] font-black text-emerald-500/80 uppercase italic">{t('dashboard.factoryUptime')}: {t('dashboard.statusStabilized')}</span>
-              </div>
-              <div className="flex items-center gap-2 px-3 py-1.5 bg-indigo-500/5 border border-indigo-500/10 rounded-full">
-                <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 shadow-[0_0_5px_rgba(99,102,241,0.5)]" />
-                <span className="text-[8px] font-black text-indigo-400/80 uppercase italic">{t('dashboard.mtbf')}: 456.2 hours</span>
-              </div>
-            </div>
-          </div>
-        </Card>
-
-        {/* 6. FG WAREHOUSE & SALES */}
-        <Card>
-          <CardHeader icon={<Truck className="w-4 h-4" />} title={'FG WAREHOUSE'} sub={'SAP SD METRICS'} color="violet" />
-          <div className="flex-1 flex flex-col justify-center px-4 gap-3">
-            <div className="flex items-center gap-4">
-              <div className="w-14 h-14 bg-violet-500/10 rounded-2xl flex items-center justify-center border border-violet-500/20">
-                <span className="text-xl font-black text-white italic font-mono">{salesStats.dailyShippedQty.toLocaleString()}</span>
-              </div>
-              <div>
-                <p className="text-lg font-black text-white italic leading-tight uppercase tracking-tighter">Shipped Today</p>
-                <p className="text-[8px] font-black text-violet-400 uppercase tracking-widest leading-none">Pieces (PCS)</p>
-              </div>
-            </div>
-            <div className="grid grid-cols-3 gap-2 border-t border-white/5 pt-3">
-              <div className="bg-slate-950/40 p-1.5 rounded-lg border border-white/5 text-center flex flex-col">
-                <span className="text-[7px] font-black text-slate-500 uppercase">Open SOs</span>
-                <span className="font-mono text-xs font-black text-white">{salesStats.pendingOrderCount}</span>
-              </div>
-              <div className="bg-slate-950/40 p-1.5 rounded-lg border border-white/5 text-center flex flex-col">
-                <span className="text-[7px] font-black text-slate-500 uppercase">Total FG</span>
-                <span className="font-mono text-xs font-black text-white">{finishedGoods.reduce((s: number, f: any) => s + f.totalQuantity, 0).toLocaleString()}</span>
-              </div>
-              <div className="bg-slate-950/40 p-1.5 rounded-lg border border-white/5 text-center flex flex-col">
-                <span className="text-[7px] font-black text-slate-500 uppercase">Avail FG</span>
-                <span className="font-mono text-xs font-black text-emerald-400">{finishedGoods.reduce((s: number, f: any) => s + f.availableQuantity, 0).toLocaleString()}</span>
-              </div>
-            </div>
-            <div className="flex items-center justify-between mt-1 opacity-40">
-              <span className="text-[7px] font-black text-slate-600 uppercase tracking-[0.2em] font-mono italic">SYNC: SAP-SD-MOD</span>
-              <Clock className="w-3 h-3 text-slate-700" />
-            </div>
-          </div>
-        </Card>
-
       </div>
 
-      {/* FOOTER SYNC BAR */}
-      <div className="h-6 shrink-0 flex items-center justify-between bg-slate-900/60 backdrop-blur-xl border border-white/5 rounded-full px-4 text-[7px] font-black text-slate-500 uppercase tracking-[0.2em] italic font-mono">
-        <div className="flex items-center gap-4">
+      {/* ── FOOTER STATUS BAR ──────────────────────────────────────────────── */}
+      <div className="shrink-0 h-7 flex items-center justify-between px-5 bg-slate-900/50 border-t border-white/5 text-[7px] font-black text-slate-500 uppercase tracking-[0.15em] font-mono italic">
+        <div className="flex items-center gap-5">
           <div className="flex items-center gap-1.5">
-            <div className="w-1 h-1 rounded-full bg-cyan-500 shadow-[0_0_6px_#06b6d4]" />
+            <div className="w-1 h-1 rounded-full bg-cyan-500 shadow-[0_0_4px_#06b6d4]" />
             <span>HUB ID: 0x99A2</span>
           </div>
-          <span>{t('dashboard.systemVersion')}: Prime v4.5</span>
+          <span>FABRKA ERP v2.0</span>
+          <span>Detallar: {totalFathers}F / {totalChildren}C</span>
         </div>
-        <div className="flex items-center gap-4">
-          <span>{t('dashboard.latency')}: 12ms</span>
-          <div className="flex items-center gap-2 text-white">
-            <LayoutGrid className="w-2.5 h-2.5 opacity-50" />
-            <DigitalClock />
-          </div>
+        <div className="flex items-center gap-5">
+          <span>Kechikish: 12ms</span>
+          <span>Yangilandi: {lastRefresh.toLocaleTimeString('uz', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })}</span>
+          <DigitalClock />
         </div>
       </div>
-
     </div>
   );
 }
 
-function Card({ children, containerClass = "" }: any) {
+// ─── Sub-components ───────────────────────────────────────────────────────────
+
+function Card({ children, className = '', onClick }: { children: React.ReactNode; className?: string; onClick?: () => void }) {
   return (
-    <div className={`bg-slate-900/40 backdrop-blur-2xl border border-white/5 rounded-[1.5rem] flex flex-col ring-1 ring-white/5 shadow-xl hover:bg-slate-900/60 transition-all duration-300 relative ${containerClass}`}>
+    <motion.div
+      initial={{ opacity: 0, y: 6 }}
+      animate={{ opacity: 1, y: 0 }}
+      onClick={onClick}
+      className={`bg-slate-900/40 backdrop-blur-2xl border border-white/5 rounded-2xl flex flex-col ring-1 ring-white/5 shadow-xl hover:bg-slate-900/60 hover:border-white/10 transition-all duration-300 relative overflow-hidden ${onClick ? 'cursor-pointer' : ''} ${className}`}
+    >
       {children}
-    </div>
+    </motion.div>
   );
 }
 
-function CardHeader({ icon, title, sub, color }: any) {
-  const colors: any = {
-    cyan: "text-cyan-400 group-hover:text-cyan-300 shadow-cyan-500/20",
-    rose: "text-rose-400 group-hover:text-rose-300 shadow-rose-500/20",
-    emerald: "text-emerald-400 group-hover:text-emerald-300 shadow-emerald-500/20",
-    amber: "text-amber-500 group-hover:text-amber-400 shadow-amber-500/20",
-    violet: "text-violet-400 group-hover:text-violet-300 shadow-violet-500/20",
+function CardHeader({ icon, title, sub, color }: { icon: React.ReactNode; title: string; sub: string; color: string }) {
+  const colorMap: Record<string, string> = {
+    cyan: 'text-cyan-400', rose: 'text-rose-400', emerald: 'text-emerald-400',
+    amber: 'text-amber-400', violet: 'text-violet-400', indigo: 'text-indigo-400',
   };
-
   return (
-    <div className="px-5 pt-4 pb-2 flex items-center justify-between shrink-0">
+    <div className="px-4 pt-3 pb-2 flex items-center justify-between shrink-0">
       <div className="flex items-center gap-2.5">
-        <div className={`p-1.5 rounded-lg bg-slate-950/80 border border-white/5 ${colors[color].split(' ')[0]}`}>
+        <div className={`p-1.5 rounded-lg bg-slate-950/80 border border-white/5 ${colorMap[color] || 'text-slate-400'}`}>
           {icon}
         </div>
-        <div className="flex flex-col">
-          <h3 className="text-[10px] font-black text-white uppercase tracking-widest font-mono italic leading-none">{title}</h3>
-          <span className="text-[7px] font-bold text-slate-500 uppercase tracking-wider mt-0.5">{sub}</span>
+        <div>
+          <h3 className="text-[9px] font-black text-white uppercase tracking-widest font-mono italic leading-none">{title}</h3>
+          <span className="text-[7px] font-bold text-slate-500 uppercase tracking-wider mt-0.5 block">{sub}</span>
         </div>
       </div>
-      <div className="w-1 h-1 rounded-full bg-white/10" />
+      <div className="w-1.5 h-1.5 rounded-full bg-white/10" />
     </div>
   );
 }
 
-function TelemetryMini({ icon, label, value, color }: any) {
-  const colors: any = {
-    cyan: "text-cyan-400",
-    rose: "text-rose-400",
-    emerald: "text-emerald-400",
-    indigo: "text-indigo-400",
-  };
+function TelemetryMini({ label, value, color }: { label: string; value: string; color: string }) {
   return (
-    <div className="flex flex-col items-end justify-center">
-      <div className="flex items-center gap-1.5 text-slate-500 mb-0.5">
-        <span className="opacity-50">{icon}</span>
-        <span className="text-[7px] font-black uppercase tracking-widest italic">{label}</span>
-      </div>
-      <span className={`text-lg font-black italic tracking-tighter ${colors[color]} leading-none font-mono`}>{value}</span>
+    <div className="flex flex-col items-center">
+      <span className="text-[7px] font-black text-slate-500 uppercase tracking-widest">{label}</span>
+      <span className="text-base font-black italic font-mono leading-tight" style={{ color }}>{value}</span>
     </div>
   );
 }
@@ -373,11 +592,11 @@ function TelemetryMini({ icon, label, value, color }: any) {
 function DigitalClock() {
   const [time, setTime] = useState(new Date());
   useEffect(() => {
-    const timer = setInterval(() => setTime(new Date()), 1000);
-    return () => clearInterval(timer);
+    const t = setInterval(() => setTime(new Date()), 1000);
+    return () => clearInterval(t);
   }, []);
   return (
-    <span className="font-mono text-[9px] font-black italic tracking-tighter">
+    <span className="font-mono text-[9px] font-black italic text-white">
       {time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })}
     </span>
   );

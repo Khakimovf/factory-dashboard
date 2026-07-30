@@ -3,11 +3,15 @@ import { useParams, useNavigate } from 'react-router-dom';
 import {
   GitBranch, ChevronRight, Package, Layers, Plus, Pencil, Trash2,
   Search, RefreshCw, Loader2, X, Save, ChevronUp, ChevronDown,
-  ChevronsUpDown, AlertTriangle,
+  ChevronsUpDown, AlertTriangle, FileSpreadsheet, Upload, QrCode, Download
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { toast } from 'sonner';
+import * as XLSX from 'xlsx';
 import { useDetailsStore, ChildDetail } from '../../../store/detailsStore';
+import { UITooltip } from '../../../components/common/UITooltip';
+import { BulkDetailImportModal } from '../../../components/details/BulkDetailImportModal';
+import { BarcodeScannerModal } from '../../../components/mobile/BarcodeScannerModal';
 
 type SortField = 'code' | 'name' | 'description' | 'quantity_per_unit' | 'unit';
 type SortDir = 'asc' | 'desc';
@@ -35,6 +39,8 @@ export default function FatherChildrenPage() {
   const [sortField, setSortField] = useState<SortField>('code');
   const [sortDir, setSortDir] = useState<SortDir>('asc');
   const [modal, setModal] = useState<{ mode: 'create' } | null>(null);
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [showScannerModal, setShowScannerModal] = useState(false);
 
   useEffect(() => {
     if (!fathers.length) fetchFathers();
@@ -64,11 +70,25 @@ export default function FatherChildrenPage() {
     });
   }, [fatherChildren, search, sortField, sortDir]);
 
-  const handleDelete = async (cid: string, name: string) => {
-    if (!confirm(`"${name}" bola detalini o'chirishni tasdiqlaysizmi?`)) return;
-    const ok = await deleteChild(cid);
-    if (ok) toast.success(`"${name}" o'chirildi`);
-    else toast.error("O'chirib bo'lmadi");
+  const handleExportExcel = () => {
+    if (!filtered.length) {
+      toast.error("Ekspor qilish uchun ma'lumot topilmadi");
+      return;
+    }
+    const exportData = filtered.map(c => ({
+      'Ota Kodu': father?.code || '',
+      'Ota Nomi': father?.name || '',
+      'Bola Kodu': c.code,
+      'Bola Nomi': c.name,
+      'Tavsif': c.description || '',
+      'Miqdor (1 dona ota uchun)': c.quantity_per_unit,
+      'Birlik': c.unit
+    }));
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Bola_Detallar');
+    XLSX.writeFile(workbook, `bola_detallar_${father?.code || 'barchasi'}.xlsx`);
+    toast.success("Excel fayl yuklab olindi!");
   };
 
   return (
@@ -111,13 +131,43 @@ export default function FatherChildrenPage() {
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           {/* Stats */}
           <div className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600/10 border border-indigo-500/20 rounded-2xl">
             <Layers className="w-4 h-4 text-indigo-400" />
             <span className="text-indigo-300 font-black text-lg">{fatherChildren.length}</span>
             <span className="text-slate-500 text-xs font-bold uppercase">ta bola</span>
           </div>
+
+          <UITooltip content="Shtrix-kod / QR Skanerni ochish">
+            <button
+              onClick={() => setShowScannerModal(true)}
+              className="p-2.5 bg-slate-900 border border-slate-800 rounded-2xl text-slate-300 hover:text-white hover:bg-slate-800 transition-all flex items-center gap-2 font-bold text-xs"
+            >
+              <QrCode className="w-4 h-4 text-indigo-400" />
+            </button>
+          </UITooltip>
+
+          <UITooltip content="Excel fayldan ommaviy import qilish">
+            <button
+              onClick={() => setShowImportModal(true)}
+              className="p-2.5 bg-slate-900 border border-slate-800 rounded-2xl text-emerald-400 hover:bg-emerald-950/40 transition-all flex items-center gap-2 font-bold text-xs"
+            >
+              <Upload className="w-4 h-4" />
+              <span>Import</span>
+            </button>
+          </UITooltip>
+
+          <UITooltip content="Ro'yxatni Excel faylga eksport qilish">
+            <button
+              onClick={handleExportExcel}
+              className="p-2.5 bg-slate-900 border border-slate-800 rounded-2xl text-amber-400 hover:bg-amber-950/40 transition-all flex items-center gap-2 font-bold text-xs"
+            >
+              <Download className="w-4 h-4" />
+              <span>Eksport</span>
+            </button>
+          </UITooltip>
+
           <button
             onClick={() => setModal({ mode: 'create' })}
             className="bg-indigo-600 hover:bg-indigo-500 text-white px-5 py-2.5 rounded-2xl flex items-center gap-2 font-bold transition-all shadow-lg shadow-indigo-600/25 uppercase tracking-tight italic text-sm"
@@ -229,6 +279,17 @@ export default function FatherChildrenPage() {
           />
         )}
       </AnimatePresence>
+
+      <BulkDetailImportModal
+        isOpen={showImportModal}
+        onClose={() => setShowImportModal(false)}
+        onSuccess={() => fetchChildren()}
+      />
+
+      <BarcodeScannerModal
+        isOpen={showScannerModal}
+        onClose={() => setShowScannerModal(false)}
+      />
     </div>
   );
 }
